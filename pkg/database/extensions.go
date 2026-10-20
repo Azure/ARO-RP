@@ -18,7 +18,7 @@ type secureBytesExt struct {
 	aead encryption.AEAD
 }
 
-func (s secureBytesExt) ConvertExt(v interface{}) interface{} {
+func (s secureBytesExt) ConvertExt(v any) any {
 	b, err := s.aead.Seal(v.(api.SecureBytes))
 	if err != nil {
 		panic(err)
@@ -27,7 +27,7 @@ func (s secureBytesExt) ConvertExt(v interface{}) interface{} {
 	return base64.StdEncoding.EncodeToString(b)
 }
 
-func (s secureBytesExt) UpdateExt(dest interface{}, v interface{}) {
+func (s secureBytesExt) UpdateExt(dest any, v any) {
 	b, err := base64.StdEncoding.DecodeString(v.(string))
 	if err != nil {
 		panic(err)
@@ -47,7 +47,7 @@ type secureStringExt struct {
 	aead encryption.AEAD
 }
 
-func (s secureStringExt) ConvertExt(v interface{}) interface{} {
+func (s secureStringExt) ConvertExt(v any) any {
 	b, err := s.aead.Seal([]byte(v.(api.SecureString)))
 	if err != nil {
 		panic(err)
@@ -56,7 +56,7 @@ func (s secureStringExt) ConvertExt(v interface{}) interface{} {
 	return base64.StdEncoding.EncodeToString(b)
 }
 
-func (s secureStringExt) UpdateExt(dest interface{}, v interface{}) {
+func (s secureStringExt) UpdateExt(dest any, v any) {
 	b, err := base64.StdEncoding.DecodeString(v.(string))
 	if err != nil {
 		panic(err)

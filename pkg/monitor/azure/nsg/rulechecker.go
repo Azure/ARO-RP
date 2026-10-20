@@ -6,6 +6,7 @@ package nsg
 import (
 	"fmt"
 	"net/netip"
+	"slices"
 
 	"github.com/sirupsen/logrus"
 
@@ -125,31 +126,19 @@ func (c ruleChecker) isWorker(addresses []string) bool {
 
 func overlaps(prefixes []netip.Prefix, subnet []netip.Prefix) bool {
 	for _, subnetcidr := range subnet {
-		for _, p := range prefixes {
-			if subnetcidr.Overlaps(p) {
-				return true
-			}
+		if slices.ContainsFunc(prefixes, subnetcidr.Overlaps) {
+			return true
 		}
 	}
 	return false
 }
 
 func isAny(addresses []string) bool {
-	for _, address := range addresses {
-		if address == wildcard {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(addresses, wildcard)
 }
 
 func isVirtualNetwork(addresses []string) bool {
-	for _, address := range addresses {
-		if address == virtualNetwork {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(addresses, virtualNetwork)
 }
 
 // toPrefix converts a string value of an IP address or a CIDR range into a prefix

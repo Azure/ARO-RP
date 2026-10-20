@@ -348,7 +348,7 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 	buf := &bytes.Buffer{}
 
-	err := p.templateV2.ExecuteTemplate(buf, "index.html", map[string]interface{}{
+	err := p.templateV2.ExecuteTemplate(buf, "index.html", map[string]any{
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
@@ -363,7 +363,7 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 func (p *portal) indexPrometheus(w http.ResponseWriter, r *http.Request) {
 	buf := &bytes.Buffer{}
 
-	err := p.templatePrometheus.ExecuteTemplate(buf, "index.html", map[string]interface{}{
+	err := p.templatePrometheus.ExecuteTemplate(buf, "index.html", map[string]any{
 		"nonce":          middleware.CSPNonce(r.Context()),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})

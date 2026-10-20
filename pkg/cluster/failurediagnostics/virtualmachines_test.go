@@ -21,7 +21,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -47,7 +46,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		doc            *api.OpenShiftClusterDocument
-		expectedOutput interface{}
+		expectedOutput any
 		mock           func(vmClient *mock_compute.MockVirtualMachinesClient)
 		expectedLogs   []testlog.ExpectedLogEntry
 	}{
@@ -58,7 +57,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return(nil, errors.New("vm explod"))
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				"vm listing error: vm explod",
 			},
 		},
@@ -69,7 +68,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{}, nil)
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				"no VMs found",
 			},
 		},
@@ -79,12 +78,12 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:     pointerutils.ToPtr("somename"),
-						Location: pointerutils.ToPtr("eastus"),
+						Name:     new("somename"),
+						Location: new("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								BootDiagnostics: &mgmtcompute.BootDiagnosticsInstanceView{
-									SerialConsoleLogBlobURI: pointerutils.ToPtr("bogusurl"),
+									SerialConsoleLogBlobURI: new("bogusurl"),
 								},
 							},
 						},
@@ -96,7 +95,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				).Times(1).Return(errors.New("explod"))
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				`vm somename: {"location":"eastus","properties":{}}`,
 				"vm boot diagnostics retrieval error for somename: explod",
 			},
@@ -107,8 +106,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     pointerutils.ToPtr("somename"),
-						Location:                 pointerutils.ToPtr("eastus"),
+						Name:                     new("somename"),
+						Location:                 new("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
@@ -135,7 +134,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
 			},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
@@ -145,8 +144,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     pointerutils.ToPtr("somename"),
-						Location:                 pointerutils.ToPtr("eastus"),
+						Name:                     new("somename"),
+						Location:                 new("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
@@ -173,7 +172,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
 			},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
@@ -183,8 +182,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     pointerutils.ToPtr("somename"),
-						Location:                 pointerutils.ToPtr("eastus"),
+						Name:                     new("somename"),
+						Location:                 new("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
@@ -200,7 +199,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				})
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
@@ -210,16 +209,16 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     pointerutils.ToPtr("somename"),
-						Location:                 pointerutils.ToPtr("eastus"),
+						Name:                     new("somename"),
+						Location:                 new("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
 
 				iothing := bytes.NewBufferString("")
-				for i := 0; i < 11; i++ {
+				for i := range 11 {
 					fmt.Fprintf(iothing, "%d", i)
-					for x := 0; x < 98; x++ {
+					for range 98 {
 						iothing.WriteByte('a')
 					}
 					iothing.WriteByte('\n')
@@ -285,7 +284,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
 			},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
@@ -295,7 +294,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				"cluster document missing",
 			},
 		},
@@ -305,7 +304,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				"cluster document missing",
 			},
 		},

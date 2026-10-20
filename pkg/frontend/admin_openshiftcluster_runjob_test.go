@@ -38,16 +38,16 @@ func TestAdminPostRunJob(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	method := http.MethodPost
 
-	minimalJobBody := map[string]interface{}{
+	minimalJobBody := map[string]any{
 		"kind":       "Job",
 		"apiVersion": "batch/v1",
-		"metadata":   map[string]interface{}{"name": "test-job"},
-		"spec": map[string]interface{}{
-			"template": map[string]interface{}{
-				"spec": map[string]interface{}{
+		"metadata":   map[string]any{"name": "test-job"},
+		"spec": map[string]any{
+			"template": map[string]any{
+				"spec": map[string]any{
 					"restartPolicy": "Never",
-					"containers": []interface{}{
-						map[string]interface{}{
+					"containers": []any{
+						map[string]any{
 							"name":  "worker",
 							"image": "busybox",
 						},
@@ -56,11 +56,11 @@ func TestAdminPostRunJob(t *testing.T) {
 			},
 		},
 	}
-	minimalTemplate := minimalJobBody["spec"].(map[string]interface{})["template"]
+	minimalTemplate := minimalJobBody["spec"].(map[string]any)["template"]
 
 	type test struct {
 		name                    string
-		body                    interface{}
+		body                    any
 		noClusterDoc            bool
 		kubeActionsFactory      func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
 		mocks                   func(*test, *mock_adminactions.MockKubeActions)
@@ -80,11 +80,11 @@ func TestAdminPostRunJob(t *testing.T) {
 					DoAndReturn(func(_ context.Context, _ *unstructured.Unstructured, _ string) (watch.Interface, error) {
 						go func() {
 							fakeWatcher.Add(&unstructured.Unstructured{
-								Object: map[string]interface{}{
+								Object: map[string]any{
 									"kind":       "Pod",
 									"apiVersion": "v1",
-									"metadata":   map[string]interface{}{"name": "test-pod"},
-									"status":     map[string]interface{}{"phase": "Running"},
+									"metadata":   map[string]any{"name": "test-pod"},
+									"status":     map[string]any{"phase": "Running"},
 								},
 							})
 						}()
@@ -125,11 +125,11 @@ func TestAdminPostRunJob(t *testing.T) {
 					DoAndReturn(func(_ context.Context, _ *unstructured.Unstructured, _ string) (watch.Interface, error) {
 						go func() {
 							fakeWatcher.Add(&unstructured.Unstructured{
-								Object: map[string]interface{}{
+								Object: map[string]any{
 									"kind":       "Pod",
 									"apiVersion": "v1",
-									"metadata":   map[string]interface{}{"name": "test-pod"},
-									"status":     map[string]interface{}{"phase": "Failed"},
+									"metadata":   map[string]any{"name": "test-pod"},
+									"status":     map[string]any{"phase": "Failed"},
 								},
 							})
 						}()
@@ -160,11 +160,11 @@ func TestAdminPostRunJob(t *testing.T) {
 					DoAndReturn(func(_ context.Context, _ *unstructured.Unstructured, _ string) (watch.Interface, error) {
 						go func() {
 							fakeWatcher.Add(&unstructured.Unstructured{
-								Object: map[string]interface{}{
+								Object: map[string]any{
 									"kind":       "Pod",
 									"apiVersion": "v1",
-									"metadata":   map[string]interface{}{"name": "test-pod"},
-									"status":     map[string]interface{}{"phase": "Succeeded"},
+									"metadata":   map[string]any{"name": "test-pod"},
+									"status":     map[string]any{"phase": "Succeeded"},
 								},
 							})
 						}()
@@ -231,16 +231,16 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name:                    "wrong kind returns 400",
-			body:                    map[string]interface{}{"kind": "Pod"},
+			body:                    map[string]any{"kind": "Pod"},
 			wantStatusCode:          http.StatusBadRequest,
 			wantResponseContentType: "application/json",
 			wantError:               "400: InvalidParameter: : Expected kind 'Job', got 'Pod'.",
 		},
 		{
 			name: "missing name returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":     "Job",
-				"metadata": map[string]interface{}{"name": ""},
+				"metadata": map[string]any{"name": ""},
 			},
 			wantStatusCode:          http.StatusBadRequest,
 			wantResponseContentType: "application/json",
@@ -248,9 +248,9 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "invalid name returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":     "Job",
-				"metadata": map[string]interface{}{"name": "invalid name!"},
+				"metadata": map[string]any{"name": "invalid name!"},
 			},
 			wantStatusCode:          http.StatusBadRequest,
 			wantResponseContentType: "application/json",
@@ -258,9 +258,9 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "customer namespace returns 403",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":     "Job",
-				"metadata": map[string]interface{}{"name": "test-job", "namespace": "customer-app"},
+				"metadata": map[string]any{"name": "test-job", "namespace": "customer-app"},
 			},
 			wantStatusCode:          http.StatusForbidden,
 			wantResponseContentType: "application/json",
@@ -268,9 +268,9 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "invalid namespace returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":     "Job",
-				"metadata": map[string]interface{}{"name": "test-job", "namespace": "bad namespace!"},
+				"metadata": map[string]any{"name": "test-job", "namespace": "bad namespace!"},
 			},
 			wantStatusCode:          http.StatusBadRequest,
 			wantResponseContentType: "application/json",
@@ -278,11 +278,11 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "parallelism > 1 returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
 					"parallelism": 2,
 					"template":    minimalTemplate,
 				},
@@ -293,11 +293,11 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "completions > 1 returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
 					"completions": 3,
 					"template":    minimalTemplate,
 				},
@@ -308,11 +308,11 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "backoffLimit != 0 returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
 					"backoffLimit": 3,
 					"template":     minimalTemplate,
 				},
@@ -323,16 +323,16 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "empty restartPolicy returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
+					"template": map[string]any{
+						"spec": map[string]any{
 							"restartPolicy": "",
-							"containers": []interface{}{
-								map[string]interface{}{"name": "worker", "image": "busybox"},
+							"containers": []any{
+								map[string]any{"name": "worker", "image": "busybox"},
 							},
 						},
 					},
@@ -344,15 +344,15 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "zero containers returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
+					"template": map[string]any{
+						"spec": map[string]any{
 							"restartPolicy": "Never",
-							"containers":    []interface{}{},
+							"containers":    []any{},
 						},
 					},
 				},
@@ -363,17 +363,17 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "multiple containers returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
+					"template": map[string]any{
+						"spec": map[string]any{
 							"restartPolicy": "Never",
-							"containers": []interface{}{
-								map[string]interface{}{"name": "c1", "image": "busybox"},
-								map[string]interface{}{"name": "c2", "image": "busybox"},
+							"containers": []any{
+								map[string]any{"name": "c1", "image": "busybox"},
+								map[string]any{"name": "c2", "image": "busybox"},
 							},
 						},
 					},
@@ -385,16 +385,16 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "empty container name returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
+					"template": map[string]any{
+						"spec": map[string]any{
 							"restartPolicy": "Never",
-							"containers": []interface{}{
-								map[string]interface{}{"name": "", "image": "busybox"},
+							"containers": []any{
+								map[string]any{"name": "", "image": "busybox"},
 							},
 						},
 					},
@@ -406,16 +406,16 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "invalid container name returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
+					"template": map[string]any{
+						"spec": map[string]any{
 							"restartPolicy": "Never",
-							"containers": []interface{}{
-								map[string]interface{}{"name": "bad name!", "image": "busybox"},
+							"containers": []any{
+								map[string]any{"name": "bad name!", "image": "busybox"},
 							},
 						},
 					},
@@ -427,10 +427,10 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "name longer than 57 chars is truncated to produce a 63-char final name",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": strings.Repeat("a", 70)},
+				"metadata":   map[string]any{"name": strings.Repeat("a", 70)},
 				"spec":       minimalJobBody["spec"],
 			},
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
@@ -454,10 +454,10 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "all-dash name longer than 57 chars reduces to empty after truncation",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": strings.Repeat("-", 70)},
+				"metadata":   map[string]any{"name": strings.Repeat("-", 70)},
 				"spec":       minimalJobBody["spec"],
 			},
 			wantStatusCode:          http.StatusBadRequest,
@@ -729,9 +729,9 @@ func TestRunJobStream_LogStreamingError(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Succeeded"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Succeeded"},
 			},
 		})
 	}()
@@ -786,9 +786,9 @@ func TestRunJobStream_CleanupFailure(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Succeeded"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Succeeded"},
 			},
 		})
 	}()
@@ -844,9 +844,9 @@ func TestRunJobStream_CleanupNotFound(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Succeeded"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Succeeded"},
 			},
 		})
 	}()
@@ -908,9 +908,9 @@ func TestRunJobStream_ContextCancellation(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Succeeded"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Succeeded"},
 			},
 		})
 	}()
@@ -968,9 +968,9 @@ func TestRunJobStream_PollExhausted(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Succeeded"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Succeeded"},
 			},
 		})
 	}()
@@ -1058,9 +1058,9 @@ func TestRunJobStream_ContextCancellationWithCleanupFailure(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Succeeded"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Succeeded"},
 			},
 		})
 	}()
@@ -1114,9 +1114,9 @@ func TestRunJobStream_LogErrorWithCancelledContext(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Running"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Running"},
 			},
 		})
 	}()
@@ -1187,9 +1187,9 @@ func TestRunJobStream_ContextCancelledBetweenPodAndLogs(t *testing.T) {
 	wCh <- watch.Event{
 		Type: watch.Added,
 		Object: &unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Running"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Running"},
 			},
 		},
 	}
@@ -1272,20 +1272,20 @@ func TestAdminPostRunJob_DBGroupError(t *testing.T) {
 	resp, b, err := ti.request(http.MethodPost,
 		fmt.Sprintf("https://server/admin%s/runjob", resourceID),
 		http.Header{"Content-Type": []string{"application/json"}},
-		map[string]interface{}{
+		map[string]any{
 			"apiVersion": "batch/v1",
 			"kind":       "Job",
-			"metadata":   map[string]interface{}{"name": "test-job", "namespace": "openshift-azure-operator"},
-			"spec": map[string]interface{}{
+			"metadata":   map[string]any{"name": "test-job", "namespace": "openshift-azure-operator"},
+			"spec": map[string]any{
 				"backoffLimit": 0,
-				"template": map[string]interface{}{
-					"spec": map[string]interface{}{
+				"template": map[string]any{
+					"spec": map[string]any{
 						"restartPolicy": "Never",
-						"containers": []interface{}{
-							map[string]interface{}{
+						"containers": []any{
+							map[string]any{
 								"name":    "worker",
 								"image":   "busybox",
-								"command": []interface{}{"sh", "-c", "echo hi"},
+								"command": []any{"sh", "-c", "echo hi"},
 							},
 						},
 					},

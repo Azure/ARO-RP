@@ -9,7 +9,7 @@ import (
 
 type billingDocumentConverter struct{}
 
-func (b billingDocumentConverter) ToExternal(doc *api.BillingDocument) interface{} {
+func (b billingDocumentConverter) ToExternal(doc *api.BillingDocument) any {
 	if doc == nil || doc.Billing == nil {
 		return nil
 	}
@@ -31,7 +31,7 @@ func (b billingDocumentConverter) ToExternal(doc *api.BillingDocument) interface
 	}
 }
 
-func (b billingDocumentConverter) ToExternalList(docs []*api.BillingDocument, nextLink string) interface{} {
+func (b billingDocumentConverter) ToExternalList(docs []*api.BillingDocument, nextLink string) any {
 	l := &BillingDocumentList{
 		BillingDocuments: make([]*BillingDocument, 0, len(docs)),
 		NextLink:         nextLink,

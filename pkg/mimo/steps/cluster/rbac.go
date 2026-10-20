@@ -12,7 +12,6 @@ import (
 	sdkauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
 
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -65,7 +64,7 @@ func EnsureClusterServicePrincipalRBAC(ctx context.Context) error {
 		Properties: &sdkauthorization.RoleAssignmentProperties{
 			RoleDefinitionID: &roleDefinitionID,
 			PrincipalID:      &spp.SPObjectID,
-			PrincipalType:    pointerutils.ToPtr(sdkauthorization.PrincipalTypeServicePrincipal),
+			PrincipalType:    new(sdkauthorization.PrincipalTypeServicePrincipal),
 		},
 	}, nil)
 	if err != nil {

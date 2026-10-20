@@ -260,7 +260,7 @@ func TestFirstFailPolicyDo(t *testing.T) {
 	t.Run("GET: passes through without touching injection state", func(t *testing.T) {
 		srv, close := testhttp.NewServer()
 		defer close()
-		for i := 0; i < 4; i++ {
+		for range 4 {
 			srv.AppendResponse(testhttp.WithStatusCode(http.StatusOK))
 		}
 
@@ -270,7 +270,7 @@ func TestFirstFailPolicyDo(t *testing.T) {
 		}, &policy.ClientOptions{Transport: srv})
 
 		// GETs are never injected and do not affect the per-URL injection map.
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			req, err := runtime.NewRequest(context.Background(), http.MethodGet, srv.URL())
 			if err != nil {
 				t.Fatal(err)
@@ -297,7 +297,7 @@ func TestFirstFailPolicyDo(t *testing.T) {
 		srv, close := testhttp.NewServer()
 		defer close()
 		// 4 distinct URLs × 1 retry each = 4 server responses
-		for i := 0; i < 4; i++ {
+		for range 4 {
 			srv.AppendResponse(testhttp.WithStatusCode(http.StatusOK))
 		}
 

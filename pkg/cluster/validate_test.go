@@ -143,13 +143,13 @@ func TestValidateZones(t *testing.T) {
 
 			skus := []*armcompute.ResourceSKU{
 				{
-					Name:      pointerutils.ToPtr(workerProfileSku),
+					Name:      new(workerProfileSku),
 					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
 					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
 						{Zones: pointerutils.ToSlicePtr(tt.workerSkuZones)},
 					}),
 					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-					ResourceType: pointerutils.ToPtr("virtualMachines"),
+					ResourceType: new("virtualMachines"),
 				},
 				{
 					Name:      &controlPlaneSku,
@@ -158,7 +158,7 @@ func TestValidateZones(t *testing.T) {
 						{Zones: pointerutils.ToSlicePtr(tt.controlPlaneSkuZones)},
 					}),
 					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-					ResourceType: pointerutils.ToPtr("virtualMachines"),
+					ResourceType: new("virtualMachines"),
 				},
 			}
 

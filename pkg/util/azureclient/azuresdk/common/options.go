@@ -5,6 +5,7 @@ package common
 
 import (
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -36,10 +37,8 @@ func shouldRetry(resp *http.Response, err error) bool {
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
 		return false
 	}
-	for _, sc := range autorest.StatusCodesForRetry {
-		if resp.StatusCode == sc {
-			return true
-		}
+	if slices.Contains(autorest.StatusCodesForRetry, resp.StatusCode) {
+		return true
 	}
 	// 409 with Retry-After header indicates a transient ARM conflict.
 	return resp.StatusCode == http.StatusConflict && resp.Header.Get("Retry-After") != ""

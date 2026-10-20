@@ -61,7 +61,7 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 		}
 
 		// Check mandatory no_proxy entries
-		for _, mandatory_no_proxy := range strings.Split(mandatory_no_proxies, ",") {
+		for mandatory_no_proxy := range strings.SplitSeq(mandatory_no_proxies, ",") {
 			if !noProxyMap[mandatory_no_proxy] {
 				missing_no_proxy_list = append(missing_no_proxy_list, mandatory_no_proxy)
 			}

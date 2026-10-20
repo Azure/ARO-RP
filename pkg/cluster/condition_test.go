@@ -32,7 +32,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -126,7 +125,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 						},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          pointerutils.ToPtr(phaseRunning),
+						Phase:          new(phaseRunning),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},
@@ -140,7 +139,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 						},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          pointerutils.ToPtr(phaseRunning),
+						Phase:          new(phaseRunning),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},
@@ -154,7 +153,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 						},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          pointerutils.ToPtr(phaseFailed),
+						Phase:          new(phaseFailed),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},
@@ -235,7 +234,7 @@ func TestDetectWorkerVMQuotaError(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          pointerutils.ToPtr(phaseRunning),
+						Phase:          new(phaseRunning),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},
@@ -248,7 +247,7 @@ func TestDetectWorkerVMQuotaError(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
 					Status: machinev1beta1.MachineStatus{
-						Phase: pointerutils.ToPtr(phaseFailed),
+						Phase: new(phaseFailed),
 						ProviderStatus: &runtime.RawExtension{
 							Raw: []byte(`{"vmState":"Failed","conditions":[{"type":"MachineCreation","status":"False","reason":"CreateError","message":"some generic Azure error"}]}`),
 						},
@@ -263,7 +262,7 @@ func TestDetectWorkerVMQuotaError(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
 					Status: machinev1beta1.MachineStatus{
-						Phase: pointerutils.ToPtr(phaseFailed),
+						Phase: new(phaseFailed),
 						ProviderStatus: &runtime.RawExtension{
 							Raw: []byte(`{"vmState":"Failed","conditions":[{"type":"MachineCreation","status":"False","reason":"CreateError","message":"RESPONSE 409, ERROR CODE: OperationNotAllowed, Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota. Additional details - Deployment Model: Resource Manager, Location: centralus, Current Limit: 200, Current Usage: 200, Additional Required: 4, (Minimum) New Limit Required: 204."}]}`),
 						},
@@ -278,7 +277,7 @@ func TestDetectWorkerVMQuotaError(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
 					Status: machinev1beta1.MachineStatus{
-						Phase: pointerutils.ToPtr(phaseFailed),
+						Phase: new(phaseFailed),
 						ProviderStatus: &runtime.RawExtension{
 							Raw: []byte(`{"vmState":"Failed","conditions":[{"type":"MachineCreation","status":"False","reason":"QuotaExceeded"}]}`),
 						},
@@ -293,7 +292,7 @@ func TestDetectWorkerVMQuotaError(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
 					Status: machinev1beta1.MachineStatus{
-						Phase: pointerutils.ToPtr(phaseFailed),
+						Phase: new(phaseFailed),
 						ProviderStatus: &runtime.RawExtension{
 							Raw: []byte(`{"vmState":"Failed","conditions":[{"type":"MachineCreation","status":"False","reason":"SkuNotAvailable"}]}`),
 						},
@@ -308,7 +307,7 @@ func TestDetectWorkerVMQuotaError(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
 					Status: machinev1beta1.MachineStatus{
-						Phase: pointerutils.ToPtr(phaseFailed),
+						Phase: new(phaseFailed),
 						ProviderStatus: &runtime.RawExtension{
 							Raw: []byte(`{"vmState":"Failed","conditions":[{"type":"MachineCreation","status":"False","reason":"CreateError","message":"RESPONSE 409, ERROR CODE: OperationNotAllowed, The operation is not allowed on this resource"}]}`),
 						},
@@ -323,7 +322,7 @@ func TestDetectWorkerVMQuotaError(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
 					Status: machinev1beta1.MachineStatus{
-						Phase: pointerutils.ToPtr(phaseFailed),
+						Phase: new(phaseFailed),
 					},
 				},
 			},
@@ -335,14 +334,14 @@ func TestDetectWorkerVMQuotaError(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          pointerutils.ToPtr(phaseRunning),
+						Phase:          new(phaseRunning),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "w2", Labels: workerLabels},
 					Status: machinev1beta1.MachineStatus{
-						Phase: pointerutils.ToPtr(phaseFailed),
+						Phase: new(phaseFailed),
 						ProviderStatus: &runtime.RawExtension{
 							Raw: []byte(`{"vmState":"Failed","conditions":[{"type":"MachineCreation","status":"False","reason":"CreateError","message":"OperationNotAllowed: exceeding approved Cores quota"}]}`),
 						},
@@ -389,7 +388,7 @@ func TestMinimumWorkerNodesReady_QuotaError(t *testing.T) {
 						Labels: map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase: pointerutils.ToPtr(phaseFailed),
+						Phase: new(phaseFailed),
 						ProviderStatus: &runtime.RawExtension{
 							Raw: []byte(`{"vmState":"Failed","conditions":[{"message":"OperationNotAllowed: exceeding approved Cores quota. Current Limit: 200"}]}`),
 						},
@@ -401,7 +400,7 @@ func TestMinimumWorkerNodesReady_QuotaError(t *testing.T) {
 						Labels: map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase: pointerutils.ToPtr(phaseFailed),
+						Phase: new(phaseFailed),
 						ProviderStatus: &runtime.RawExtension{
 							Raw: []byte(`{"vmState":"Failed","conditions":[{"message":"OperationNotAllowed: exceeding approved Cores quota. Current Limit: 200"}]}`),
 						},
@@ -421,7 +420,7 @@ func TestMinimumWorkerNodesReady_QuotaError(t *testing.T) {
 						Labels: map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase: pointerutils.ToPtr(phaseFailed),
+						Phase: new(phaseFailed),
 						ProviderStatus: &runtime.RawExtension{
 							Raw: []byte(`{"vmState":"Failed","conditions":[{"message":"some generic infrastructure error"}]}`),
 						},

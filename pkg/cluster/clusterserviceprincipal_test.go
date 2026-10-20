@@ -32,7 +32,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -69,21 +68,21 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 		clusterSPObjectID string
 		roleAssignments   []mgmtauthorization.RoleAssignment
 		mocksDeployment   func(*mock_features.MockDeploymentsClient)
-		mocksAuthz        func(*mock_authorization.MockRoleAssignmentsClient, *mock_authorization.MockRoleDefinitionsClient, interface{})
+		mocksAuthz        func(*mock_authorization.MockRoleAssignmentsClient, *mock_authorization.MockRoleDefinitionsClient, any)
 	}{
 		{
 			name: "noop",
 			roleAssignments: []mgmtauthorization.RoleAssignment{
 				{
-					Name: pointerutils.ToPtr(assignmentName),
+					Name: new(assignmentName),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						RoleDefinitionID: pointerutils.ToPtr(rbac.RoleContributor),
-						Scope:            pointerutils.ToPtr(resourceGroupID),
-						PrincipalID:      pointerutils.ToPtr(fakeClusterSPObjectId),
+						RoleDefinitionID: new(rbac.RoleContributor),
+						Scope:            new(resourceGroupID),
+						PrincipalID:      new(fakeClusterSPObjectId),
 					},
 				},
 			},
-			mocksAuthz: func(roleAssignments *mock_authorization.MockRoleAssignmentsClient, roleDefinitions *mock_authorization.MockRoleDefinitionsClient, result interface{}) {
+			mocksAuthz: func(roleAssignments *mock_authorization.MockRoleAssignmentsClient, roleDefinitions *mock_authorization.MockRoleDefinitionsClient, result any) {
 				roleAssignments.EXPECT().ListForResourceGroup(gomock.Any(), gomock.Any(), gomock.Any()).Return(result, nil)
 				roleDefinitions.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 			},
@@ -91,7 +90,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 		{
 			name: "needs create",
 			mocksDeployment: func(client *mock_features.MockDeploymentsClient) {
-				var parameters map[string]interface{}
+				var parameters map[string]any
 				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRGName, gomock.Any(), mgmtfeatures.Deployment{
 					Properties: &mgmtfeatures.DeploymentProperties{
 						Template: &arm.Template{
@@ -104,7 +103,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 					},
 				}).Return(nil)
 			},
-			mocksAuthz: func(roleAssignments *mock_authorization.MockRoleAssignmentsClient, roleDefinitions *mock_authorization.MockRoleDefinitionsClient, result interface{}) {
+			mocksAuthz: func(roleAssignments *mock_authorization.MockRoleAssignmentsClient, roleDefinitions *mock_authorization.MockRoleDefinitionsClient, result any) {
 				roleAssignments.EXPECT().ListForResourceGroup(gomock.Any(), gomock.Any(), gomock.Any()).Return(result, nil)
 				roleDefinitions.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 			},
@@ -113,16 +112,16 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 			name: "needs delete & create",
 			roleAssignments: []mgmtauthorization.RoleAssignment{
 				{
-					Name: pointerutils.ToPtr(assignmentName),
+					Name: new(assignmentName),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						RoleDefinitionID: pointerutils.ToPtr(rbac.RoleContributor),
-						Scope:            pointerutils.ToPtr(resourceGroupID),
-						PrincipalID:      pointerutils.ToPtr("00000000-0000-0000-0000-000000000001"),
+						RoleDefinitionID: new(rbac.RoleContributor),
+						Scope:            new(resourceGroupID),
+						PrincipalID:      new("00000000-0000-0000-0000-000000000001"),
 					},
 				},
 			},
 			mocksDeployment: func(client *mock_features.MockDeploymentsClient) {
-				var parameters map[string]interface{}
+				var parameters map[string]any
 				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRGName, gomock.Any(), mgmtfeatures.Deployment{
 					Properties: &mgmtfeatures.DeploymentProperties{
 						Template: &arm.Template{
@@ -135,7 +134,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 					},
 				}).Return(nil)
 			},
-			mocksAuthz: func(roleAssignments *mock_authorization.MockRoleAssignmentsClient, roleDefinitions *mock_authorization.MockRoleDefinitionsClient, result interface{}) {
+			mocksAuthz: func(roleAssignments *mock_authorization.MockRoleAssignmentsClient, roleDefinitions *mock_authorization.MockRoleDefinitionsClient, result any) {
 				roleAssignments.EXPECT().ListForResourceGroup(gomock.Any(), gomock.Any(), gomock.Any()).Return(result, nil)
 				roleAssignments.EXPECT().Delete(gomock.Any(), resourceGroupID, assignmentName)
 				roleDefinitions.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
@@ -172,7 +171,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 func getFakeAROSecret(clientID, secret string) corev1.Secret {
 	name := "azure-cloud-provider"
 	namespace := "kube-system"
-	data := map[string]interface{}{
+	data := map[string]any{
 		"aadClientId":     clientID,
 		"aadClientSecret": secret,
 	}
@@ -195,7 +194,7 @@ func TestCloudConfigSecretFromChanges(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
 		secretIn   func() *corev1.Secret
-		cf         map[string]interface{}
+		cf         map[string]any
 		wantSecret func() *corev1.Secret
 		wantErrMsg string
 	}{
@@ -205,7 +204,7 @@ func TestCloudConfigSecretFromChanges(t *testing.T) {
 				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
 				return &secret
 			},
-			cf: map[string]interface{}{
+			cf: map[string]any{
 				"aadClientId":     "aadClientIdNew",
 				"aadClientSecret": "aadClientSecretNew",
 			},
@@ -220,7 +219,7 @@ func TestCloudConfigSecretFromChanges(t *testing.T) {
 				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
 				return &secret
 			},
-			cf: map[string]interface{}{
+			cf: map[string]any{
 				"aadClientId":     "aadClientId",
 				"aadClientSecret": "aadClientSecretNew",
 			},
@@ -235,7 +234,7 @@ func TestCloudConfigSecretFromChanges(t *testing.T) {
 				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
 				return &secret
 			},
-			cf: map[string]interface{}{
+			cf: map[string]any{
 				"aadClientId":     "aadClientId",
 				"aadClientSecret": "aadClientSecret",
 			},

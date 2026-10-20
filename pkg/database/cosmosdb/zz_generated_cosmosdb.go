@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"mime"
 	"net/http"
 	"net/textproto"
@@ -58,7 +59,7 @@ var ErrNotImplemented = fmt.Errorf("not implemented")
 // RetryOnPreconditionFailed retries a function if it fails due to
 // PreconditionFailed
 func RetryOnPreconditionFailed(f func() error) (err error) {
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		err = f()
 		if !IsErrorStatusCode(err, http.StatusPreconditionFailed) {
 			return
@@ -68,7 +69,7 @@ func RetryOnPreconditionFailed(f func() error) (err error) {
 	return
 }
 
-func (c *databaseClient) do(ctx context.Context, method, path, resourceType, resourceLink string, expectedStatusCode int, in, out interface{}, headers http.Header) error {
+func (c *databaseClient) do(ctx context.Context, method, path, resourceType, resourceLink string, expectedStatusCode int, in, out any, headers http.Header) error {
 	var resp *http.Response
 	var err error
 
@@ -92,15 +93,13 @@ func (c *databaseClient) do(ctx context.Context, method, path, resourceType, res
 		for k := range headers {
 			delete(headers, k)
 		}
-		for k, v := range resp.Header {
-			headers[k] = v
-		}
+		maps.Copy(headers, resp.Header)
 	}
 
 	return err
 }
 
-func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, resourceLink string, expectedStatusCode int, in, out interface{}, headers http.Header) (*http.Response, error) {
+func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, resourceLink string, expectedStatusCode int, in, out any, headers http.Header) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, "https://"+c.databaseHostname+"/"+path, nil)
 	if err != nil {
 		return nil, err

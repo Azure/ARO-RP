@@ -11,7 +11,7 @@ import (
 
 var h = &codec.JsonHandle{}
 
-func deepCopy(i interface{}) (interface{}, error) {
+func deepCopy(i any) (any, error) {
 	var b []byte
 	err := codec.NewEncoderBytes(&b, h).Encode(i)
 	if err != nil {

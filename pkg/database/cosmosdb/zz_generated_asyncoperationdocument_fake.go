@@ -332,7 +332,7 @@ type fakeAsyncOperationDocumentIterator struct {
 	done                    bool
 }
 
-func (i *fakeAsyncOperationDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakeAsyncOperationDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out any) error {
 	return ErrNotImplemented
 }
 
@@ -347,10 +347,7 @@ func (i *fakeAsyncOperationDocumentIterator) Next(ctx context.Context, maxItemCo
 		i.continuation = len(i.asyncOperationDocuments)
 		i.done = true
 	} else {
-		max := i.continuation + maxItemCount
-		if max > len(i.asyncOperationDocuments) {
-			max = len(i.asyncOperationDocuments)
-		}
+		max := min(i.continuation+maxItemCount, len(i.asyncOperationDocuments))
 		asyncOperationDocuments = i.asyncOperationDocuments[i.continuation:max]
 		i.continuation = max
 		i.done = i.Continuation() == ""
@@ -383,7 +380,7 @@ func (i *fakeAsyncOperationDocumentErroringRawIterator) Next(ctx context.Context
 	return nil, i.err
 }
 
-func (i *fakeAsyncOperationDocumentErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+func (i *fakeAsyncOperationDocumentErroringRawIterator) NextRaw(context.Context, int, any) error {
 	return i.err
 }
 

@@ -38,7 +38,6 @@ import (
 
 	localarmcompute "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func main() {
@@ -96,8 +95,8 @@ func run(log *logrus.Entry) error {
 		pagerClient := factory.NewResourceSKUsClient()
 		seq = func(yield func(armcompute.ResourceSKU, error) bool) {
 			pager := pagerClient.NewListPager(&armcompute.ResourceSKUsClientListOptions{
-				Filter:                   pointerutils.ToPtr(filter),
-				IncludeExtendedLocations: pointerutils.ToPtr("false"),
+				Filter:                   new(filter),
+				IncludeExtendedLocations: new("false"),
 			})
 			for pager.More() {
 				page, err := pager.NextPage(ctx)

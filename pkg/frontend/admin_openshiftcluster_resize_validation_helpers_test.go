@@ -21,7 +21,6 @@ import (
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -790,8 +789,8 @@ func TestGetAzureVMs(t *testing.T) {
 				},
 				InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 					Statuses: &[]mgmtcompute.InstanceViewStatus{
-						{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-						{Code: pointerutils.ToPtr("PowerState/running")},
+						{Code: new("ProvisioningState/succeeded")},
+						{Code: new("PowerState/running")},
 					},
 				},
 			},
@@ -822,8 +821,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},
@@ -839,8 +838,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},
@@ -856,8 +855,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},
@@ -925,8 +924,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},
@@ -942,8 +941,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},
@@ -959,8 +958,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},
@@ -999,8 +998,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},
@@ -1016,8 +1015,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},
@@ -1058,8 +1057,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},
@@ -1075,8 +1074,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},
@@ -1101,8 +1100,8 @@ func TestGetAzureVMs(t *testing.T) {
 							HardwareProfile: nil, // nil HardwareProfile
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},
@@ -1118,8 +1117,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},
@@ -1135,8 +1134,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
+									{Code: new("ProvisioningState/succeeded")},
+									{Code: new("PowerState/running")},
 								},
 							},
 						},

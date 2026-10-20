@@ -20,7 +20,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilssh "github.com/Azure/ARO-RP/pkg/util/ssh"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -33,27 +32,27 @@ const (
 )
 
 var bootstrapNodeSSHProbeProperties = &armnetwork.ProbePropertiesFormat{
-	Protocol:          pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
-	Port:              pointerutils.ToPtr(int32(sshPort)),
-	IntervalInSeconds: pointerutils.ToPtr(int32(5)),
-	NumberOfProbes:    pointerutils.ToPtr(int32(2)),
+	Protocol:          new(armnetwork.ProbeProtocolTCP),
+	Port:              new(int32(sshPort)),
+	IntervalInSeconds: new(int32(5)),
+	NumberOfProbes:    new(int32(2)),
 }
 
 // LogBootstrapNode reconfigures the ILB, establishes an SSH connection to the
 // bootstrap node, and runs the embedded diagnostic script.
-func (m *manager) LogBootstrapNode(ctx context.Context) (interface{}, error) {
+func (m *manager) LogBootstrapNode(ctx context.Context) (any, error) {
 	if m.armInterfaces == nil || m.loadBalancers == nil {
-		return []interface{}{"lb or interface client missing"}, nil
+		return []any{"lb or interface client missing"}, nil
 	}
 	client, err := m.setupBootstrapNodeSSH(ctx)
 	if err != nil {
-		return []interface{}{fmt.Sprintf("bootstrap node SSH error: %v", err)}, nil
+		return []any{fmt.Sprintf("bootstrap node SSH error: %v", err)}, nil
 	}
 	defer client.Close()
 	if err := m.runDiagCommands(client, bootstrapNodeDiagCommands); err != nil {
 		m.log.WithError(err).Error("running bootstrap node diagnostic commands")
 	}
-	return []interface{}{}, nil
+	return []any{}, nil
 }
 
 // setupBootstrapNodeSSH reconfigures the internal load balancer to expose the
@@ -254,12 +253,12 @@ func (m *manager) runSSHCommand(client *cryptossh.Client, cmd string) error {
 	if timedOut.Load() {
 		logEntry.Warn("command timed out")
 	}
-	for _, line := range strings.Split(strings.TrimRight(stdout.String(), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimRight(stdout.String(), "\n"), "\n") {
 		if line != "" {
 			logEntry.WithField("stream", "stdout").Info(line)
 		}
 	}
-	for _, line := range strings.Split(strings.TrimRight(stderr.String(), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimRight(stderr.String(), "\n"), "\n") {
 		if line != "" {
 			logEntry.WithField("stream", "stderr").Info(line)
 		}
@@ -337,7 +336,7 @@ func (m *manager) ensureBootstrapNodeLBConfig(lb *armnetwork.LoadBalancer) (chan
 		return p.Name != nil && strings.EqualFold(*p.Name, bootstrapNodeSSHProbeName)
 	}) {
 		lb.Properties.Probes = append(lb.Properties.Probes, &armnetwork.Probe{
-			Name:       pointerutils.ToPtr(bootstrapNodeSSHProbeName),
+			Name:       new(bootstrapNodeSSHProbeName),
 			Properties: bootstrapNodeSSHProbeProperties,
 		})
 		changed = true
@@ -347,7 +346,7 @@ func (m *manager) ensureBootstrapNodeLBConfig(lb *armnetwork.LoadBalancer) (chan
 		return p.Name != nil && strings.EqualFold(*p.Name, bootstrapNodeBackendPool)
 	}) {
 		lb.Properties.BackendAddressPools = append(lb.Properties.BackendAddressPools, &armnetwork.BackendAddressPool{
-			Name: pointerutils.ToPtr(bootstrapNodeBackendPool),
+			Name: new(bootstrapNodeBackendPool),
 		})
 		changed = true
 	}
@@ -359,23 +358,23 @@ func (m *manager) ensureBootstrapNodeLBConfig(lb *armnetwork.LoadBalancer) (chan
 			return changed, fmt.Errorf("ILB missing ID or frontend IP configuration")
 		}
 		lb.Properties.LoadBalancingRules = append(lb.Properties.LoadBalancingRules, &armnetwork.LoadBalancingRule{
-			Name: pointerutils.ToPtr(bootstrapNodeBackendPool),
+			Name: new(bootstrapNodeBackendPool),
 			Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
 				FrontendIPConfiguration: &armnetwork.SubResource{
 					ID: lb.Properties.FrontendIPConfigurations[0].ID,
 				},
 				BackendAddressPool: &armnetwork.SubResource{
-					ID: pointerutils.ToPtr(fmt.Sprintf("%s/backendAddressPools/%s", *lb.ID, bootstrapNodeBackendPool)),
+					ID: new(fmt.Sprintf("%s/backendAddressPools/%s", *lb.ID, bootstrapNodeBackendPool)),
 				},
 				Probe: &armnetwork.SubResource{
-					ID: pointerutils.ToPtr(fmt.Sprintf("%s/probes/%s", *lb.ID, bootstrapNodeSSHProbeName)),
+					ID: new(fmt.Sprintf("%s/probes/%s", *lb.ID, bootstrapNodeSSHProbeName)),
 				},
-				Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-				LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-				FrontendPort:         pointerutils.ToPtr(int32(bootstrapNodeLBSSHPort)),
-				BackendPort:          pointerutils.ToPtr(int32(sshPort)),
-				IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
-				DisableOutboundSnat:  pointerutils.ToPtr(true),
+				Protocol:             new(armnetwork.TransportProtocolTCP),
+				LoadDistribution:     new(armnetwork.LoadDistributionDefault),
+				FrontendPort:         new(int32(bootstrapNodeLBSSHPort)),
+				BackendPort:          new(int32(sshPort)),
+				IdleTimeoutInMinutes: new(int32(30)),
+				DisableOutboundSnat:  new(true),
 			},
 		})
 		changed = true
@@ -399,7 +398,7 @@ func ensureNICInBootstrapNodePool(nic *armnetwork.Interface, bootstrapPoolID str
 		}) {
 			ipc.Properties.LoadBalancerBackendAddressPools = append(
 				ipc.Properties.LoadBalancerBackendAddressPools,
-				&armnetwork.BackendAddressPool{ID: pointerutils.ToPtr(bootstrapPoolID)},
+				&armnetwork.BackendAddressPool{ID: new(bootstrapPoolID)},
 			)
 			changed = true
 		}

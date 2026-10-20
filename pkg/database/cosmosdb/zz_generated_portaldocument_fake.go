@@ -332,7 +332,7 @@ type fakePortalDocumentIterator struct {
 	done            bool
 }
 
-func (i *fakePortalDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakePortalDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out any) error {
 	return ErrNotImplemented
 }
 
@@ -347,10 +347,7 @@ func (i *fakePortalDocumentIterator) Next(ctx context.Context, maxItemCount int)
 		i.continuation = len(i.portalDocuments)
 		i.done = true
 	} else {
-		max := i.continuation + maxItemCount
-		if max > len(i.portalDocuments) {
-			max = len(i.portalDocuments)
-		}
+		max := min(i.continuation+maxItemCount, len(i.portalDocuments))
 		portalDocuments = i.portalDocuments[i.continuation:max]
 		i.continuation = max
 		i.done = i.Continuation() == ""
@@ -383,7 +380,7 @@ func (i *fakePortalDocumentErroringRawIterator) Next(ctx context.Context, maxIte
 	return nil, i.err
 }
 
-func (i *fakePortalDocumentErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+func (i *fakePortalDocumentErroringRawIterator) NextRaw(context.Context, int, any) error {
 	return i.err
 }
 

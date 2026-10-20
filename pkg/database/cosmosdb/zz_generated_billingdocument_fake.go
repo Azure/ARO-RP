@@ -332,7 +332,7 @@ type fakeBillingDocumentIterator struct {
 	done             bool
 }
 
-func (i *fakeBillingDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakeBillingDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out any) error {
 	return ErrNotImplemented
 }
 
@@ -347,10 +347,7 @@ func (i *fakeBillingDocumentIterator) Next(ctx context.Context, maxItemCount int
 		i.continuation = len(i.billingDocuments)
 		i.done = true
 	} else {
-		max := i.continuation + maxItemCount
-		if max > len(i.billingDocuments) {
-			max = len(i.billingDocuments)
-		}
+		max := min(i.continuation+maxItemCount, len(i.billingDocuments))
 		billingDocuments = i.billingDocuments[i.continuation:max]
 		i.continuation = max
 		i.done = i.Continuation() == ""
@@ -383,7 +380,7 @@ func (i *fakeBillingDocumentErroringRawIterator) Next(ctx context.Context, maxIt
 	return nil, i.err
 }
 
-func (i *fakeBillingDocumentErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+func (i *fakeBillingDocumentErroringRawIterator) NextRaw(context.Context, int, any) error {
 	return i.err
 }
 

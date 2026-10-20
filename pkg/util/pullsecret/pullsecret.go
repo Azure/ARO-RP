@@ -15,7 +15,7 @@ import (
 )
 
 type pullSecret struct {
-	Auths map[string]map[string]interface{} `json:"auths,omitempty"`
+	Auths map[string]map[string]any `json:"auths,omitempty"`
 }
 
 // Unmarshal pull-secret data which is stored in corev1.Secret.Data
@@ -61,13 +61,13 @@ func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, bool,
 	}
 
 	if ps.Auths == nil {
-		ps.Auths = map[string]map[string]interface{}{}
+		ps.Auths = map[string]map[string]any{}
 	}
 
 	var changed bool
 
 	for _, rp := range rps {
-		v := map[string]interface{}{
+		v := map[string]any{
 			"auth": base64.StdEncoding.EncodeToString([]byte(rp.Username + ":" + string(rp.Password))),
 		}
 
@@ -108,7 +108,7 @@ func Merge(_base, _ps string) (string, bool, error) {
 
 	for k, v := range ps.Auths {
 		if base.Auths == nil {
-			base.Auths = map[string]map[string]interface{}{}
+			base.Auths = map[string]map[string]any{}
 		}
 
 		if !reflect.DeepEqual(base.Auths[k], v) {

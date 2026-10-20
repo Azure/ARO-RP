@@ -9,7 +9,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -42,8 +41,8 @@ func (f *FakeACRToken) generateTokenPassword(registryProfile *api.RegistryProfil
 	newTestPassword := uuid.DefaultGenerator.Generate()
 	f.generatedPasswords = append(f.generatedPasswords, newTestPassword)
 	registryProfile.Password = api.SecureString(newTestPassword)
-	registryProfile.IssueDate = pointerutils.ToPtr(f.now().UTC())
-	return newTestPassword, pointerutils.ToPtr(f.now().UTC()), nil
+	registryProfile.IssueDate = new(f.now().UTC())
+	return newTestPassword, new(f.now().UTC()), nil
 }
 
 // EnsureTokenAndPassword implements [acrtoken.Manager].

@@ -21,7 +21,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
@@ -136,7 +135,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Namespace: "openshift-machine-api",
 				},
 				Spec: machinev1beta1.MachineHealthCheckSpec{
-					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(1)),
+					MaxUnhealthy: new(intstr.FromInt32(1)),
 				},
 			},
 			wantConditions: defaultConditions,
@@ -255,7 +254,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Namespace: "openshift-machine-api",
 				},
 				Spec: machinev1beta1.MachineHealthCheckSpec{
-					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(2)),
+					MaxUnhealthy: new(intstr.FromInt32(2)),
 				},
 			},
 			wantConditions: defaultConditions,
@@ -293,7 +292,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Namespace: "openshift-machine-api",
 				},
 				Spec: machinev1beta1.MachineHealthCheckSpec{
-					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(0)),
+					MaxUnhealthy: new(intstr.FromInt32(0)),
 				},
 			},
 			wantConditions: defaultConditions,
@@ -331,7 +330,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Namespace: "openshift-machine-api",
 				},
 				Spec: machinev1beta1.MachineHealthCheckSpec{
-					MaxUnhealthy: pointerutils.ToPtr(intstr.FromString("0")),
+					MaxUnhealthy: new(intstr.FromString("0")),
 				},
 			},
 			wantConditions: defaultConditions,
@@ -369,7 +368,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Namespace: "openshift-machine-api",
 				},
 				Spec: machinev1beta1.MachineHealthCheckSpec{
-					MaxUnhealthy: pointerutils.ToPtr(intstr.FromString("100%")),
+					MaxUnhealthy: new(intstr.FromString("100%")),
 				},
 			},
 			wantConditions: defaultConditions,
@@ -407,7 +406,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Namespace: "openshift-machine-api",
 				},
 				Spec: machinev1beta1.MachineHealthCheckSpec{
-					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(1)),
+					MaxUnhealthy: new(intstr.FromInt32(1)),
 					Selector:     metav1.LabelSelector{},
 				},
 			},
@@ -443,7 +442,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Namespace: "openshift-machine-api",
 				},
 				Spec: machinev1beta1.MachineHealthCheckSpec{
-					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(1)),
+					MaxUnhealthy: new(intstr.FromInt32(1)),
 					Selector: metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{
 							{
@@ -496,7 +495,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Namespace: "openshift-machine-api",
 				},
 				Spec: machinev1beta1.MachineHealthCheckSpec{
-					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(1)),
+					MaxUnhealthy: new(intstr.FromInt32(1)),
 					Selector: metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{
 							{
@@ -556,7 +555,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					},
 				},
 				Spec: machinev1beta1.MachineHealthCheckSpec{
-					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(1)),
+					MaxUnhealthy: new(intstr.FromInt32(1)),
 				},
 			},
 			wantConditions: defaultConditions,
@@ -592,7 +591,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Namespace: "openshift-machine-api",
 				},
 				Spec: machinev1beta1.MachineHealthCheckSpec{
-					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(1)),
+					MaxUnhealthy: new(intstr.FromInt32(1)),
 				},
 			},
 			wantErr: "",

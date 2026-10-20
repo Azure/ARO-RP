@@ -31,7 +31,7 @@ type dirtyfragworkaround struct {
 	log *logrus.Entry
 	ch  clienthelper.Interface
 
-	marshal func(v interface{}) ([]byte, error)
+	marshal func(v any) ([]byte, error)
 }
 
 var _ Workaround = &dirtyfragworkaround{}
@@ -113,7 +113,7 @@ func (a *dirtyfragworkaround) Remove(ctx context.Context) error {
 	)
 }
 
-func makeDirtyfragMachineConfig(marshal func(interface{}) ([]byte, error), role string) (*mcv1.MachineConfig, error) {
+func makeDirtyfragMachineConfig(marshal func(any) ([]byte, error), role string) (*mcv1.MachineConfig, error) {
 	// File content to write
 	content := `install esp4 /bin/false
 install esp6 /bin/false
@@ -124,17 +124,17 @@ install rxrpc /bin/false
 	encodedContent := base64.StdEncoding.EncodeToString([]byte(content))
 
 	// Create Ignition config
-	ignitionConfig := map[string]interface{}{
-		"ignition": map[string]interface{}{
+	ignitionConfig := map[string]any{
+		"ignition": map[string]any{
 			"version": "3.2.0",
 		},
-		"storage": map[string]interface{}{
-			"files": []map[string]interface{}{
+		"storage": map[string]any{
+			"files": []map[string]any{
 				{
 					"path":      "/etc/modprobe.d/aro-dirtyfrag-mitigation-controlplane.conf",
 					"mode":      420, // 0644 in octal
 					"overwrite": true,
-					"contents": map[string]interface{}{
+					"contents": map[string]any{
 						"source": "data:text/plain;charset=utf-8;base64," + encodedContent,
 					},
 				},

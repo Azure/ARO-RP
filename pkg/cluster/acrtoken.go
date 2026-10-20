@@ -30,7 +30,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
@@ -99,7 +98,7 @@ func ensureACRToken(ctx context.Context, env env.Interface, doc *api.OpenShiftCl
 			return nil, err
 		}
 		rp.Password = api.SecureString(password)
-		rp.IssueDate = pointerutils.ToPtr(issueDate.UTC())
+		rp.IssueDate = new(issueDate.UTC())
 	}
 
 	return rp, nil
@@ -167,7 +166,7 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 		},
 	)
 	err = retryApply(func() error {
-		return ch.Apply(ctx, applyConfiguration, &client.ApplyOptions{FieldManager: "aro-rp", Force: pointerutils.ToPtr(true)})
+		return ch.Apply(ctx, applyConfiguration, &client.ApplyOptions{FieldManager: "aro-rp", Force: new(true)})
 	})
 	if err != nil {
 		return doc, fmt.Errorf("when applying pullsecret: %w", err)
@@ -228,7 +227,7 @@ func rotateOpenShiftConfigSecret(ctx context.Context, log *logrus.Entry, ch clie
 		}
 	}
 	err = retryApply(func() error {
-		return ch.Apply(ctx, applyConfiguration, &client.ApplyOptions{FieldManager: "aro-rp", Force: pointerutils.ToPtr(true)})
+		return ch.Apply(ctx, applyConfiguration, &client.ApplyOptions{FieldManager: "aro-rp", Force: new(true)})
 	})
 	if err != nil {
 		return fmt.Errorf("error applying secret %s: %w", pullSecretName, err)

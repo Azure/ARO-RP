@@ -23,7 +23,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const registryResourceID = "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arointsvc"
@@ -53,13 +52,13 @@ func TestAzureInitRPTenant(t *testing.T) {
 							// Put the params in for some dirty testing :)
 							Passwords: []*armcontainerregistry.TokenPassword{
 								{
-									Value: pointerutils.ToPtr(resourceGroupName),
+									Value: new(resourceGroupName),
 								},
 								{
-									Value: pointerutils.ToPtr(registryName),
+									Value: new(registryName),
 								},
 								{
-									Value: pointerutils.ToPtr(tokenName),
+									Value: new(tokenName),
 								},
 							},
 						},
@@ -103,13 +102,13 @@ func TestAzureInitRPTenant(t *testing.T) {
 	require.NoError(err)
 	require.Equal([]*armcontainerregistry.TokenPassword{
 		{
-			Value: pointerutils.ToPtr("a"),
+			Value: new("a"),
 		},
 		{
-			Value: pointerutils.ToPtr("b"),
+			Value: new("b"),
 		},
 		{
-			Value: pointerutils.ToPtr("c"),
+			Value: new("c"),
 		},
 	}, p.Credentials.Passwords)
 
@@ -146,8 +145,8 @@ func TestAzureInitClusterTenant(t *testing.T) {
 		Get: func(ctx context.Context, resourceGroupName, loadBalancerName string, options *armnetwork.LoadBalancersClientGetOptions) (resp azcorefake.Responder[armnetwork.LoadBalancersClientGetResponse], errResp azcorefake.ErrorResponder) {
 			body := armnetwork.LoadBalancersClientGetResponse{
 				LoadBalancer: armnetwork.LoadBalancer{
-					Name: pointerutils.ToPtr(loadBalancerName),
-					ID: pointerutils.ToPtr(azure.Resource{
+					Name: new(loadBalancerName),
+					ID: new(azure.Resource{
 						SubscriptionID: "456",
 						ResourceGroup:  resourceGroupName,
 						Provider:       "Microsoft.Network",
@@ -184,8 +183,8 @@ func TestAzureInitClusterTenant(t *testing.T) {
 	require.NoError(err)
 	require.Equal(
 		armnetwork.LoadBalancer{
-			Name: pointerutils.ToPtr("b"),
-			ID:   pointerutils.ToPtr("/subscriptions/456/resourceGroups/a/providers/Microsoft.Network/loadBalancers/b"),
+			Name: new("b"),
+			ID:   new("/subscriptions/456/resourceGroups/a/providers/Microsoft.Network/loadBalancers/b"),
 		},
 		p.LoadBalancer)
 

@@ -27,11 +27,11 @@ type Client struct {
 }
 
 type ResponseMessageEnvelope struct {
-	Id         string      `json:"id,omitempty"`
-	Name       string      `json:"name,omitempty"`
-	Type       string      `json:"type,omitempty"`
-	Location   string      `json:"location,omitempty"`
-	Properties interface{} `json:"properties,omitempty"`
+	Id         string `json:"id,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Type       string `json:"type,omitempty"`
+	Location   string `json:"location,omitempty"`
+	Properties any    `json:"properties,omitempty"`
 }
 
 type ResponseMessageCollectionEnvelope struct {
@@ -211,7 +211,7 @@ func (c *Client) executeAndEnsureSuccessResponse(request *policy.Request) (*http
 }
 
 func newResponseMessageCollectionEnvelope(valueJson []byte, resourceID, location string) (*ResponseMessageCollectionEnvelope, error) {
-	var results []interface{}
+	var results []any
 	err := json.Unmarshal(valueJson, &results)
 	if err != nil {
 		return nil, err
@@ -234,9 +234,9 @@ func newResponseMessageCollectionEnvelope(valueJson []byte, resourceID, location
 	return &listResult, nil
 }
 
-func getDetectorID(detector interface{}) string {
-	if propertyMap, ok := detector.(map[string]interface{}); ok {
-		if metadataMap, ok := propertyMap["metadata"].(map[string]interface{}); ok {
+func getDetectorID(detector any) string {
+	if propertyMap, ok := detector.(map[string]any); ok {
+		if metadataMap, ok := propertyMap["metadata"].(map[string]any); ok {
 			if idObj, ok := metadataMap["id"]; ok {
 				if id, ok := idObj.(string); ok {
 					return id
@@ -248,7 +248,7 @@ func getDetectorID(detector interface{}) string {
 }
 
 func newResponseMessageEnvelope(resourceID, name, location string, propertiesJson []byte) (*ResponseMessageEnvelope, error) {
-	var converted interface{}
+	var converted any
 	err := json.Unmarshal(propertiesJson, &converted)
 	if err != nil {
 		return nil, err

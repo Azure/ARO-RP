@@ -34,7 +34,6 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -93,7 +92,7 @@ func defaultMachineHealthCheck() *machinev1beta1.MachineHealthCheck {
 					Timeout: metav1.Duration{Duration: 15 * time.Minute},
 				},
 			},
-			MaxUnhealthy:       pointerutils.ToPtr(intstr.FromInt32(1)),
+			MaxUnhealthy:       new(intstr.FromInt32(1)),
 			NodeStartupTimeout: &metav1.Duration{Duration: 25 * time.Minute},
 		},
 	}
@@ -200,7 +199,7 @@ func (r *Reconciler) ensureMachineHealthCheck(ctx context.Context, desired *mach
 		if patch.Spec.MaxUnhealthy != nil &&
 			((patch.Spec.MaxUnhealthy.Type == intstr.Int && patch.Spec.MaxUnhealthy.IntVal == 0) ||
 				(patch.Spec.MaxUnhealthy.Type == intstr.String && patch.Spec.MaxUnhealthy.StrVal == "0")) {
-			patch.Spec.MaxUnhealthy = pointerutils.ToPtr(intstr.FromInt32(1))
+			patch.Spec.MaxUnhealthy = new(intstr.FromInt32(1))
 			changed = true
 		}
 

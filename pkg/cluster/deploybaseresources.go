@@ -31,7 +31,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -76,8 +75,8 @@ func (m *manager) createOIDC(ctx context.Context) error {
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = pointerutils.ToPtr(api.OIDCIssuer(oidcBuilder.GetEndpointUrl()))
-		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = pointerutils.ToPtr(api.SecureString(oidcBuilder.GetPrivateKey()))
+		doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = new(api.OIDCIssuer(oidcBuilder.GetEndpointUrl()))
+		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = new(api.SecureString(oidcBuilder.GetPrivateKey()))
 		return nil
 	})
 
@@ -136,7 +135,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		if group.Tags == nil {
 			group.Tags = map[string]*string{}
 		}
-		group.Tags["purge"] = pointerutils.ToPtr("true")
+		group.Tags["purge"] = new("true")
 	}
 
 	// According to https://stackoverflow.microsoft.com/a/245391/62320,
@@ -433,7 +432,7 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 				}
 
 				s.Properties.NetworkSecurityGroup = &armnetwork.SecurityGroup{
-					ID: pointerutils.ToPtr(nsgID),
+					ID: new(nsgID),
 				}
 
 				// NSG may not be ready immediately after deployment; nsgNotReadyErrorRegex and IsRetryableError both continue the poll.
@@ -483,12 +482,12 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 
 	if s.Properties.PrivateEndpointNetworkPolicies == nil || *s.Properties.PrivateEndpointNetworkPolicies != armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled {
 		needsUpdate = true
-		s.Properties.PrivateEndpointNetworkPolicies = pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled)
+		s.Properties.PrivateEndpointNetworkPolicies = new(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled)
 	}
 
 	if s.Properties.PrivateLinkServiceNetworkPolicies == nil || *s.Properties.PrivateLinkServiceNetworkPolicies != armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled {
 		needsUpdate = true
-		s.Properties.PrivateLinkServiceNetworkPolicies = pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled)
+		s.Properties.PrivateLinkServiceNetworkPolicies = new(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled)
 	}
 
 	// return if we do not need to update the subnet
@@ -534,7 +533,7 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 		return errors.New("OIDCIssuer is nil")
 	}
 
-	issuer := pointerutils.ToPtr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
+	issuer := new((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
 
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
@@ -564,9 +563,9 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 					federatedIdentityCredentialResourceName,
 					armmsi.FederatedIdentityCredential{
 						Properties: &armmsi.FederatedIdentityCredentialProperties{
-							Audiences: []*string{pointerutils.ToPtr("openshift")},
+							Audiences: []*string{new("openshift")},
 							Issuer:    issuer,
-							Subject:   pointerutils.ToPtr(sa),
+							Subject:   new(sa),
 						},
 					},
 					&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},
