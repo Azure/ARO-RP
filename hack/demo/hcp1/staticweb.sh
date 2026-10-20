@@ -178,7 +178,7 @@ pod=$(oc get pod -l app=nginx -o jsonpath='{range .items[*]}{.metadata.name}{"\n
 oc wait --for=condition=Ready pod/$pod
 
 # create a volume to hold a basic index.html
-oc set volume deploy/nginx --add --name=staticweb --type=pvc --claim-size=1M --claim-class=azurefile-csi --claim-mode=ReadOnlyMany --mount-path=/usr/share/nginx/html/
+oc set volume deploy/nginx --add --name=staticweb --type=pvc --claim-size=1M --claim-class=azurefile-csi --claim-mode=ReadWriteMany --mount-path=/usr/share/nginx/html/
 pod=$(oc get pod --sort-by .metadata.creationTimestamp -l app=nginx -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | tail -1)
 oc wait --for=condition=Ready pod/$pod
 echo "welcome to cluster1" > index.html
