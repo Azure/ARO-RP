@@ -1,0 +1,54 @@
+# Synthetic ACI collector for OTEL e2e (Tier A). Product image has no filter
+# processor — routing keeps only e2e-marker records; rest goes to /dev/null.
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+connectors:
+  routing:
+    default_pipelines: [logs/drop]
+    table:
+      - context: log
+        # containers/journald: body|body.message; audit: objectRef name
+        condition: >
+          (IsString(log.body) and IsMatch(log.body, "(?i)aro-e2e-otel-marker"))
+          or (IsMap(log.body) and IsString(log.body["message"]) and IsMatch(log.body["message"], "(?i)aro-e2e-otel-marker"))
+          or (IsMap(log.body) and IsString(log.body["objectRef_name"]) and IsMatch(log.body["objectRef_name"], "(?i)aro-e2e-otel-marker"))
+          or (IsMap(log.body) and IsMap(log.body["objectRef"]) and IsString(log.body["objectRef"]["name"]) and IsMatch(log.body["objectRef"]["name"], "(?i)aro-e2e-otel-marker"))
+        pipelines: [logs/keep]
+
+processors:
+  attributes/e2e-sink:
+    actions:
+      - key: aro.e2e.otel
+        value: "[ARO-E2E-OTEL]"
+        action: insert
+
+exporters:
+  debug:
+    verbosity: detailed
+  file/drop:
+    path: /dev/null
+
+service:
+  telemetry:
+    metrics:
+      level: none
+  extensions: [health_check]
+  pipelines:
+    logs:
+      receivers: [otlp]
+      exporters: [routing]
+    logs/keep:
+      receivers: [routing]
+      processors: [attributes/e2e-sink]
+      exporters: [debug]
+    logs/drop:
+      receivers: [routing]
+      exporters: [file/drop]
