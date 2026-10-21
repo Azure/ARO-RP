@@ -63,7 +63,7 @@ type AsyncOperationDocumentIterator interface {
 // AsyncOperationDocumentRawIterator is a asyncOperationDocument raw iterator
 type AsyncOperationDocumentRawIterator interface {
 	AsyncOperationDocumentIterator
-	NextRaw(context.Context, int, interface{}) error
+	NextRaw(context.Context, int, any) error
 }
 
 // NewAsyncOperationDocumentClient returns a new asyncOperationDocument client
@@ -277,7 +277,7 @@ func (i *asyncOperationDocumentQueryIterator) Next(ctx context.Context, maxItemC
 	return
 }
 
-func (i *asyncOperationDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
+func (i *asyncOperationDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw any) (err error) {
 	if i.done {
 		return
 	}

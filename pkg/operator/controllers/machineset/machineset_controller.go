@@ -22,7 +22,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -96,7 +95,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if replicaCount < minSupportedReplicas {
 		r.Log.Infof("Found less than %v worker replicas. The MachineSet controller will attempt scaling.", minSupportedReplicas)
 		// Add replicas to the object, and call Update
-		modifiedMachineset.Spec.Replicas = pointerutils.ToPtr(int32(minSupportedReplicas-replicaCount) + *modifiedMachineset.Spec.Replicas)
+		modifiedMachineset.Spec.Replicas = new(int32(minSupportedReplicas-replicaCount) + *modifiedMachineset.Spec.Replicas)
 		err := r.Client.Update(ctx, modifiedMachineset)
 		if err != nil {
 			r.Log.Error(err)

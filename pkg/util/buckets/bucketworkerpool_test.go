@@ -273,7 +273,7 @@ func TestConcurrentDeleteChannelCloseSafety(t *testing.T) {
 	// Now have multiple goroutines try to delete the same document concurrently
 	numGoroutines := 10
 	wg := sync.WaitGroup{}
-	panicChan := make(chan interface{}, numGoroutines)
+	panicChan := make(chan any, numGoroutines)
 
 	for range numGoroutines {
 		wg.Go(func() {
@@ -292,7 +292,7 @@ func TestConcurrentDeleteChannelCloseSafety(t *testing.T) {
 	close(panicChan)
 
 	// Check if any goroutine panicked
-	var panics []interface{}
+	var panics []any
 	for p := range panicChan {
 		panics = append(panics, p)
 	}
@@ -318,7 +318,7 @@ func createMockClusterDoc(clusterID string, bucket int, provisioningState api.Pr
 		MissingFields: api.MissingFields{},
 		ID:            clusterID,
 		ResourceID:    resourceID,
-		Metadata:      map[string]interface{}{},
+		Metadata:      map[string]any{},
 		Key:           strings.ToLower(resourceID),
 		Bucket:        bucket,
 		OpenShiftCluster: &api.OpenShiftCluster{

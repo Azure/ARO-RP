@@ -51,7 +51,7 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 				},
 			},
 			mocks: func(client *mock_features.MockDeploymentsClient) {
-				var parameters map[string]interface{}
+				var parameters map[string]any
 				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRGName, gomock.Any(), mgmtfeatures.Deployment{
 					Properties: &mgmtfeatures.DeploymentProperties{
 						Template: &arm.Template{
@@ -117,7 +117,7 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 				},
 			},
 			mocks: func(client *mock_features.MockDeploymentsClient) {
-				var parameters map[string]interface{}
+				var parameters map[string]any
 				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRGName, gomock.Any(), mgmtfeatures.Deployment{
 					Properties: &mgmtfeatures.DeploymentProperties{
 						Template: &arm.Template{

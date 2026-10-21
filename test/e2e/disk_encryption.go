@@ -121,7 +121,7 @@ var _ = Describe("Disk encryption at rest", Label(install), func() {
 		Expect(sc.Annotations["storageclass.kubernetes.io/is-default-class"]).To(Equal("true"))
 
 		By("making sure the encrypted storage class uses worker disk encryption set")
-		expectedDiskEncryptionSetID := *((oc.Properties.WorkerProfiles)[0].DiskEncryptionSetID)
+		expectedDiskEncryptionSetID := *oc.Properties.WorkerProfiles[0].DiskEncryptionSetID
 		Expect(sc.Parameters).NotTo(BeNil())
 		Expect(sc.Parameters["diskEncryptionSetID"]).To(Equal(expectedDiskEncryptionSetID))
 	})

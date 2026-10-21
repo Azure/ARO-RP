@@ -24,16 +24,18 @@ import (
 var ErrWantRefresh = errors.New("want refresh")
 
 // AuthorizationRetryingAction returns a wrapper Step which retries Azure
-// authorization errors for up to 10 minutes. If authorizer is non-nil, it
-// is rebuilt before each retry; a nil authorizer enables retry-only behavior.
+// authorization errors for up to 10 minutes. If auth is non-nil, the
+// credentials it holds are rebuilt before each retry (forcing a fresh access
+// token, which in turn forces ARM to re-evaluate role assignments rather than
+// serve its per-token cache); a nil auth enables retry-only behavior.
 // Any other error is returned directly.
-func AuthorizationRetryingAction(r refreshable.Authorizer, action actionFunction, managedRGName string) Step {
+func AuthorizationRetryingAction(r refreshable.Rebuilder, action actionFunction, managedRGName string) Step {
 	return AuthorizationRetryingActionWithTimeout(r, action, managedRGName, 0)
 }
 
 // AuthorizationRetryingActionWithTimeout overrides the authorization retry window.
 // A zero timeout uses the default 10 minutes. Individual calls are not timed out.
-func AuthorizationRetryingActionWithTimeout(r refreshable.Authorizer, action actionFunction, managedRGName string, timeout time.Duration) Step {
+func AuthorizationRetryingActionWithTimeout(r refreshable.Rebuilder, action actionFunction, managedRGName string, timeout time.Duration) Step {
 	return &authorizationRefreshingActionStep{
 		auth:          r,
 		f:             action,
@@ -44,7 +46,7 @@ func AuthorizationRetryingActionWithTimeout(r refreshable.Authorizer, action act
 
 type authorizationRefreshingActionStep struct {
 	f             actionFunction
-	auth          refreshable.Authorizer
+	auth          refreshable.Rebuilder
 	retryTimeout  time.Duration
 	pollInterval  time.Duration
 	managedRGName string
@@ -97,7 +99,7 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 			if s.auth != nil {
 				rebuildErr := s.auth.Rebuild()
 				if rebuildErr != nil {
-					log.Printf("auth authorizer rebuild failed: %v", rebuildErr)
+					log.Printf("auth credential rebuild failed: %v", rebuildErr)
 					err = rebuildErr
 				}
 				return false, rebuildErr

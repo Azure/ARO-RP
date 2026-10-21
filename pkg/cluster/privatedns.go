@@ -7,12 +7,15 @@ import (
 	"context"
 	"errors"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/go-autorest/autorest/azure"
 
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 )
 
-func DeletePrivateDNSVNetLinks(ctx context.Context, vNetLinksClient privatedns.VirtualNetworkLinksClient, resourceID string) error {
+func DeletePrivateDNSVNetLinks(ctx context.Context, log *logrus.Entry, vNetLinksClient privatedns.VirtualNetworkLinksClient, resourceID string) error {
 	r, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return err
@@ -28,7 +31,10 @@ func DeletePrivateDNSVNetLinks(ctx context.Context, vNetLinksClient privatedns.V
 	}
 
 	for _, vNetLink := range vNetLinks {
-		err = vNetLinksClient.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, *vNetLink.Name, "")
+		name := *vNetLink.Name
+		err = arm.RetryableDelete(ctx, func() error {
+			return vNetLinksClient.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, name, "")
+		}, log, "deleting private DNS VNet link "+name)
 		if err != nil {
 			return err
 		}

@@ -5,6 +5,7 @@ package rbac
 
 import (
 	"context"
+	"io/fs"
 
 	"github.com/sirupsen/logrus"
 
@@ -15,13 +16,13 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -32,22 +33,19 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	dh dynamichelper.Interface
-
-	client client.Client
+	ch clienthelper.Interface
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, ch clienthelper.Interface) *Reconciler {
 	return &Reconciler{
-		log:    log,
-		dh:     dh,
-		client: client,
+		log: log,
+		ch:  ch,
 	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	err := r.ch.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -59,20 +57,31 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.log.Debug("running")
 	var resources []kruntime.Object
-	for _, assetName := range AssetNames() {
-		b, err := Asset(assetName)
+	fserr := fs.WalkDir(staticResources, "staticresources", func(path string, d fs.DirEntry, _ error) error {
+		// ignore the error being passed in as it is only for directory read
+		// failures (which as this is a static fs, should not happen anyway)
+
+		// We only care about the files
+		if d.IsDir() {
+			return nil
+		}
+
+		b, err := staticResources.ReadFile(path)
 		if err != nil {
-			r.log.Error(err)
-			return reconcile.Result{}, err
+			return err
 		}
 
 		resource, _, err := scheme.Codecs.UniversalDeserializer().Decode(b, nil, nil)
 		if err != nil {
-			r.log.Error(err)
-			return reconcile.Result{}, err
+			return err
 		}
 
 		resources = append(resources, resource)
+		return nil
+	})
+	if fserr != nil {
+		r.log.Error(fserr)
+		return reconcile.Result{}, fserr
 	}
 
 	err = dynamichelper.SetControllerReferences(resources, instance)
@@ -87,7 +96,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	err = r.dh.Ensure(ctx, resources...)
+	err = r.ch.Ensure(ctx, resources...)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err

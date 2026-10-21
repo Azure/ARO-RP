@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
@@ -54,6 +55,9 @@ type TaskContext interface {
 
 	// Azure Compute clients
 	ResourceSKUsClient() (armcompute.ResourceSKUsClient, error)
+
+	// Azure Authorization clients
+	RoleAssignmentsClient() (armauthorization.RoleAssignmentsClient, error)
 
 	// Azure Container Registry clients
 	FirstPartyTokensClient() (armcontainerregistry.TokensClient, error)

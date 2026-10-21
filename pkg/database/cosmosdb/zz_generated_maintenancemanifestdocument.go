@@ -63,7 +63,7 @@ type MaintenanceManifestDocumentIterator interface {
 // MaintenanceManifestDocumentRawIterator is a maintenanceManifestDocument raw iterator
 type MaintenanceManifestDocumentRawIterator interface {
 	MaintenanceManifestDocumentIterator
-	NextRaw(context.Context, int, interface{}) error
+	NextRaw(context.Context, int, any) error
 }
 
 // NewMaintenanceManifestDocumentClient returns a new maintenanceManifestDocument client
@@ -277,7 +277,7 @@ func (i *maintenanceManifestDocumentQueryIterator) Next(ctx context.Context, max
 	return
 }
 
-func (i *maintenanceManifestDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
+func (i *maintenanceManifestDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw any) (err error) {
 	if i.done {
 		return
 	}

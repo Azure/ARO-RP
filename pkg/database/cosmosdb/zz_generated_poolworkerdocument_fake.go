@@ -332,7 +332,7 @@ type fakePoolWorkerDocumentIterator struct {
 	done                bool
 }
 
-func (i *fakePoolWorkerDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakePoolWorkerDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out any) error {
 	return ErrNotImplemented
 }
 
@@ -347,10 +347,7 @@ func (i *fakePoolWorkerDocumentIterator) Next(ctx context.Context, maxItemCount 
 		i.continuation = len(i.poolWorkerDocuments)
 		i.done = true
 	} else {
-		max := i.continuation + maxItemCount
-		if max > len(i.poolWorkerDocuments) {
-			max = len(i.poolWorkerDocuments)
-		}
+		max := min(i.continuation+maxItemCount, len(i.poolWorkerDocuments))
 		poolWorkerDocuments = i.poolWorkerDocuments[i.continuation:max]
 		i.continuation = max
 		i.done = i.Continuation() == ""
@@ -383,7 +380,7 @@ func (i *fakePoolWorkerDocumentErroringRawIterator) Next(ctx context.Context, ma
 	return nil, i.err
 }
 
-func (i *fakePoolWorkerDocumentErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+func (i *fakePoolWorkerDocumentErroringRawIterator) NextRaw(context.Context, int, any) error {
 	return i.err
 }
 

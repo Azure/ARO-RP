@@ -24,8 +24,8 @@ type Mismatch struct {
 	ResourceType  string              `json:"resourceType"`
 	ResourceGroup string              `json:"resourceGroup"`
 	Property      string              `json:"property"`
-	Expected      interface{}         `json:"expected"`
-	Actual        interface{}         `json:"actual"`
+	Expected      any                 `json:"expected"`
+	Actual        any                 `json:"actual"`
 	Policies      []PolicyAttribution `json:"policies,omitempty"`
 }
 
@@ -44,7 +44,7 @@ type PolicyRef struct {
 	ResourceGroupName string `json:"resourceGroupName,omitempty"`
 }
 
-func ValidateDeploymentWithWhatIf(ctx context.Context, log *logrus.Entry, deployments features.DeploymentsClient, resourceGroupName string, deploymentName string, template *Template, resourcesToValidate map[string]map[string]interface{}) []Mismatch {
+func ValidateDeploymentWithWhatIf(ctx context.Context, log *logrus.Entry, deployments features.DeploymentsClient, resourceGroupName string, deploymentName string, template *Template, resourcesToValidate map[string]map[string]any) []Mismatch {
 	log.Printf("validating %s deployment with what-if", deploymentName)
 
 	whatIfParams := mgmtfeatures.DeploymentWhatIf{
@@ -103,7 +103,7 @@ func MismatchesToCloudError(mismatches []Mismatch) error {
 	}
 }
 
-func findMatchingResourceConfig(parsedResourceID *arm.ResourceID, resourcesToValidate map[string]map[string]interface{}) map[string]interface{} {
+func findMatchingResourceConfig(parsedResourceID *arm.ResourceID, resourcesToValidate map[string]map[string]any) map[string]any {
 	config, exists := resourcesToValidate[strings.ToLower(parsedResourceID.Name)]
 	if !exists {
 		return nil
@@ -112,14 +112,14 @@ func findMatchingResourceConfig(parsedResourceID *arm.ResourceID, resourcesToVal
 	if !ok || !strings.EqualFold(parsedResourceID.ResourceType.String(), expectedType) {
 		return nil
 	}
-	expectedProperties, ok := config["expectedProperties"].(map[string]interface{})
+	expectedProperties, ok := config["expectedProperties"].(map[string]any)
 	if !ok {
 		return nil
 	}
 	return expectedProperties
 }
 
-func collectPropertyChanges(log *logrus.Entry, propertyChanges []mgmtfeatures.WhatIfPropertyChange, parsedResourceID *arm.ResourceID, expectedProperties map[string]interface{}) []Mismatch {
+func collectPropertyChanges(log *logrus.Entry, propertyChanges []mgmtfeatures.WhatIfPropertyChange, parsedResourceID *arm.ResourceID, expectedProperties map[string]any) []Mismatch {
 	var mismatches []Mismatch
 	for _, propChange := range propertyChanges {
 		if propChange.Path != nil {
@@ -149,14 +149,14 @@ func collectPropertyChanges(log *logrus.Entry, propertyChanges []mgmtfeatures.Wh
 	return mismatches
 }
 
-func BuildStorageAccountsValidationMap(storageAccountNames ...string) map[string]map[string]interface{} {
-	resourcesToValidate := make(map[string]map[string]interface{})
-	expectedProperties := map[string]interface{}{
+func BuildStorageAccountsValidationMap(storageAccountNames ...string) map[string]map[string]any {
+	resourcesToValidate := make(map[string]map[string]any)
+	expectedProperties := map[string]any{
 		"/properties/publicNetworkAccess": "Enabled",
 	}
 	for _, accountName := range storageAccountNames {
 		if accountName != "" {
-			resourcesToValidate[strings.ToLower(accountName)] = map[string]interface{}{
+			resourcesToValidate[strings.ToLower(accountName)] = map[string]any{
 				"resourceType":       "Microsoft.Storage/storageAccounts",
 				"expectedProperties": expectedProperties,
 			}

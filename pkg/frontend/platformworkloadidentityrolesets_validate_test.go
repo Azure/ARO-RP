@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -49,7 +48,7 @@ func TestValidatePlatformWorkloadIdentities(t *testing.T) {
 				"disk-csi-driver":          {ResourceID: mockMiResourceId},
 				"extra-new-operator":       {ResourceID: mockMiResourceId},
 			},
-			upgradeableTo: pointerutils.ToPtr(api.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
+			upgradeableTo: new(api.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 		},
 		{
 			test:    "Success - Valid platform workload identities provided with UpgradeableTo smaller than current version",
@@ -64,7 +63,7 @@ func TestValidatePlatformWorkloadIdentities(t *testing.T) {
 				"aro-operator":             {ResourceID: mockMiResourceId},
 				"disk-csi-driver":          {ResourceID: mockMiResourceId},
 			},
-			upgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.10.25")),
+			upgradeableTo: new(api.UpgradeableTo("4.10.25")),
 		},
 		{
 			test: "Success - Not a MIWI Cluster, do nothing",
@@ -97,7 +96,7 @@ func TestValidatePlatformWorkloadIdentities(t *testing.T) {
 				"aro-operator":             {ResourceID: mockMiResourceId},
 				"disk-csi-driver":          {ResourceID: mockMiResourceId},
 			},
-			upgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.1052")),
+			upgradeableTo: new(api.UpgradeableTo("4.1052")),
 			wantErr:       `could not parse version "4.1052"`,
 		},
 		{

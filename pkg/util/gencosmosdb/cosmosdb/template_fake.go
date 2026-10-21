@@ -330,7 +330,7 @@ type fakeTemplateIterator struct {
 	done         bool
 }
 
-func (i *fakeTemplateIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakeTemplateIterator) NextRaw(ctx context.Context, maxItemCount int, out any) error {
 	return ErrNotImplemented
 }
 
@@ -345,10 +345,7 @@ func (i *fakeTemplateIterator) Next(ctx context.Context, maxItemCount int) (*pkg
 		i.continuation = len(i.templates)
 		i.done = true
 	} else {
-		max := i.continuation + maxItemCount
-		if max > len(i.templates) {
-			max = len(i.templates)
-		}
+		max := min(i.continuation+maxItemCount, len(i.templates))
 		templates = i.templates[i.continuation:max]
 		i.continuation = max
 		i.done = i.Continuation() == ""
@@ -381,7 +378,7 @@ func (i *fakeTemplateErroringRawIterator) Next(ctx context.Context, maxItemCount
 	return nil, i.err
 }
 
-func (i *fakeTemplateErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+func (i *fakeTemplateErroringRawIterator) NextRaw(context.Context, int, any) error {
 	return i.err
 }
 

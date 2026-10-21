@@ -32,7 +32,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	utilnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilrecover "github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -140,7 +139,7 @@ func parseAndValidateJob(body []byte) (*batchv1.Job, error) {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
 			"Jobs with spec.backoffLimit != 0 are not supported; set it to 0 or omit it.")
 	}
-	job.Spec.BackoffLimit = pointerutils.ToPtr(int32(0))
+	job.Spec.BackoffLimit = new(int32(0))
 
 	// restartPolicy must be Never or OnFailure; "Always" would cause the pod to restart indefinitely.
 	if rp := job.Spec.Template.Spec.RestartPolicy; rp != corev1.RestartPolicyNever && rp != corev1.RestartPolicyOnFailure {

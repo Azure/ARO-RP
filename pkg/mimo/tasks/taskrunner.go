@@ -29,6 +29,7 @@ var DEFAULT_MAINTENANCE_TASKS = map[api.MIMOTaskID]MaintenanceTask{
 	mimo.MSI_CERT_RENEWAL_ID:             MSICertificateRenewal,
 	mimo.MIGRATE_LB_ZONES_ID:             MigrateInternalLoadBalancerZones,
 	mimo.FIX_SSH_ID:                      FixSSH,
+	mimo.ENSURE_CSP_RBAC_ID:              EnsureClusterServicePrincipalRBAC,
 
 	// Tasks to update Operator flags
 	mimo.OPERATOR_FLAG_SET_GENEVA_OTEL:                      SetOperatorFlagGenevaLoggingUseOTel,

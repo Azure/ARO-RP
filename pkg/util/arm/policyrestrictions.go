@@ -15,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armpolicyinsights"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const mismatchDetailsPrefix = "Unexpected property mutations detected, likely due to Azure policies. Details: "
@@ -109,13 +108,13 @@ func lookupPolicyRestrictions(
 	apiVersion string,
 	allowedFields map[string]struct{},
 ) map[string][]PolicyAttribution {
-	content := map[string]interface{}{
+	content := map[string]any{
 		"type": resourceType,
 		"name": resourceName,
 	}
 	details := &sdkpolicyinsights.CheckRestrictionsResourceDetails{
 		ResourceContent: content,
-		APIVersion:      pointerutils.ToPtr(apiVersion),
+		APIVersion:      new(apiVersion),
 	}
 	resp, err := client.CheckAtResourceGroupScope(ctx, resourceGroupName, sdkpolicyinsights.CheckRestrictionsRequest{
 		ResourceDetails: details,

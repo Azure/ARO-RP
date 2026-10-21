@@ -15,7 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 // Maximum lifetime of the ACR token
@@ -72,8 +71,8 @@ func (m *manager) EnsureTokenAndPassword(ctx context.Context, registryProfile *a
 	// We don't use anything from the token body so just ignore it
 	_, err := m.tokens.CreateAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, registryProfile.Username, sdkarmcontainerregistry.Token{
 		Properties: &sdkarmcontainerregistry.TokenProperties{
-			ScopeMapID: pointerutils.ToPtr(m.env.ACRResourceID() + "/scopeMaps/_repositories_pull"),
-			Status:     pointerutils.ToPtr(sdkarmcontainerregistry.TokenStatusEnabled),
+			ScopeMapID: new(m.env.ACRResourceID() + "/scopeMaps/_repositories_pull"),
+			Status:     new(sdkarmcontainerregistry.TokenStatusEnabled),
 		},
 	})
 	// Ignore StatusConflict errors (it means it's already created)
@@ -164,8 +163,8 @@ func (m *manager) RotateTokenPassword(ctx context.Context, registryProfile *api.
 // a password for the specified password name
 func (m *manager) generateTokenPassword(ctx context.Context, passwordName sdkarmcontainerregistry.TokenPasswordName, registryProfile *api.RegistryProfile) (string, *time.Time, error) {
 	creds, err := m.registries.GenerateCredentialsAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, sdkarmcontainerregistry.GenerateCredentialsParameters{
-		TokenID: pointerutils.ToPtr(m.env.ACRResourceID() + "/tokens/" + registryProfile.Username),
-		Name:    pointerutils.ToPtr(passwordName),
+		TokenID: new(m.env.ACRResourceID() + "/tokens/" + registryProfile.Username),
+		Name:    new(passwordName),
 	})
 	if err != nil {
 		return "", nil, err
@@ -176,11 +175,11 @@ func (m *manager) generateTokenPassword(ctx context.Context, passwordName sdkarm
 
 	for _, pw := range creds.Passwords {
 		if pw.Name != nil && *pw.Name == passwordName {
-			return *pw.Value, pointerutils.ToPtr(pw.CreationTime.UTC()), nil
+			return *pw.Value, new(pw.CreationTime.UTC()), nil
 		}
 	}
 
-	return *(creds.Passwords)[0].Value, pointerutils.ToPtr(creds.Passwords[0].CreationTime.UTC()), nil
+	return *creds.Passwords[0].Value, new(creds.Passwords[0].CreationTime.UTC()), nil
 }
 
 func (m *manager) Delete(ctx context.Context, registryProfile *api.RegistryProfile) error {

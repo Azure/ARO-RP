@@ -15,8 +15,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	fakearmnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6/fake"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 var (
@@ -27,11 +25,11 @@ var (
 	noPagerResults    = make([]*armnetwork.Interface, 0)
 	pagerResults      = []*armnetwork.Interface{
 		{
-			Name:       pointerutils.ToPtr("interface1"),
+			Name:       new("interface1"),
 			Properties: &armnetwork.InterfacePropertiesFormat{},
 		},
 		{
-			Name:       pointerutils.ToPtr("interface2"),
+			Name:       new("interface2"),
 			Properties: &armnetwork.InterfacePropertiesFormat{},
 		},
 	}

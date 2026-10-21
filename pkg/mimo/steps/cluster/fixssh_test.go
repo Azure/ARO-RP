@@ -18,7 +18,6 @@ import (
 	mock_armcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcompute"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testtasks "github.com/Azure/ARO-RP/test/mimo/tasks"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -26,18 +25,18 @@ import (
 
 func genInt(name string, withPool []*armnetwork_sdk.BackendAddressPool) *armnetwork_sdk.Interface {
 	i := &armnetwork_sdk.Interface{
-		Name: pointerutils.ToPtr(name),
+		Name: new(name),
 		Properties: &armnetwork_sdk.InterfacePropertiesFormat{
 			IPConfigurations: []*armnetwork_sdk.InterfaceIPConfiguration{
 				{
-					Name: pointerutils.ToPtr(name),
+					Name: new(name),
 					Properties: &armnetwork_sdk.InterfaceIPConfigurationPropertiesFormat{
-						Subnet: &armnetwork_sdk.Subnet{Name: pointerutils.ToPtr("subnetID")},
+						Subnet: &armnetwork_sdk.Subnet{Name: new("subnetID")},
 					},
 				},
 			},
 			VirtualMachine: &armnetwork_sdk.SubResource{
-				ID: pointerutils.ToPtr("somemachine"),
+				ID: new("somemachine"),
 			},
 		},
 	}
@@ -184,29 +183,29 @@ func TestFixSSH(t *testing.T) {
 				}, nil)
 
 			ints.EXPECT().CreateOrUpdateAndWait(gomock.Any(), rgName, infraID+"-master0-nic", *genInt(infraID+"-master0-nic", []*armnetwork_sdk.BackendAddressPool{
-				{ID: pointerutils.ToPtr(tt.internalLBName + "/backendAddressPools/infraID")},
-				{ID: pointerutils.ToPtr(tt.internalLBName + "/backendAddressPools/ssh-0")},
+				{ID: new(tt.internalLBName + "/backendAddressPools/infraID")},
+				{ID: new(tt.internalLBName + "/backendAddressPools/ssh-0")},
 			}), gomock.Any()).Return(nil)
 
 			ints.EXPECT().CreateOrUpdateAndWait(gomock.Any(), rgName, infraID+"-master1-nic", *genInt(infraID+"-master1-nic", []*armnetwork_sdk.BackendAddressPool{
-				{ID: pointerutils.ToPtr(tt.internalLBName + "/backendAddressPools/infraID")},
-				{ID: pointerutils.ToPtr(tt.internalLBName + "/backendAddressPools/ssh-1")},
+				{ID: new(tt.internalLBName + "/backendAddressPools/infraID")},
+				{ID: new(tt.internalLBName + "/backendAddressPools/ssh-1")},
 			}), gomock.Any()).Return(nil)
 			ints.EXPECT().CreateOrUpdateAndWait(gomock.Any(), rgName, infraID+"-master2-nic", *genInt(infraID+"-master2-nic", []*armnetwork_sdk.BackendAddressPool{
-				{ID: pointerutils.ToPtr(tt.internalLBName + "/backendAddressPools/infraID")},
-				{ID: pointerutils.ToPtr(tt.internalLBName + "/backendAddressPools/ssh-2")},
+				{ID: new(tt.internalLBName + "/backendAddressPools/infraID")},
+				{ID: new(tt.internalLBName + "/backendAddressPools/ssh-2")},
 			}), gomock.Any()).Return(nil)
 
 			lbs.EXPECT().Get(gomock.Any(), rgName, tt.internalLBName, nil).Return(
 				armnetwork_sdk.LoadBalancersClientGetResponse{
 					LoadBalancer: armnetwork_sdk.LoadBalancer{
-						ID:   pointerutils.ToPtr(tt.internalLBName),
-						Name: pointerutils.ToPtr(tt.internalLBName),
+						ID:   new(tt.internalLBName),
+						Name: new(tt.internalLBName),
 						Properties: &armnetwork_sdk.LoadBalancerPropertiesFormat{
 							FrontendIPConfigurations: []*armnetwork_sdk.FrontendIPConfiguration{
 								{
-									ID:    pointerutils.ToPtr(tt.internalLBName + "/frontendIPConfigurations/internal-lb-ip-v4"),
-									Name:  pointerutils.ToPtr("internal-lb-ip-v4"),
+									ID:    new(tt.internalLBName + "/frontendIPConfigurations/internal-lb-ip-v4"),
+									Name:  new("internal-lb-ip-v4"),
 									Zones: []*string{},
 								},
 							},
@@ -218,98 +217,98 @@ func TestFixSSH(t *testing.T) {
 
 			goodRules := []*armnetwork_sdk.LoadBalancingRule{
 				{
-					Name: pointerutils.ToPtr("ssh-0"),
+					Name: new("ssh-0"),
 					Properties: &armnetwork_sdk.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &armnetwork_sdk.SubResource{
-							ID: pointerutils.ToPtr(tt.internalLBName + "/frontendIPConfigurations/internal-lb-ip-v4"),
+							ID: new(tt.internalLBName + "/frontendIPConfigurations/internal-lb-ip-v4"),
 						},
 						BackendAddressPool: &armnetwork_sdk.SubResource{
-							ID: pointerutils.ToPtr(tt.internalLBName + "/backendAddressPools/ssh-0"),
+							ID: new(tt.internalLBName + "/backendAddressPools/ssh-0"),
 						},
 						Probe: &armnetwork_sdk.SubResource{
-							ID: pointerutils.ToPtr(tt.internalLBName + "/probes/ssh"),
+							ID: new(tt.internalLBName + "/probes/ssh"),
 						},
-						Protocol:             pointerutils.ToPtr(armnetwork_sdk.TransportProtocolTCP),
-						LoadDistribution:     pointerutils.ToPtr(armnetwork_sdk.LoadDistributionDefault),
-						FrontendPort:         pointerutils.ToPtr(int32(2200)),
-						BackendPort:          pointerutils.ToPtr(int32(22)),
-						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
-						DisableOutboundSnat:  pointerutils.ToPtr(true),
+						Protocol:             new(armnetwork_sdk.TransportProtocolTCP),
+						LoadDistribution:     new(armnetwork_sdk.LoadDistributionDefault),
+						FrontendPort:         new(int32(2200)),
+						BackendPort:          new(int32(22)),
+						IdleTimeoutInMinutes: new(int32(30)),
+						DisableOutboundSnat:  new(true),
 					},
 				},
 
 				{
-					Name: pointerutils.ToPtr("ssh-1"),
+					Name: new("ssh-1"),
 					Properties: &armnetwork_sdk.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &armnetwork_sdk.SubResource{
-							ID: pointerutils.ToPtr(tt.internalLBName + "/frontendIPConfigurations/internal-lb-ip-v4"),
+							ID: new(tt.internalLBName + "/frontendIPConfigurations/internal-lb-ip-v4"),
 						},
 						BackendAddressPool: &armnetwork_sdk.SubResource{
-							ID: pointerutils.ToPtr(tt.internalLBName + "/backendAddressPools/ssh-1"),
+							ID: new(tt.internalLBName + "/backendAddressPools/ssh-1"),
 						},
 						Probe: &armnetwork_sdk.SubResource{
-							ID: pointerutils.ToPtr(tt.internalLBName + "/probes/ssh"),
+							ID: new(tt.internalLBName + "/probes/ssh"),
 						},
-						Protocol:             pointerutils.ToPtr(armnetwork_sdk.TransportProtocolTCP),
-						LoadDistribution:     pointerutils.ToPtr(armnetwork_sdk.LoadDistributionDefault),
-						FrontendPort:         pointerutils.ToPtr(int32(2201)),
-						BackendPort:          pointerutils.ToPtr(int32(22)),
-						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
-						DisableOutboundSnat:  pointerutils.ToPtr(true),
+						Protocol:             new(armnetwork_sdk.TransportProtocolTCP),
+						LoadDistribution:     new(armnetwork_sdk.LoadDistributionDefault),
+						FrontendPort:         new(int32(2201)),
+						BackendPort:          new(int32(22)),
+						IdleTimeoutInMinutes: new(int32(30)),
+						DisableOutboundSnat:  new(true),
 					},
 				},
 				{
-					Name: pointerutils.ToPtr("ssh-2"),
+					Name: new("ssh-2"),
 					Properties: &armnetwork_sdk.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &armnetwork_sdk.SubResource{
-							ID: pointerutils.ToPtr(tt.internalLBName + "/frontendIPConfigurations/internal-lb-ip-v4"),
+							ID: new(tt.internalLBName + "/frontendIPConfigurations/internal-lb-ip-v4"),
 						},
 						BackendAddressPool: &armnetwork_sdk.SubResource{
-							ID: pointerutils.ToPtr(tt.internalLBName + "/backendAddressPools/ssh-2"),
+							ID: new(tt.internalLBName + "/backendAddressPools/ssh-2"),
 						},
 						Probe: &armnetwork_sdk.SubResource{
-							ID: pointerutils.ToPtr(tt.internalLBName + "/probes/ssh"),
+							ID: new(tt.internalLBName + "/probes/ssh"),
 						},
-						Protocol:             pointerutils.ToPtr(armnetwork_sdk.TransportProtocolTCP),
-						LoadDistribution:     pointerutils.ToPtr(armnetwork_sdk.LoadDistributionDefault),
-						FrontendPort:         pointerutils.ToPtr(int32(2202)),
-						BackendPort:          pointerutils.ToPtr(int32(22)),
-						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
-						DisableOutboundSnat:  pointerutils.ToPtr(true),
+						Protocol:             new(armnetwork_sdk.TransportProtocolTCP),
+						LoadDistribution:     new(armnetwork_sdk.LoadDistributionDefault),
+						FrontendPort:         new(int32(2202)),
+						BackendPort:          new(int32(22)),
+						IdleTimeoutInMinutes: new(int32(30)),
+						DisableOutboundSnat:  new(true),
 					},
 				},
 			}
 			lbs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), rgName, tt.internalLBName, armnetwork_sdk.LoadBalancer{
-				ID:   pointerutils.ToPtr(tt.internalLBName),
-				Name: pointerutils.ToPtr(tt.internalLBName),
+				ID:   new(tt.internalLBName),
+				Name: new(tt.internalLBName),
 				Properties: &armnetwork_sdk.LoadBalancerPropertiesFormat{
 					FrontendIPConfigurations: []*armnetwork_sdk.FrontendIPConfiguration{
 						{
-							ID:    pointerutils.ToPtr(tt.internalLBName + "/frontendIPConfigurations/internal-lb-ip-v4"),
+							ID:    new(tt.internalLBName + "/frontendIPConfigurations/internal-lb-ip-v4"),
 							Zones: []*string{},
-							Name:  pointerutils.ToPtr("internal-lb-ip-v4"),
+							Name:  new("internal-lb-ip-v4"),
 						},
 					},
 					BackendAddressPools: []*armnetwork_sdk.BackendAddressPool{
 						{
-							Name: pointerutils.ToPtr("ssh-0"),
+							Name: new("ssh-0"),
 						},
 						{
-							Name: pointerutils.ToPtr("ssh-1"),
+							Name: new("ssh-1"),
 						},
 						{
-							Name: pointerutils.ToPtr("ssh-2"),
+							Name: new("ssh-2"),
 						},
 					},
 					LoadBalancingRules: goodRules,
 					Probes: []*armnetwork_sdk.Probe{
 						{
-							Name: pointerutils.ToPtr("ssh"),
+							Name: new("ssh"),
 							Properties: &armnetwork_sdk.ProbePropertiesFormat{
-								Protocol:          pointerutils.ToPtr(armnetwork_sdk.ProbeProtocolTCP),
-								Port:              pointerutils.ToPtr(int32(22)),
-								IntervalInSeconds: pointerutils.ToPtr(int32(5)),
-								NumberOfProbes:    pointerutils.ToPtr(int32(2)),
+								Protocol:          new(armnetwork_sdk.ProbeProtocolTCP),
+								Port:              new(int32(22)),
+								IntervalInSeconds: new(int32(5)),
+								NumberOfProbes:    new(int32(2)),
 							},
 						},
 					},

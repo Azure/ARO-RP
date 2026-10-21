@@ -28,7 +28,6 @@ import (
 	armredhatopenshift "github.com/Azure/ARO-RP/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -449,7 +448,7 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(getOutboundIPsCount(resp.LoadBalancer)).To(Equal(5))
 
 		By("sending the PUT request to decrease Managed Outbound IPs")
-		oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count = pointerutils.ToPtr(int32(1))
+		oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count = new(int32(1))
 		err = clients.OpenshiftClusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc.OpenShiftCluster)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -481,7 +480,7 @@ func newManagedOutboundIPUpdateBody(managedOutboundIPCount int32) armredhatopens
 			NetworkProfile: &armredhatopenshift.NetworkProfile{
 				LoadBalancerProfile: &armredhatopenshift.LoadBalancerProfile{
 					ManagedOutboundIPs: &armredhatopenshift.ManagedOutboundIPs{
-						Count: pointerutils.ToPtr(managedOutboundIPCount),
+						Count: new(managedOutboundIPCount),
 					},
 				},
 			},

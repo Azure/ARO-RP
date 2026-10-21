@@ -26,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -214,7 +213,7 @@ func (dh *dynamicHelper) ensureByServerSideApply(ctx context.Context, uns *unstr
 			// sole owner of the VAP resources it creates. Do NOT extend
 			// this path to resources whose ownership is shared with
 			// other controllers without revisiting this assumption.
-			Force: pointerutils.ToPtr(true),
+			Force: new(true),
 		})
 	if err != nil {
 		return fmt.Errorf("server-side apply %s/%s: %w", uns.GroupVersionKind().GroupKind(), uns.GetName(), err)

@@ -35,7 +35,7 @@ func TestAdminPostExec(t *testing.T) {
 		container               string
 		command                 string
 		useBody                 bool
-		bodyData                interface{}
+		bodyData                any
 		noClusterDoc            bool
 		kubeActionsFactory      func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
 		mocks                   func(*test, *mock_adminactions.MockKubeActions)
@@ -280,11 +280,11 @@ func TestAdminPostExec(t *testing.T) {
 				tt.mocks(tt, k)
 			}
 
-			var reqBody interface{}
+			var reqBody any
 			if tt.useBody {
 				reqBody = tt.bodyData
 			} else {
-				reqBody = map[string]interface{}{
+				reqBody = map[string]any{
 					"namespace": tt.namespace,
 					"podName":   tt.podName,
 					"container": tt.container,
@@ -422,7 +422,7 @@ func TestAdminPostExec_DBGroupError(t *testing.T) {
 	resp, b, err := ti.request(http.MethodPost,
 		fmt.Sprintf("https://server/admin%s/exec", resourceID),
 		http.Header{"Content-Type": []string{"application/json"}},
-		map[string]interface{}{
+		map[string]any{
 			"namespace": "openshift-etcd",
 			"podName":   "etcd-master-0",
 			"container": "etcdctl",

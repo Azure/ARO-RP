@@ -54,7 +54,7 @@ func RetryableWith(ctx context.Context, isRetryable func(error) bool, f func() e
 	}
 	steps := b.Steps
 	var lastErr error
-	for i := 0; i < steps; i++ {
+	for i := range steps {
 		lastErr = f()
 		if lastErr == nil {
 			return nil

@@ -63,7 +63,7 @@ type PlatformWorkloadIdentityRoleSetDocumentIterator interface {
 // PlatformWorkloadIdentityRoleSetDocumentRawIterator is a platformWorkloadIdentityRoleSetDocument raw iterator
 type PlatformWorkloadIdentityRoleSetDocumentRawIterator interface {
 	PlatformWorkloadIdentityRoleSetDocumentIterator
-	NextRaw(context.Context, int, interface{}) error
+	NextRaw(context.Context, int, any) error
 }
 
 // NewPlatformWorkloadIdentityRoleSetDocumentClient returns a new platformWorkloadIdentityRoleSetDocument client
@@ -277,7 +277,7 @@ func (i *platformWorkloadIdentityRoleSetDocumentQueryIterator) Next(ctx context.
 	return
 }
 
-func (i *platformWorkloadIdentityRoleSetDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
+func (i *platformWorkloadIdentityRoleSetDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw any) (err error) {
 	if i.done {
 		return
 	}

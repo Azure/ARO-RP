@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	apitesterror "github.com/Azure/ARO-RP/pkg/api/test/error"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 )
 
 func TestIsTerminal(t *testing.T) {
@@ -251,7 +250,7 @@ func TestPutRegistryProfile(t *testing.T) {
 	newProfile := &RegistryProfile{
 		Name:      "arointsvc.example.com",
 		Username:  "token-22222222-2222-2222-2222-222222220001",
-		IssueDate: pointerutils.ToPtr(time.Unix(1, 0)),
+		IssueDate: new(time.Unix(1, 0)),
 	}
 
 	ocWithProfile := &OpenShiftCluster{
