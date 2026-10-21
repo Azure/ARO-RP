@@ -5,10 +5,19 @@ LC_ALL=C
 echo "Before pushing commits, ensure you've run the required make commands:"
 echo "  - make generate"
 echo "  - make imports"
-read -r -p "Have you run all required make commands? [y/N] " run_make_commands
-if [[ ! "${run_make_commands}" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-    echo "Commit aborted. Run the required make commands and try again."
-    exit 1
+
+# Only prompt when an interactive terminal is available.
+if [ -t 0 ] || [ -t 1 ]; then
+    # Read from /dev/tty so we don't consume Git's stdin (the list of refs).
+    if ! read -r -p "Have you run all required make commands? [y/N] " run_make_commands </dev/tty; then
+        # If we cannot read from the terminal, allow the push to proceed.
+        exit 0
+    fi
+
+    if [[ ! "${run_make_commands}" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+        echo "Commit aborted. Run the required make commands and try again."
+        exit 1
+    fi
 fi
 
 exit 0
