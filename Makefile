@@ -575,6 +575,7 @@ LOCAL_ARO_RP_IMAGE ?= aro
 LOCAL_E2E_IMAGE ?= e2e
 LOCAL_ARO_AZEXT_IMAGE ?= azext-aro
 LOCAL_TUNNEL_IMAGE ?= aro-tunnel
+LOCAL_TELEMETRY_COLLECTOR_IMAGE ?= telemetry-collector
 
 ###############################################################################
 # Targets
@@ -625,6 +626,18 @@ aro-e2e:
 		--build-arg ARO_VERSION=$(VERSION) \
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_E2E_IMAGE):$(VERSION)
+
+.PHONY: ci-telemetrycollector
+ci-telemetrycollector:
+	docker build . ${DOCKER_BUILD_CI_ARGS} \
+		-f Dockerfile.telemetrycollector \
+		--ulimit=nofile=4096:4096 \
+		--platform=$(PLATFORM) \
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
+		--build-arg VERSION=$(VERSION) \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_TELEMETRY_COLLECTOR_IMAGE):$(VERSION)
 
 .PHONY: ci-tunnel
 ci-tunnel:
