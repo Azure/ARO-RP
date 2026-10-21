@@ -17,13 +17,13 @@ az login
 
 2. Run the cluster 1 setup script from its directory. This will create a cluster with a static web server identifying the cluster
 ```
-cd ./script1
+cd ./cluster1
 ./staticweb.sh
 ```
 
 3. Run the cluster 2 setup script from its directory. This will create another cluster with a static web server identifying the cluster
 ```
-cd ../script2
+cd ../cluster2
 ./staticweb.sh
 ```
 
@@ -48,6 +48,7 @@ We need to document the states of the resources before the simulated incident, d
 
 2. Display the routes for the static web servers and their outputs (the frontdoor script will already output its URL)
 ```
+date
 cat cluster1/cluster1_route.txt
 curl $(cat cluster1/cluster1_route.txt)
 cat cluster2/cluster2_route.txt
@@ -60,7 +61,8 @@ Screenshot the above and save it into a file: before\_curl\_routes.png
 
 3. Simulate an incident for cluster1
 ```
-KUBECONFIG=cluster1/cluster1.kubeconfig oc scale deploy -n staticweb --replicas 0 nginx
+date
+KUBECONFIG=cluster1/bcdrmain.kubeconfig oc scale deploy --replicas 0 nginx
 date
 ```
 
@@ -72,6 +74,7 @@ Screenshot the above and save it into a file: incident\_creation.png
 > It will take a few minutes for Azure Front Door to mark the webserver on the main cluster as unhealthy and begin routing traffic to the webserver on the failover cluster
 
 ```
+date
 curl <frontdoor URL>
 date
 ```
@@ -84,7 +87,8 @@ Screenshot the above (once the frontdoor URL shows output from the webserver on 
 > It will take a few minutes for Azure Front Door to mark the webserver on the main cluster as healthy and begin routing traffic to it again
 
 ```
-KUBECONFIG=cluster1/cluster1.kubeconfig oc scale deploy -n staticweb --replicas 2 nginx
+date
+KUBECONFIG=cluster1/bcdrmain.kubeconfig oc scale deploy --replicas 2 nginx
 sleep 300
 curl <frontdoor url>
 date
