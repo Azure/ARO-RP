@@ -5,7 +5,6 @@ package v20250725
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
@@ -16,23 +15,23 @@ type platformWorkloadIdentityRoleSetConverter struct{}
 // fields that appear in the external representation.  ToExternal does not
 // modify its argument; there is no pointer aliasing between the passed and
 // returned objects.
-func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWorkloadIdentityRoleSet) interface{} {
+func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWorkloadIdentityRoleSet) any {
 	out := &PlatformWorkloadIdentityRoleSet{
 		PlatformWorkloadIdentityRoleSet: generated.PlatformWorkloadIdentityRoleSet{
 			Properties: &generated.PlatformWorkloadIdentityRoleSetProperties{},
 		},
 	}
 	if s.ID != "" {
-		out.ID = pointerutils.ToPtr(s.ID)
+		out.ID = new(s.ID)
 	}
 	if s.Name != "" {
-		out.Name = pointerutils.ToPtr(s.Name)
+		out.Name = new(s.Name)
 	}
 	if s.Type != "" {
-		out.Type = pointerutils.ToPtr(s.Type)
+		out.Type = new(s.Type)
 	}
 	if s.Properties.OpenShiftVersion != "" {
-		out.Properties.OpenShiftVersion = pointerutils.ToPtr(s.Properties.OpenShiftVersion)
+		out.Properties.OpenShiftVersion = new(s.Properties.OpenShiftVersion)
 	}
 	if len(s.Properties.PlatformWorkloadIdentityRoles) > 0 {
 		out.Properties.PlatformWorkloadIdentityRoles = make([]*generated.PlatformWorkloadIdentityRole, 0, len(s.Properties.PlatformWorkloadIdentityRoles))
@@ -41,13 +40,13 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWork
 	for _, r := range s.Properties.PlatformWorkloadIdentityRoles {
 		role := &generated.PlatformWorkloadIdentityRole{}
 		if r.OperatorName != "" {
-			role.OperatorName = pointerutils.ToPtr(r.OperatorName)
+			role.OperatorName = new(r.OperatorName)
 		}
 		if r.RoleDefinitionName != "" {
-			role.RoleDefinitionName = pointerutils.ToPtr(r.RoleDefinitionName)
+			role.RoleDefinitionName = new(r.RoleDefinitionName)
 		}
 		if r.RoleDefinitionID != "" {
-			role.RoleDefinitionID = pointerutils.ToPtr(r.RoleDefinitionID)
+			role.RoleDefinitionID = new(r.RoleDefinitionID)
 		}
 		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, role)
 	}
@@ -57,7 +56,7 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWork
 
 // ToExternalList returns a slice of external representations of the internal
 // objects
-func (c platformWorkloadIdentityRoleSetConverter) ToExternalList(sets []*api.PlatformWorkloadIdentityRoleSet) interface{} {
+func (c platformWorkloadIdentityRoleSetConverter) ToExternalList(sets []*api.PlatformWorkloadIdentityRoleSet) any {
 	l := &PlatformWorkloadIdentityRoleSetList{
 		PlatformWorkloadIdentityRoleSets: make([]*PlatformWorkloadIdentityRoleSet, 0, len(sets)),
 	}
@@ -73,7 +72,7 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternalList(sets []*api.Pla
 // all mapped fields from the external representation. ToInternal modifies its
 // argument; there is no pointer aliasing between the passed and returned
 // objects
-func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new interface{}, out *api.PlatformWorkloadIdentityRoleSet) {
+func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new any, out *api.PlatformWorkloadIdentityRoleSet) {
 	new := _new.(*PlatformWorkloadIdentityRoleSet)
 
 	out.Properties.OpenShiftVersion = value(new.Properties.OpenShiftVersion)

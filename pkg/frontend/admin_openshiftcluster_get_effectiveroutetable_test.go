@@ -35,7 +35,7 @@ func TestAdminGetEffectiveRouteTable(t *testing.T) {
 		nicName        string
 		mocks          func(*test, *mock_adminactions.MockAzureActions)
 		wantStatusCode int
-		wantResponse   interface{}
+		wantResponse   any
 		validateJSON   bool
 		wantError      string
 	}
@@ -274,17 +274,17 @@ func TestAdminGetEffectiveRouteTable(t *testing.T) {
 			// Additional validation for successful responses
 			if tt.wantStatusCode == http.StatusOK && len(b) > 0 && tt.validateJSON {
 				// Verify response is valid JSON
-				var result map[string]interface{}
+				var result map[string]any
 				if err := json.Unmarshal(b, &result); err != nil {
 					t.Errorf("Response is not valid JSON: %v", err)
 				}
 
 				// Verify response contains expected structure
 				if value, ok := result["value"]; ok {
-					if valueSlice, ok := value.([]interface{}); ok {
+					if valueSlice, ok := value.([]any); ok {
 						// For tests with route data, verify structure
 						if tt.name == "successful effective route table retrieval" && len(valueSlice) > 0 {
-							route := valueSlice[0].(map[string]interface{})
+							route := valueSlice[0].(map[string]any)
 							expectedFields := []string{"name", "source", "state", "addressPrefix", "nextHopType"}
 							for _, field := range expectedFields {
 								if _, exists := route[field]; !exists {

@@ -16,8 +16,8 @@ type ts struct {
 	Map         map[string]string `json:"map,omitempty"`
 	EmptyNoJSON string            `mutable:"false"` // handle no json tag
 	None        string            // default to immutable
-	Time        time.Time         `json:"time,omitempty"`
-	MutableTime time.Time         `json:"mutableTime,omitempty" mutable:"true"`
+	Time        time.Time         `json:"time"`
+	MutableTime time.Time         `json:"mutableTime" mutable:"true"`
 }
 
 func TestValidate(t *testing.T) {
@@ -472,7 +472,7 @@ func TestPolicyJSONName(t *testing.T) {
 		Location             string
 	}
 
-	typeOfModel := reflect.TypeOf(model{})
+	typeOfModel := reflect.TypeFor[model]()
 	tests := []struct {
 		field string
 		want  string
@@ -500,7 +500,7 @@ func TestPolicyJSONName(t *testing.T) {
 	}
 }
 
-func assertPolicyValidation(t *testing.T, after, before interface{}, policy Policy, wantErr string) {
+func assertPolicyValidation(t *testing.T, after, before any, policy Policy, wantErr string) {
 	t.Helper()
 
 	err := ValidateWithPolicy("", after, before, policy)

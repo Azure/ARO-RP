@@ -63,7 +63,7 @@ type OpenShiftClusterDocumentIterator interface {
 // OpenShiftClusterDocumentRawIterator is a openShiftClusterDocument raw iterator
 type OpenShiftClusterDocumentRawIterator interface {
 	OpenShiftClusterDocumentIterator
-	NextRaw(context.Context, int, interface{}) error
+	NextRaw(context.Context, int, any) error
 }
 
 // NewOpenShiftClusterDocumentClient returns a new openShiftClusterDocument client
@@ -277,7 +277,7 @@ func (i *openShiftClusterDocumentQueryIterator) Next(ctx context.Context, maxIte
 	return
 }
 
-func (i *openShiftClusterDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
+func (i *openShiftClusterDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw any) (err error) {
 	if i.done {
 		return
 	}

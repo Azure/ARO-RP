@@ -13,7 +13,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 // ensureServiceEndpoints should enable service endpoints on
@@ -107,8 +106,8 @@ func addEndpointToSubnet(endpoint string, subnet *armnetwork.Subnet) {
 	}
 
 	serviceEndpoint := armnetwork.ServiceEndpointPropertiesFormat{
-		Service:   pointerutils.ToPtr(endpoint),
-		Locations: []*string{pointerutils.ToPtr("*")},
+		Service:   new(endpoint),
+		Locations: []*string{new("*")},
 	}
 
 	subnet.Properties.ServiceEndpoints = append(subnet.Properties.ServiceEndpoints, &serviceEndpoint)

@@ -33,7 +33,6 @@ import (
 	"github.com/openshift/hive/apis/hive/v1/azure"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -374,7 +373,7 @@ func TestMerge(t *testing.T) {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -387,7 +386,7 @@ func TestMerge(t *testing.T) {
 							MaxSurge:       &intstr.IntOrString{IntVal: 0},
 						},
 					},
-					RevisionHistoryLimit: pointerutils.ToPtr(int32(10)),
+					RevisionHistoryLimit: new(int32(10)),
 				},
 			},
 			wantChanged: true,
@@ -428,11 +427,11 @@ func TestMerge(t *testing.T) {
 					UpdatedReplicas:   3,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointerutils.ToPtr(int32(1)),
+					Replicas: new(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -452,8 +451,8 @@ func TestMerge(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    pointerutils.ToPtr(int32(10)),
-					ProgressDeadlineSeconds: pointerutils.ToPtr(int32(600)),
+					RevisionHistoryLimit:    new(int32(10)),
+					ProgressDeadlineSeconds: new(int32(600)),
 				},
 			},
 			wantChanged: true,
@@ -616,7 +615,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -647,7 +646,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -675,7 +674,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -709,7 +708,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -734,7 +733,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -756,7 +755,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -1128,7 +1127,7 @@ func TestMergeApply(t *testing.T) {
 					Namespace: "testnamespace",
 				},
 				Spec: appsv1.DaemonSetSpec{
-					RevisionHistoryLimit: pointerutils.ToPtr(int32(12)),
+					RevisionHistoryLimit: new(int32(12)),
 				},
 			},
 			want: &appsv1.DaemonSet{
@@ -1148,7 +1147,7 @@ func TestMergeApply(t *testing.T) {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -1161,7 +1160,7 @@ func TestMergeApply(t *testing.T) {
 							MaxSurge:       &intstr.IntOrString{IntVal: 0},
 						},
 					},
-					RevisionHistoryLimit: pointerutils.ToPtr(int32(12)),
+					RevisionHistoryLimit: new(int32(12)),
 				},
 			},
 			wantChanged: true,
@@ -1196,7 +1195,7 @@ func TestMergeApply(t *testing.T) {
 					Namespace: "testnamespace",
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: pointerutils.ToPtr(int32(12)),
+					RevisionHistoryLimit: new(int32(12)),
 				},
 			},
 			want: &appsv1.Deployment{
@@ -1214,11 +1213,11 @@ func TestMergeApply(t *testing.T) {
 					UpdatedReplicas:   3,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointerutils.ToPtr(int32(1)),
+					Replicas: new(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -1238,8 +1237,8 @@ func TestMergeApply(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    pointerutils.ToPtr(int32(12)),
-					ProgressDeadlineSeconds: pointerutils.ToPtr(int32(600)),
+					RevisionHistoryLimit:    new(int32(12)),
+					ProgressDeadlineSeconds: new(int32(600)),
 				},
 			},
 			wantChanged: true,

@@ -12,16 +12,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestConfigurationFieldParity(t *testing.T) {
 	// create a map whose keys are all the fields of Configuration
 	m := map[string]struct{}{}
 
-	typ := reflect.TypeOf(Configuration{})
-	for i := 0; i < typ.NumField(); i++ {
-		m[strings.SplitN(typ.Field(i).Tag.Get("json"), ",", 2)[0]] = struct{}{}
+	typ := reflect.TypeFor[Configuration]()
+	for field := range typ.Fields() {
+		m[strings.SplitN(field.Tag.Get("json"), ",", 2)[0]] = struct{}{}
 	}
 
 	for _, paramsFile := range []string{
@@ -54,10 +53,10 @@ func TestConfigurationFieldParity(t *testing.T) {
 }
 
 func TestMergeConfig(t *testing.T) {
-	databaseAccountName := pointerutils.ToPtr("databaseAccountName")
-	fpServerCertCommonName := pointerutils.ToPtr("fpServerCertCommonName")
-	fpServerSecondaryCommonName := pointerutils.ToPtr("fpServerSecondaryCommonName")
-	kvPrefix := pointerutils.ToPtr("keyvaultPrefix")
+	databaseAccountName := new("databaseAccountName")
+	fpServerCertCommonName := new("fpServerCertCommonName")
+	fpServerSecondaryCommonName := new("fpServerSecondaryCommonName")
+	kvPrefix := new("keyvaultPrefix")
 
 	for _, tt := range []struct {
 		name      string
@@ -108,7 +107,7 @@ func TestConfigNilable(t *testing.T) {
 	cfg := Configuration{}
 	val := reflect.ValueOf(cfg)
 
-	for i := 0; i < val.NumField(); i++ {
-		val.Field(i).IsNil()
+	for _, field := range val.Fields() {
+		field.IsNil()
 	}
 }

@@ -52,7 +52,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -431,7 +430,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 	for _, wi := range platformWorkloadIdentityRoles {
 		c.log.Infof("creating WI: %s", wi.OperatorName)
 		resp, err := c.msiClient.CreateOrUpdate(ctx, vnetResourceGroup, wi.OperatorName, armmsi.Identity{
-			Location: pointerutils.ToPtr(c.Config.Location),
+			Location: new(c.Config.Location),
 		}, nil)
 		if err != nil {
 			return err
@@ -512,7 +511,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 // createRoleAssignmentWithRetry creates a role assignment with automatic retry logic, handling transient or 409 errors.
 // Uses exponential backoff (1s, 2s, 4s, 8s) based on retryDelay. If retryDelay is 0, skips sleeps (for tests).
 func (c *Cluster) createRoleAssignmentWithRetry(ctx context.Context, scope string, roleDefinitionID string, principalID string) error {
-	for i := 0; i < roleAssignmentMaxRetries; i++ {
+	for i := range roleAssignmentMaxRetries {
 		_, err := c.roleassignments.Create(
 			ctx,
 			scope,
@@ -670,7 +669,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 	if c.Config.IsCI {
 		c.log.Infof("creating resource group")
 		_, err = c.groups.CreateOrUpdate(ctx, c.Config.VnetResourceGroup, mgmtfeatures.ResourceGroup{
-			Location: pointerutils.ToPtr(c.Config.Location),
+			Location: new(c.Config.Location),
 		})
 		if err != nil {
 			return err
@@ -690,7 +689,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
@@ -744,7 +743,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 				kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
 				result, err := c.vaultsClient.CheckNameAvailability(
 					ctx,
-					sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: pointerutils.ToPtr("Microsoft.KeyVault/vaults")},
+					sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: new("Microsoft.KeyVault/vaults")},
 					nil,
 				)
 				if err != nil {
@@ -778,10 +777,10 @@ func (c *Cluster) Create(ctx context.Context) error {
 			Value: []sdknetwork.Route{
 				{
 					Properties: &sdknetwork.RoutePropertiesFormat{
-						AddressPrefix: pointerutils.ToPtr("0.0.0.0/0"),
-						NextHopType:   pointerutils.ToPtr(sdknetwork.RouteNextHopTypeNone),
+						AddressPrefix: new("0.0.0.0/0"),
+						NextHopType:   new(sdknetwork.RouteNextHopTypeNone),
 					},
-					Name: pointerutils.ToPtr("blackhole"),
+					Name: new("blackhole"),
 				},
 			},
 		}
@@ -1714,17 +1713,17 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string)
 		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &c.ciParentVnet,
 		},
-		AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
-		AllowForwardedTraffic:     pointerutils.ToPtr(true),
-		UseRemoteGateways:         pointerutils.ToPtr(true),
+		AllowVirtualNetworkAccess: new(true),
+		AllowForwardedTraffic:     new(true),
+		UseRemoteGateways:         new(true),
 	}
 	rpProp := &sdknetwork.VirtualNetworkPeeringPropertiesFormat{
 		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &cluster,
 		},
-		AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
-		AllowForwardedTraffic:     pointerutils.ToPtr(true),
-		AllowGatewayTransit:       pointerutils.ToPtr(true),
+		AllowVirtualNetworkAccess: new(true),
+		AllowForwardedTraffic:     new(true),
+		AllowGatewayTransit:       new(true),
 	}
 
 	err = c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", r.ResourceGroup+"-peer", sdknetwork.VirtualNetworkPeering{Properties: clusterProp}, nil)
@@ -1744,9 +1743,9 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 	c.log.Info("ensuring testing mutation policy")
 	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/17d1049b-9a84-46fb-8f53-869881c3d3ab"
 	policyName, assignmentName, scope := c.getPolicyConfig(TestingPolicyPrefix)
-	policyRule := map[string]interface{}{
-		"if": map[string]interface{}{
-			"allOf": []map[string]interface{}{
+	policyRule := map[string]any{
+		"if": map[string]any{
+			"allOf": []map[string]any{
 				{
 					"field":  "type",
 					"equals": "Microsoft.Storage/storageAccounts",
@@ -1757,11 +1756,11 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 				},
 			},
 		},
-		"then": map[string]interface{}{
+		"then": map[string]any{
 			"effect": "modify",
-			"details": map[string]interface{}{
+			"details": map[string]any{
 				"roleDefinitionIds": []string{roleDefID},
-				"operations": []map[string]interface{}{
+				"operations": []map[string]any{
 					{
 						"operation": "addOrReplace",
 						"field":     "Microsoft.Storage/storageAccounts/publicNetworkAccess",
@@ -1774,10 +1773,10 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 
 	policyDefinition, err := c.policyDefinitionsClient.CreateOrUpdate(ctx, policyName, sdkpolicy.Definition{
 		Properties: &sdkpolicy.DefinitionProperties{
-			DisplayName: pointerutils.ToPtr(policyName),
-			Mode:        pointerutils.ToPtr("Indexed"),
+			DisplayName: new(policyName),
+			Mode:        new("Indexed"),
 			PolicyRule:  policyRule,
-			PolicyType:  pointerutils.ToPtr(sdkpolicy.PolicyTypeCustom),
+			PolicyType:  new(sdkpolicy.PolicyTypeCustom),
 		},
 	}, nil)
 	if err != nil {
@@ -1787,13 +1786,13 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 
 	_, err = c.policyAssignmentsClient.Create(ctx, scope, assignmentName, sdkpolicy.Assignment{
 		Identity: &sdkpolicy.Identity{
-			Type: pointerutils.ToPtr(sdkpolicy.ResourceIdentityTypeSystemAssigned),
+			Type: new(sdkpolicy.ResourceIdentityTypeSystemAssigned),
 		},
 		Properties: &sdkpolicy.AssignmentProperties{
-			DisplayName:        pointerutils.ToPtr(assignmentName),
-			PolicyDefinitionID: pointerutils.ToPtr(*policyDefinition.ID),
+			DisplayName:        new(assignmentName),
+			PolicyDefinitionID: new(*policyDefinition.ID),
 		},
-		Location: pointerutils.ToPtr(c.Config.Location),
+		Location: new(c.Config.Location),
 	}, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create policy assignment: %w", err)

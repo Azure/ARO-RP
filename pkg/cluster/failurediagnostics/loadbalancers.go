@@ -12,16 +12,15 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
 
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 // LogLoadBalancers fetches the internal load balancer state and Azure Monitor metrics and logs them.
-func (m *manager) LogLoadBalancers(ctx context.Context) (interface{}, error) {
+func (m *manager) LogLoadBalancers(ctx context.Context) (any, error) {
 	if m.loadBalancers == nil || m.armMonitor == nil {
-		return []interface{}{"load balancer or metrics client missing"}, nil
+		return []any{"load balancer or metrics client missing"}, nil
 	}
-	return []interface{}{}, m.logLoadBalancers(ctx)
+	return []any{}, m.logLoadBalancers(ctx)
 }
 
 func (m *manager) logLoadBalancers(ctx context.Context) error {
@@ -58,13 +57,13 @@ func (m *manager) logLoadBalancers(ctx context.Context) error {
 		ctx,
 		*lb.ID,
 		&armmonitor.MetricsClientListOptions{
-			Metricnames: pointerutils.ToPtr("DipAvailability,VipAvailability"),
-			Aggregation: pointerutils.ToPtr("average"),
-			Timespan:    pointerutils.ToPtr(timespan),
-			Interval:    pointerutils.ToPtr("PT1M"),
+			Metricnames: new("DipAvailability,VipAvailability"),
+			Aggregation: new("average"),
+			Timespan:    new(timespan),
+			Interval:    new("PT1M"),
 			// Split each metric by FrontendPort so that port 22623 (MCS)
 			// and port 6443 (API) appear as separate time series.
-			Filter: pointerutils.ToPtr("FrontendPort eq '*'"),
+			Filter: new("FrontendPort eq '*'"),
 		},
 	)
 	if err != nil {

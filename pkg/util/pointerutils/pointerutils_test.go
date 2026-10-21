@@ -8,15 +8,11 @@ import (
 	"testing"
 )
 
-func TestToPtr(t *testing.T) {
+func TestToSlicePtr(t *testing.T) {
 	input := []byte("Test String")
-	output := ToPtr(input)
+	output := ToSlicePtr([][]byte{input})
 
-	if output == &input {
-		t.Errorf("Value returned by ToPtr does not matches the expected pointer value")
-	}
-
-	if !bytes.Equal(input, *output) {
-		t.Errorf("Input bytes doesn't match with the bytes value for the pointer returned by ToPtr")
+	if !bytes.Equal(input, *output[0]) {
+		t.Errorf("Input bytes doesn't match with the bytes value for the pointer returned by ToSlicePtr")
 	}
 }

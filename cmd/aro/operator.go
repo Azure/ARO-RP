@@ -135,9 +135,9 @@ func operator(log *logrus.Entry) error {
 			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", monitoring.ControllerName, err)
 		}
-		if err = (rbac.NewReconciler(
+		if err = rbac.NewReconciler(
 			log.WithField("controller", rbac.ControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			ch).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", rbac.ControllerName, err)
 		}
 		if err = (dnsmasq.NewClusterReconciler(

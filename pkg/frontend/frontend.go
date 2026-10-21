@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"log"
+	"maps"
 	"net"
 	"net/http"
 	"os"
@@ -641,9 +642,7 @@ func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b 
 }
 
 func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
-	for k, v := range header {
-		w.Header()[k] = v
-	}
+	maps.Copy(w.Header(), header)
 
 	if err != nil {
 		switch err := err.(type) {

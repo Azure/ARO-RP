@@ -21,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -928,7 +927,7 @@ func TestProcessLoop(t *testing.T) {
 		},
 		{
 			desc: "valid daily schedule, already-scheduled manifests that are valid and not run inside the schedule smearing window are kept",
-			date: pointerutils.ToPtr(time.Date(2026, 1, 1, 0, 0, 1, 0, time.UTC)),
+			date: new(time.Date(2026, 1, 1, 0, 0, 1, 0, time.UTC)),
 			schedule: &api.MaintenanceScheduleDocument{
 				ID: manifestScheduleID,
 				MaintenanceSchedule: api.MaintenanceSchedule{
@@ -1050,7 +1049,7 @@ func TestProcessLoop(t *testing.T) {
 		},
 		{
 			desc: "valid daily schedule, does not create manifests for clusters that are technically within the scheduleAcross window",
-			date: pointerutils.ToPtr(time.Date(2026, 1, 1, 0, 0, 1, 0, time.UTC)),
+			date: new(time.Date(2026, 1, 1, 0, 0, 1, 0, time.UTC)),
 			schedule: &api.MaintenanceScheduleDocument{
 				ID: manifestScheduleID,
 				MaintenanceSchedule: api.MaintenanceSchedule{
@@ -1146,7 +1145,7 @@ func TestProcessLoop(t *testing.T) {
 		},
 		{
 			desc: "valid daily schedule, does not create manifests for clusters that are technically within the scheduleAcross window (at the very end of the window)",
-			date: pointerutils.ToPtr(time.Date(2026, 1, 1, 0, 59, 59, 0, time.UTC)),
+			date: new(time.Date(2026, 1, 1, 0, 59, 59, 0, time.UTC)),
 			schedule: &api.MaintenanceScheduleDocument{
 				ID: manifestScheduleID,
 				MaintenanceSchedule: api.MaintenanceSchedule{

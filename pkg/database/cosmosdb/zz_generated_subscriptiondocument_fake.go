@@ -332,7 +332,7 @@ type fakeSubscriptionDocumentIterator struct {
 	done                  bool
 }
 
-func (i *fakeSubscriptionDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakeSubscriptionDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out any) error {
 	return ErrNotImplemented
 }
 
@@ -347,10 +347,7 @@ func (i *fakeSubscriptionDocumentIterator) Next(ctx context.Context, maxItemCoun
 		i.continuation = len(i.subscriptionDocuments)
 		i.done = true
 	} else {
-		max := i.continuation + maxItemCount
-		if max > len(i.subscriptionDocuments) {
-			max = len(i.subscriptionDocuments)
-		}
+		max := min(i.continuation+maxItemCount, len(i.subscriptionDocuments))
 		subscriptionDocuments = i.subscriptionDocuments[i.continuation:max]
 		i.continuation = max
 		i.done = i.Continuation() == ""
@@ -383,7 +380,7 @@ func (i *fakeSubscriptionDocumentErroringRawIterator) Next(ctx context.Context, 
 	return nil, i.err
 }
 
-func (i *fakeSubscriptionDocumentErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+func (i *fakeSubscriptionDocumentErroringRawIterator) NextRaw(context.Context, int, any) error {
 	return i.err
 }
 

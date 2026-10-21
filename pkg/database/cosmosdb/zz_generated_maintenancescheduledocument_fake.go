@@ -332,7 +332,7 @@ type fakeMaintenanceScheduleDocumentIterator struct {
 	done                         bool
 }
 
-func (i *fakeMaintenanceScheduleDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakeMaintenanceScheduleDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out any) error {
 	return ErrNotImplemented
 }
 
@@ -347,10 +347,7 @@ func (i *fakeMaintenanceScheduleDocumentIterator) Next(ctx context.Context, maxI
 		i.continuation = len(i.maintenanceScheduleDocuments)
 		i.done = true
 	} else {
-		max := i.continuation + maxItemCount
-		if max > len(i.maintenanceScheduleDocuments) {
-			max = len(i.maintenanceScheduleDocuments)
-		}
+		max := min(i.continuation+maxItemCount, len(i.maintenanceScheduleDocuments))
 		maintenanceScheduleDocuments = i.maintenanceScheduleDocuments[i.continuation:max]
 		i.continuation = max
 		i.done = i.Continuation() == ""
@@ -383,7 +380,7 @@ func (i *fakeMaintenanceScheduleDocumentErroringRawIterator) Next(ctx context.Co
 	return nil, i.err
 }
 
-func (i *fakeMaintenanceScheduleDocumentErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+func (i *fakeMaintenanceScheduleDocumentErroringRawIterator) NextRaw(context.Context, int, any) error {
 	return i.err
 }
 

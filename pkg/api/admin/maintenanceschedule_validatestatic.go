@@ -17,7 +17,7 @@ import (
 type maintenanceScheduleStaticValidator struct{}
 
 // Validate validates a MaintenanceSchedule
-func (sv maintenanceScheduleStaticValidator) Static(_new interface{}, _current *api.MaintenanceScheduleDocument) error {
+func (sv maintenanceScheduleStaticValidator) Static(_new any, _current *api.MaintenanceScheduleDocument) error {
 	new := _new.(*MaintenanceSchedule)
 
 	var current *MaintenanceSchedule

@@ -332,7 +332,7 @@ type fakeOpenShiftVersionDocumentIterator struct {
 	done                      bool
 }
 
-func (i *fakeOpenShiftVersionDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakeOpenShiftVersionDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out any) error {
 	return ErrNotImplemented
 }
 
@@ -347,10 +347,7 @@ func (i *fakeOpenShiftVersionDocumentIterator) Next(ctx context.Context, maxItem
 		i.continuation = len(i.openShiftVersionDocuments)
 		i.done = true
 	} else {
-		max := i.continuation + maxItemCount
-		if max > len(i.openShiftVersionDocuments) {
-			max = len(i.openShiftVersionDocuments)
-		}
+		max := min(i.continuation+maxItemCount, len(i.openShiftVersionDocuments))
 		openShiftVersionDocuments = i.openShiftVersionDocuments[i.continuation:max]
 		i.continuation = max
 		i.done = i.Continuation() == ""
@@ -383,7 +380,7 @@ func (i *fakeOpenShiftVersionDocumentErroringRawIterator) Next(ctx context.Conte
 	return nil, i.err
 }
 
-func (i *fakeOpenShiftVersionDocumentErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+func (i *fakeOpenShiftVersionDocumentErroringRawIterator) NextRaw(context.Context, int, any) error {
 	return i.err
 }
 

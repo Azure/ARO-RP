@@ -60,15 +60,15 @@ type Paths map[string]*PathItem
 // PathItem represents a Path Item object
 // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#path-item-object
 type PathItem struct {
-	Ref        string        `json:"$ref,omitempty"`
-	Get        *Operation    `json:"get,omitempty"`
-	Put        *Operation    `json:"put,omitempty"`
-	Post       *Operation    `json:"post,omitempty"`
-	Delete     *Operation    `json:"delete,omitempty"`
-	Options    *Operation    `json:"options,omitempty"`
-	Head       *Operation    `json:"head,omitempty"`
-	Patch      *Operation    `json:"patch,omitempty"`
-	Parameters []interface{} `json:"parameters,omitempty"`
+	Ref        string     `json:"$ref,omitempty"`
+	Get        *Operation `json:"get,omitempty"`
+	Put        *Operation `json:"put,omitempty"`
+	Post       *Operation `json:"post,omitempty"`
+	Delete     *Operation `json:"delete,omitempty"`
+	Options    *Operation `json:"options,omitempty"`
+	Head       *Operation `json:"head,omitempty"`
+	Patch      *Operation `json:"patch,omitempty"`
+	Parameters []any      `json:"parameters,omitempty"`
 }
 
 // Operation represents an Operation object
@@ -81,7 +81,7 @@ type Operation struct {
 	OperationID  string                 `json:"operationId,omitempty"`
 	Consumes     []string               `json:"consumes,omitempty"`
 	Produces     []string               `json:"produces,omitempty"`
-	Parameters   []interface{}          `json:"parameters,omitempty"`
+	Parameters   []any                  `json:"parameters,omitempty"`
 	Responses    Responses              `json:"responses,omitempty"`
 	Schemes      []string               `json:"schemes,omitempty"`
 	Deprecated   bool                   `json:"deprecated,omitempty"`
@@ -106,29 +106,29 @@ type Pageable struct {
 // Parameter represents a Parameter object
 // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#parameter-object
 type Parameter struct {
-	Name             string        `json:"name,omitempty"`
-	In               string        `json:"in,omitempty"`
-	Description      string        `json:"description,omitempty"`
-	Required         bool          `json:"required,omitempty"`
-	Schema           *Schema       `json:"schema,omitempty"`
-	Type             string        `json:"type,omitempty"`
-	Format           string        `json:"format,omitempty"`
-	AllowEmptyValue  bool          `json:"allowEmptyValue,omitempty"`
-	Items            *Items        `json:"items,omitempty"`
-	CollectionFormat string        `json:"collectionFormat,omitempty"`
-	Default          interface{}   `json:"default,omitempty"`
-	Maximum          int           `json:"maximum,omitempty"`
-	ExclusiveMaximum bool          `json:"exclusiveMaximum,omitempty"`
-	Minimum          int           `json:"minimum,omitempty"`
-	ExclusiveMinimum bool          `json:"exclusiveMinimum,omitempty"`
-	MaxLength        int           `json:"maxLength,omitempty"`
-	MinLength        int           `json:"minLength,omitempty"`
-	Pattern          string        `json:"pattern,omitempty"`
-	MaxItems         int           `json:"maxItems,omitempty"`
-	MinItems         int           `json:"minItems,omitempty"`
-	UniqueItems      bool          `json:"uniqueItems,omitempty"`
-	Enum             []interface{} `json:"enum,omitempty"`
-	MultipleOf       int           `json:"multipleOf,omitempty"`
+	Name             string  `json:"name,omitempty"`
+	In               string  `json:"in,omitempty"`
+	Description      string  `json:"description,omitempty"`
+	Required         bool    `json:"required,omitempty"`
+	Schema           *Schema `json:"schema,omitempty"`
+	Type             string  `json:"type,omitempty"`
+	Format           string  `json:"format,omitempty"`
+	AllowEmptyValue  bool    `json:"allowEmptyValue,omitempty"`
+	Items            *Items  `json:"items,omitempty"`
+	CollectionFormat string  `json:"collectionFormat,omitempty"`
+	Default          any     `json:"default,omitempty"`
+	Maximum          int     `json:"maximum,omitempty"`
+	ExclusiveMaximum bool    `json:"exclusiveMaximum,omitempty"`
+	Minimum          int     `json:"minimum,omitempty"`
+	ExclusiveMinimum bool    `json:"exclusiveMinimum,omitempty"`
+	MaxLength        int     `json:"maxLength,omitempty"`
+	MinLength        int     `json:"minLength,omitempty"`
+	Pattern          string  `json:"pattern,omitempty"`
+	MaxItems         int     `json:"maxItems,omitempty"`
+	MinItems         int     `json:"minItems,omitempty"`
+	UniqueItems      bool    `json:"uniqueItems,omitempty"`
+	Enum             []any   `json:"enum,omitempty"`
+	MultipleOf       int     `json:"multipleOf,omitempty"`
 
 	XMSParameterLocation string `json:"x-ms-parameter-location,omitempty"`
 }
@@ -136,28 +136,28 @@ type Parameter struct {
 // Items represents an Items object
 // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#items-object
 type Items struct {
-	Type             string        `json:"type,omitempty"`
-	Format           string        `json:"format,omitempty"`
-	Items            *Items        `json:"items,omitempty"`
-	CollectionFormat string        `json:"collectionFormat,omitempty"`
-	Default          interface{}   `json:"default,omitempty"`
-	Maximum          int           `json:"maximum,omitempty"`
-	ExclusiveMaximum bool          `json:"exclusiveMaximum,omitempty"`
-	Minimum          int           `json:"minimum,omitempty"`
-	ExclusiveMinimum bool          `json:"exclusiveMinimum,omitempty"`
-	MaxLength        int           `json:"maxLength,omitempty"`
-	MinLength        int           `json:"minLength,omitempty"`
-	Pattern          string        `json:"pattern,omitempty"`
-	MaxItems         int           `json:"maxItems,omitempty"`
-	MinItems         int           `json:"minItems,omitempty"`
-	UniqueItems      bool          `json:"uniqueItems,omitempty"`
-	Enum             []interface{} `json:"enum,omitempty"`
-	MultipleOf       int           `json:"multipleOf,omitempty"`
+	Type             string `json:"type,omitempty"`
+	Format           string `json:"format,omitempty"`
+	Items            *Items `json:"items,omitempty"`
+	CollectionFormat string `json:"collectionFormat,omitempty"`
+	Default          any    `json:"default,omitempty"`
+	Maximum          int    `json:"maximum,omitempty"`
+	ExclusiveMaximum bool   `json:"exclusiveMaximum,omitempty"`
+	Minimum          int    `json:"minimum,omitempty"`
+	ExclusiveMinimum bool   `json:"exclusiveMinimum,omitempty"`
+	MaxLength        int    `json:"maxLength,omitempty"`
+	MinLength        int    `json:"minLength,omitempty"`
+	Pattern          string `json:"pattern,omitempty"`
+	MaxItems         int    `json:"maxItems,omitempty"`
+	MinItems         int    `json:"minItems,omitempty"`
+	UniqueItems      bool   `json:"uniqueItems,omitempty"`
+	Enum             []any  `json:"enum,omitempty"`
+	MultipleOf       int    `json:"multipleOf,omitempty"`
 }
 
 // Responses represents a Responses object
 // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#responses-object
-type Responses map[string]interface{}
+type Responses map[string]any
 
 // Response represents a Response object
 // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#response-object
@@ -174,29 +174,29 @@ type Headers map[string]*Header
 
 // Example represents an Example object
 // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#example-object
-type Example map[string]interface{}
+type Example map[string]any
 
 // Header represents a Header object
 // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#header-object
 type Header struct {
-	Description      string        `json:"description,omitempty"`
-	Type             string        `json:"type,omitempty"`
-	Format           string        `json:"format,omitempty"`
-	Items            *Items        `json:"items,omitempty"`
-	CollectionFormat string        `json:"collectionFormat,omitempty"`
-	Default          interface{}   `json:"default,omitempty"`
-	Maximum          int           `json:"maximum,omitempty"`
-	ExclusiveMaximum bool          `json:"exclusiveMaximum,omitempty"`
-	Minimum          int           `json:"minimum,omitempty"`
-	ExclusiveMinimum bool          `json:"exclusiveMinimum,omitempty"`
-	MaxLength        int           `json:"maxLength,omitempty"`
-	MinLength        int           `json:"minLength,omitempty"`
-	Pattern          string        `json:"pattern,omitempty"`
-	MaxItems         int           `json:"maxItems,omitempty"`
-	MinItems         int           `json:"minItems,omitempty"`
-	UniqueItems      bool          `json:"uniqueItems,omitempty"`
-	Enum             []interface{} `json:"enum,omitempty"`
-	MultipleOf       int           `json:"multipleOf,omitempty"`
+	Description      string `json:"description,omitempty"`
+	Type             string `json:"type,omitempty"`
+	Format           string `json:"format,omitempty"`
+	Items            *Items `json:"items,omitempty"`
+	CollectionFormat string `json:"collectionFormat,omitempty"`
+	Default          any    `json:"default,omitempty"`
+	Maximum          int    `json:"maximum,omitempty"`
+	ExclusiveMaximum bool   `json:"exclusiveMaximum,omitempty"`
+	Minimum          int    `json:"minimum,omitempty"`
+	ExclusiveMinimum bool   `json:"exclusiveMinimum,omitempty"`
+	MaxLength        int    `json:"maxLength,omitempty"`
+	MinLength        int    `json:"minLength,omitempty"`
+	Pattern          string `json:"pattern,omitempty"`
+	MaxItems         int    `json:"maxItems,omitempty"`
+	MinItems         int    `json:"minItems,omitempty"`
+	UniqueItems      bool   `json:"uniqueItems,omitempty"`
+	Enum             []any  `json:"enum,omitempty"`
+	MultipleOf       int    `json:"multipleOf,omitempty"`
 }
 
 // Tag represents a Tag object
@@ -220,7 +220,7 @@ type Schema struct {
 	Format               string                 `json:"format,omitempty"`
 	Title                string                 `json:"title,omitempty"`
 	Description          string                 `json:"description,omitempty"`
-	Default              interface{}            `json:"default,omitempty"`
+	Default              any                    `json:"default,omitempty"`
 	MultipleOf           int                    `json:"multipleOf,omitempty"`
 	Maximum              int                    `json:"maximum,omitempty"`
 	ExclusiveMaximum     bool                   `json:"exclusiveMaximum,omitempty"`
@@ -235,7 +235,7 @@ type Schema struct {
 	MaxProperties        int                    `json:"maxProperties,omitempty"`
 	MinProperties        int                    `json:"minProperties,omitempty"`
 	Required             bool                   `json:"required,omitempty"`
-	Enum                 []interface{}          `json:"enum,omitempty"`
+	Enum                 []any                  `json:"enum,omitempty"`
 	Type                 string                 `json:"type,omitempty"`
 	Items                *Schema                `json:"items,omitempty"`
 	AllOf                []Schema               `json:"allOf,omitempty"`
@@ -245,7 +245,7 @@ type Schema struct {
 	ReadOnly             bool                   `json:"readOnly,omitempty"`
 	XML                  *XML                   `json:"xml,omitempty"`
 	ExternalDocs         *ExternalDocumentation `json:"externalDocs,omitempty"`
-	Example              interface{}            `json:"example,omitempty"`
+	Example              any                    `json:"example,omitempty"`
 
 	ClientFlatten  bool      `json:"x-ms-client-flatten,omitempty"`
 	XMSEnum        *XMSEnum  `json:"x-ms-enum,omitempty"`
@@ -264,9 +264,9 @@ type XMSEnum struct {
 // XMSEnumValue represents value for x-ms-enum
 // https://github.com/Azure/autorest/tree/master/docs/extensions#x-ms-enum
 type XMSEnumValue struct {
-	Value       interface{} `json:"value"`
-	Description *string     `json:"description,omitempty"`
-	Name        *string     `json:"name,omitempty"`
+	Value       any     `json:"value"`
+	Description *string `json:"description,omitempty"`
+	Name        *string `json:"name,omitempty"`
 }
 
 // XML represents an XML object
@@ -323,7 +323,7 @@ type NameParameters []NameParameter
 // NameParameter represents a name and a Parameter
 type NameParameter struct {
 	Name      string
-	Parameter interface{}
+	Parameter any
 }
 
 // UnmarshalJSON implements json.Unmarshaler

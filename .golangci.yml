@@ -31,9 +31,9 @@ linters:
             - "!${config-path}/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift/*.go"
           deny:
             - pkg: "github.com/Azure/go-autorest/autorest/to"
-              desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
+              desc: use new()
             - pkg: "k8s.io/utils/ptr"
-              desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
+              desc: use new()
         incorrectfakeclient:
           files:
             - "${config-path}/pkg/operator/**.go"

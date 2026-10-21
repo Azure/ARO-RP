@@ -309,7 +309,7 @@ func parseScenarios(s string) []faultScenario {
 		return nil
 	}
 	var out []faultScenario
-	for _, name := range strings.Split(s, ",") {
+	for name := range strings.SplitSeq(s, ",") {
 		name = strings.TrimSpace(name)
 		if sc, ok := faultScenarios[name]; ok {
 			out = append(out, sc)

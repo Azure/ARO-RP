@@ -110,19 +110,17 @@ func servePages(pages []skuPage) http.HandlerFunc {
 func oneSKUPage(name string) []skuPage {
 	return []skuPage{{
 		Value: []armcompute.ResourceSKU{
-			{Name: strPtr(name), ResourceType: strPtr("virtualMachines")},
+			{Name: new(name), ResourceType: new("virtualMachines")},
 		},
 	}}
 }
-
-func strPtr(s string) *string { return &s }
 
 // TestList_HappyPath verifies that all SKUs on a single page are yielded.
 func TestList_HappyPath(t *testing.T) {
 	srv := newTestServer(t, servePages([]skuPage{{
 		Value: []armcompute.ResourceSKU{
-			{Name: strPtr("sku1"), ResourceType: strPtr("virtualMachines")},
-			{Name: strPtr("sku2"), ResourceType: strPtr("virtualMachines")},
+			{Name: new("sku1"), ResourceType: new("virtualMachines")},
+			{Name: new("sku2"), ResourceType: new("virtualMachines")},
 		},
 	}}))
 
@@ -137,8 +135,8 @@ func TestList_HappyPath(t *testing.T) {
 // TestList_Pagination verifies that SKUs across multiple pages are all yielded.
 func TestList_Pagination(t *testing.T) {
 	srv := newTestServer(t, servePages([]skuPage{
-		{Value: []armcompute.ResourceSKU{{Name: strPtr("sku1"), ResourceType: strPtr("virtualMachines")}}},
-		{Value: []armcompute.ResourceSKU{{Name: strPtr("sku2"), ResourceType: strPtr("virtualMachines")}}},
+		{Value: []armcompute.ResourceSKU{{Name: new("sku1"), ResourceType: new("virtualMachines")}}},
+		{Value: []armcompute.ResourceSKU{{Name: new("sku2"), ResourceType: new("virtualMachines")}}},
 	}))
 
 	var got []string
@@ -154,9 +152,9 @@ func TestList_Pagination(t *testing.T) {
 func TestList_EarlyStop(t *testing.T) {
 	srv := newTestServer(t, servePages([]skuPage{{
 		Value: []armcompute.ResourceSKU{
-			{Name: strPtr("sku1"), ResourceType: strPtr("virtualMachines")},
-			{Name: strPtr("sku2"), ResourceType: strPtr("virtualMachines")},
-			{Name: strPtr("sku3"), ResourceType: strPtr("virtualMachines")},
+			{Name: new("sku1"), ResourceType: new("virtualMachines")},
+			{Name: new("sku2"), ResourceType: new("virtualMachines")},
+			{Name: new("sku3"), ResourceType: new("virtualMachines")},
 		},
 	}}))
 
@@ -233,7 +231,7 @@ func TestList_Filter(t *testing.T) {
 func TestList_NextLinkBeforeValue(t *testing.T) {
 	page2 := skuPage{
 		Value: []armcompute.ResourceSKU{
-			{Name: strPtr("sku2"), ResourceType: strPtr("virtualMachines")},
+			{Name: new("sku2"), ResourceType: new("virtualMachines")},
 		},
 	}
 

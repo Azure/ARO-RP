@@ -26,7 +26,6 @@ import (
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_storage "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/storage"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -76,7 +75,7 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 
 	for _, rule := range virtualNetworkResourceIDs {
 		*account.NetworkRuleSet.VirtualNetworkRules = append(*account.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-			VirtualNetworkResourceID: pointerutils.ToPtr(rule),
+			VirtualNetworkResourceID: new(rule),
 			Action:                   mgmtstorage.ActionAllow,
 		})
 	}
@@ -85,19 +84,19 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 
 func getValidSubnet(resourceId string) *armnetwork.Subnet {
 	s := &armnetwork.Subnet{
-		ID: pointerutils.ToPtr(resourceId),
+		ID: new(resourceId),
 		Properties: &armnetwork.SubnetPropertiesFormat{
 			NetworkSecurityGroup: &armnetwork.SecurityGroup{
-				ID: pointerutils.ToPtr(nsgv1MasterResourceId),
+				ID: new(nsgv1MasterResourceId),
 			},
 			ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{},
 		},
 	}
 	for _, endpoint := range api.SubnetsEndpoints {
 		se := &armnetwork.ServiceEndpointPropertiesFormat{
-			Service:           pointerutils.ToPtr(endpoint),
-			Locations:         []*string{pointerutils.ToPtr(location)},
-			ProvisioningState: (*armnetwork.ProvisioningState)(pointerutils.ToPtr(string(armnetwork.ProvisioningStateSucceeded))),
+			Service:           new(endpoint),
+			Locations:         []*string{new(location)},
+			ProvisioningState: (*armnetwork.ProvisioningState)(new(string(armnetwork.ProvisioningStateSucceeded))),
 		}
 		s.Properties.ServiceEndpoints = append(s.Properties.ServiceEndpoints, se)
 	}
@@ -361,7 +360,7 @@ func TestReconcileManager(t *testing.T) {
 				newMasterServiceEndpoints := []*armnetwork.ServiceEndpointPropertiesFormat{}
 
 				for _, se := range masterSubnet.Properties.ServiceEndpoints {
-					se.Locations = []*string{pointerutils.ToPtr("not_a_real_place")}
+					se.Locations = []*string{new("not_a_real_place")}
 					newMasterServiceEndpoints = append(newMasterServiceEndpoints, se)
 				}
 
@@ -370,7 +369,7 @@ func TestReconcileManager(t *testing.T) {
 				newWorkerServiceEndpoints := []*armnetwork.ServiceEndpointPropertiesFormat{}
 
 				for _, se := range workerSubnet.Properties.ServiceEndpoints {
-					se.Locations = []*string{pointerutils.ToPtr("not_a_real_place")}
+					se.Locations = []*string{new("not_a_real_place")}
 					newWorkerServiceEndpoints = append(newWorkerServiceEndpoints, se)
 				}
 

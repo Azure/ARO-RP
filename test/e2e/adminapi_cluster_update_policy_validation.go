@@ -15,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 var _ = Describe("[Admin API] Cluster admin update with policy validation", Serial, func() {
@@ -31,7 +30,7 @@ var _ = Describe("[Admin API] Cluster admin update with policy validation", Seri
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("tagging resource group to trigger policy violation")
-		triggerTags := map[string]*string{cluster.TestingPolicyTriggerTag: pointerutils.ToPtr(cluster.TestingPolicyTriggerVal)}
+		triggerTags := map[string]*string{cluster.TestingPolicyTriggerTag: new(cluster.TestingPolicyTriggerVal)}
 		err := tagResource(ctx, oc.Properties.ClusterProfile.ResourceGroupID, armresources.TagsPatchOperationMerge, triggerTags)
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func(ctx context.Context) {
@@ -78,7 +77,7 @@ func tagResource(ctx context.Context, resourceName string, operation armresource
 	log.Infof("patch tags on %s (%s): %v", resourceName, operation, tags)
 
 	_, err := clients.Tags.UpdateAtScope(ctx, resourceName, armresources.TagsPatchResource{
-		Operation: pointerutils.ToPtr(operation),
+		Operation: new(operation),
 		Properties: &armresources.Tags{
 			Tags: tags,
 		},

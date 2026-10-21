@@ -23,7 +23,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/otel/gatewayauth/internal/metadata"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type gatewayAuthenticationExtension struct {
@@ -119,12 +118,12 @@ func (e *gatewayAuthenticationExtension) startChangefeed(ctx context.Context, lo
 
 	interv := e.cfg.ChangefeedInterval.Get()
 	if interv == nil {
-		interv = pointerutils.ToPtr(30)
+		interv = new(30)
 	}
 
 	batchSize := e.cfg.ChangefeedBatchSize.Get()
 	if batchSize == nil {
-		batchSize = pointerutils.ToPtr(500)
+		batchSize = new(500)
 	}
 
 	e._env = _env

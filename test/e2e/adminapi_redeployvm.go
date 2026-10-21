@@ -131,15 +131,15 @@ func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error
 		return time.Time{}, err
 	}
 	defer stream.Close()
-	message := ""
+	var message strings.Builder
 	reader := bufio.NewScanner(stream)
 	for reader.Scan() {
 		select {
 		case <-ctx.Done():
 		default:
 			line := reader.Text()
-			message += line
+			message.WriteString(line)
 		}
 	}
-	return time.Parse(uptimeStrFmt, strings.TrimSpace(message))
+	return time.Parse(uptimeStrFmt, strings.TrimSpace(message.String()))
 }

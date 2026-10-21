@@ -17,18 +17,18 @@ var secretPreservingJSONHandle *codec.JsonHandle
 func init() {
 	secretPreservingJSONHandle = &codec.JsonHandle{}
 
-	err := secretPreservingJSONHandle.SetInterfaceExt(reflect.TypeOf(SecureBytes{}), 1, secureHidingExt{})
+	err := secretPreservingJSONHandle.SetInterfaceExt(reflect.TypeFor[SecureBytes](), 1, secureHidingExt{})
 	if err != nil {
 		panic(err)
 	}
 
-	err = secretPreservingJSONHandle.SetInterfaceExt(reflect.TypeOf((*SecureString)(nil)), 1, secureHidingExt{})
+	err = secretPreservingJSONHandle.SetInterfaceExt(reflect.TypeFor[*SecureString](), 1, secureHidingExt{})
 	if err != nil {
 		panic(err)
 	}
 }
 
-func encodeJSON(i interface{}) string {
+func encodeJSON(i any) string {
 	var b []byte
 
 	err := codec.NewEncoderBytes(&b, secretPreservingJSONHandle).Encode(i)
@@ -43,10 +43,10 @@ var _ codec.InterfaceExt = (*secureHidingExt)(nil)
 
 type secureHidingExt struct{}
 
-func (secureHidingExt) ConvertExt(v interface{}) interface{} {
+func (secureHidingExt) ConvertExt(v any) any {
 	return "[REDACTED]"
 }
 
-func (secureHidingExt) UpdateExt(dest interface{}, v interface{}) {
+func (secureHidingExt) UpdateExt(dest any, v any) {
 	panic("cannot be used to decode!")
 }

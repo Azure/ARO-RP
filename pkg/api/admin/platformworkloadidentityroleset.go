@@ -21,7 +21,7 @@ type PlatformWorkloadIdentityRoleSet struct {
 	Type string `json:"type,omitempty" mutable:"case"`
 
 	// The properties for the PlatformWorkloadIdentityRoleSet resource.
-	Properties PlatformWorkloadIdentityRoleSetProperties `json:"properties,omitempty"`
+	Properties PlatformWorkloadIdentityRoleSetProperties `json:"properties"`
 }
 
 // PlatformWorkloadIdentityRoleSetProperties represents the properties of a PlatformWorkloadIdentityRoleSet resource.
@@ -48,7 +48,7 @@ type PlatformWorkloadIdentityRole struct {
 	ServiceAccounts []string `json:"serviceAccounts,omitempty" mutable:"true" validate:"required"`
 
 	// SecretLocation represents the location of the in-cluster secret containing credentials for the platform workload identity.
-	SecretLocation SecretLocation `json:"secretLocation,omitempty" mutable:"true" validate:"required"`
+	SecretLocation SecretLocation `json:"secretLocation" mutable:"true" validate:"required"`
 }
 
 // SecretLocation represents the location of the in-cluster secret containing credentials for the platform workload identity.
