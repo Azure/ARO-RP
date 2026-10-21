@@ -8,6 +8,3 @@ This is directory which stores Go modules with pinned buildable package that is 
 * For shell: Run `source .bingo/variables.env` to source all environment variable for each tool.
 * See <https://github.com/bwplotka/bingo> or -h on how to add, remove or change binaries dependencies.
 
-## Requirements
-
-* Go 1.24.x or 1.25.x
