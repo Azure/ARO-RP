@@ -1,5 +1,5 @@
-# Synthetic ACI collector for OTEL e2e (Tier A). Product image has no filter
-# processor — routing keeps only e2e-marker records; rest goes to /dev/null.
+# Fake collector for e2e: OTLP in, keep only aro-e2e-otel-marker logs for
+# debug assert; drop everything else.
 extensions:
   health_check:
     endpoint: 0.0.0.0:13133
@@ -15,12 +15,9 @@ connectors:
     default_pipelines: [logs/drop]
     table:
       - context: log
-        # containers/journald: body|body.message; audit: objectRef name
         condition: >
           (IsString(log.body) and IsMatch(log.body, "(?i)aro-e2e-otel-marker"))
-          or (IsMap(log.body) and IsString(log.body["message"]) and IsMatch(log.body["message"], "(?i)aro-e2e-otel-marker"))
           or (IsMap(log.body) and IsString(log.body["objectRef_name"]) and IsMatch(log.body["objectRef_name"], "(?i)aro-e2e-otel-marker"))
-          or (IsMap(log.body) and IsMap(log.body["objectRef"]) and IsString(log.body["objectRef"]["name"]) and IsMatch(log.body["objectRef"]["name"], "(?i)aro-e2e-otel-marker"))
         pipelines: [logs/keep]
 
 processors:

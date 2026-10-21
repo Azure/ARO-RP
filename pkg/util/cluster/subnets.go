@@ -9,7 +9,6 @@ import (
 	"net"
 )
 
-// IPRangesOverlapCIDR reports whether any of ipRanges overlaps cidr.
 func IPRangesOverlapCIDR(ipRanges []*net.IPNet, cidr string) (bool, error) {
 	_, cidrNet, err := net.ParseCIDR(cidr)
 	if err != nil {
@@ -23,8 +22,7 @@ func IPRangesOverlapCIDR(ipRanges []*net.IPNet, cidr string) (bool, error) {
 	return false, nil
 }
 
-// PickFreeDevVNetPrefix returns a random free /28 on the shared ARO
-// dev-vnet, using the same address windows as generateSubnets:
+// Returns a random free /28 on the shared ARO dev-vnet:
 //   - local (!isCI): 10.0.0.0/16
 //   - CI (isCI):     10.3.0.0–10.127.x
 func PickFreeDevVNetPrefix(used []*net.IPNet, prefixLen, maxTries int, isCI bool) (string, error) {

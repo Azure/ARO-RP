@@ -44,12 +44,6 @@ const (
 	otelE2ELoggingNS           = "openshift-azure-logging"
 )
 
-// OTEL gateway e2e (Tier A): point cluster otel-exporter DaemonSets at a
-// synthetic telemetrycollector running as ACI in the cluster VNet, inject
-// markers for containers/journald/audit, and assert them in ACI debug logs.
-//
-// Opt-in: skipped unless TELEMETRY_COLLECTOR_IMAGE is set (image must be
-// pullable by ACI; registry auth defaults to AZURE_CLIENT_ID/SECRET).
 var _ = Describe("OTEL gateway integration", func() {
 	var (
 		subnetName         string
@@ -330,7 +324,6 @@ func waitForOTelCollectorACIHealthy(ctx context.Context, containerGroupName stri
 }
 
 func registryServerFromImage(image string) (string, error) {
-	// Images are host/path:tag — not full URLs.
 	hostPath := image
 	if strings.Contains(image, "://") {
 		u, err := url.Parse(image)
@@ -364,9 +357,6 @@ func waitForOTelConfigInsecure(ctx context.Context) {
 	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 }
 
-// waitForOTelExporterDaemonSetsReady waits until master/worker otel-exporter
-// DaemonSets are rolled out. When wantHostAliasIP is set, also require that IP
-// in each DS hostAliases (gateway target after the Cluster CR patch).
 func waitForOTelExporterDaemonSetsReady(ctx context.Context, wantHostAliasIP string) {
 	GinkgoHelper()
 	for _, daemonSetName := range []string{genevalogging.MasterDaemonsetName, genevalogging.WorkerDaemonsetName} {
@@ -412,7 +402,9 @@ func assertOTelSourceInACILogs(ctx context.Context, containerGroupName, marker, 
 
 func injectOTelContainerMarker(ctx context.Context, marker string) {
 	GinkgoHelper()
-	// Platform NS + level=error: required by minimal-logs file_log keep filters.
+	// Default cluster profile is minimal-logs, which only keeps container lines
+	// from selected platform namespaces that look like errors. Use that NS and
+	// prefix the marker with level=error so the exporter does not drop it.
 	ns := otelE2ELoggingNS
 	podName := "otel-marker-" + strings.ToLower(uuid.DefaultGenerator.Generate()[:8])
 	_, err := clients.Kubernetes.CoreV1().Pods(ns).Create(ctx, &corev1.Pod{
@@ -438,7 +430,6 @@ func injectOTelContainerMarker(ctx context.Context, marker string) {
 
 func injectOTelJournaldMarker(ctx context.Context, marker string) {
 	GinkgoHelper()
-	// user.err => PRIORITY=3, kept by minimal-logs journald high-signal filter.
 	pods, err := clients.Kubernetes.CoreV1().Pods("openshift-machine-config-operator").List(ctx, metav1.ListOptions{
 		LabelSelector: "k8s-app=machine-config-daemon",
 		FieldSelector: "status.phase=Running",
