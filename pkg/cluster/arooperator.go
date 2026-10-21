@@ -102,5 +102,5 @@ func (m *manager) ensureUpgradeAnnotation(ctx context.Context) error {
 }
 
 func (m *manager) restartAROOperatorMaster(ctx context.Context) error {
-	return m.aroOperatorDeployer.Restart(ctx, []string{"aro-operator-master"})
+	return m.aroOperatorDeployer.Restart(ctx, m.kubernetescli, []string{"aro-operator-master"})
 }

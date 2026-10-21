@@ -10,13 +10,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-// ensureGatewayUpgrade checks to see if the cluster should have the gateway
-// enabled but doesn't yet.  If so, it sets the master subnet policies, deploys
+// ensureGatewayUpgrade checks to see if the cluster should have a gateway private
+// endpoint but doesn't yet.  If so, it sets the master subnet policies, deploys
 // the private endpoint, approves the gateway PE/PLS connection, creates the
 // gateway database record and updates the model with the private endpoint IP.
 func (m *manager) ensureGatewayUpgrade(ctx context.Context) error {
-	if !m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled ||
-		m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
 		return nil
 	}
 
@@ -33,7 +32,9 @@ func (m *manager) ensureGatewayUpgrade(ctx context.Context) error {
 		ContentVersion: "1.0.0.0",
 		Resources:      []*arm.Resource{m.networkPrivateEndpoint()},
 	}
-	err = arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "gatewayprivateendpoint", t, nil)
+	err = arm.Retryable(ctx, func() error {
+		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "gatewayprivateendpoint", t, nil)
+	}, m.log, "deploying gateway private endpoint")
 	if err != nil {
 		m.log.Print(err)
 		return nil

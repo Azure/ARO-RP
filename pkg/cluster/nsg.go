@@ -10,14 +10,13 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func (m *manager) clusterNSG(infraID, location string) *arm.Resource {
 	nsg := &armnetwork.SecurityGroup{
 		Properties: &armnetwork.SecurityGroupPropertiesFormat{},
-		Name:       pointerutils.ToPtr(infraID + apisubnet.NSGSuffixV2),
-		Type:       pointerutils.ToPtr("Microsoft.Network/networkSecurityGroups"),
+		Name:       new(infraID + apisubnet.NSGSuffixV2),
+		Type:       new("Microsoft.Network/networkSecurityGroups"),
 		Location:   &location,
 	}
 
@@ -25,16 +24,16 @@ func (m *manager) clusterNSG(infraID, location string) *arm.Resource {
 		nsg.Properties.SecurityRules = []*armnetwork.SecurityRule{
 			{
 				Properties: &armnetwork.SecurityRulePropertiesFormat{
-					Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
-					SourcePortRange:          pointerutils.ToPtr("*"),
-					DestinationPortRange:     pointerutils.ToPtr("6443"),
-					SourceAddressPrefix:      pointerutils.ToPtr("*"),
-					DestinationAddressPrefix: pointerutils.ToPtr("*"),
-					Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
-					Priority:                 pointerutils.ToPtr(int32(120)),
-					Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
+					Protocol:                 new(armnetwork.SecurityRuleProtocolTCP),
+					SourcePortRange:          new("*"),
+					DestinationPortRange:     new("6443"),
+					SourceAddressPrefix:      new("*"),
+					DestinationAddressPrefix: new("*"),
+					Access:                   new(armnetwork.SecurityRuleAccessAllow),
+					Priority:                 new(int32(120)),
+					Direction:                new(armnetwork.SecurityRuleDirectionInbound),
 				},
-				Name: pointerutils.ToPtr("apiserver_in"),
+				Name: new("apiserver_in"),
 			},
 		}
 	}

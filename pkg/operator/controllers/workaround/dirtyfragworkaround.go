@@ -13,14 +13,13 @@ import (
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -31,11 +30,11 @@ import (
 type dirtyfragworkaround struct {
 	log *logrus.Entry
 	ch  clienthelper.Interface
+
+	marshal func(v any) ([]byte, error)
 }
 
 var _ Workaround = &dirtyfragworkaround{}
-
-const ipsecModeDisabled = "Disabled"
 
 var dirtyfragFixedPatchVersions = map[string]version.Version{
 	"4.21": version.NewVersion(4, 21, 15),
@@ -47,11 +46,9 @@ var dirtyfragFixedPatchVersions = map[string]version.Version{
 	"4.12": version.NewVersion(4, 12, 90),
 }
 
-var marshalDirtyfragIgnition = json.Marshal
-
 func NewDirtyfragWorkaround(log *logrus.Entry, client client.Client) *dirtyfragworkaround {
 	ch := clienthelper.NewWithClient(log, client)
-	return &dirtyfragworkaround{log: log, ch: ch}
+	return &dirtyfragworkaround{log: log, ch: ch, marshal: json.Marshal}
 }
 
 // IsRequired implements [Workaround].
@@ -61,26 +58,20 @@ func (a *dirtyfragworkaround) IsRequired(ctx context.Context, clusterVersion ver
 		return false, nil
 	}
 
-	network := &unstructured.Unstructured{}
-	network.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "operator.openshift.io",
-		Version: "v1",
-		Kind:    "Network",
-	})
-
+	network := &operatorv1.Network{}
 	err := a.ch.Get(ctx, types.NamespacedName{Name: "cluster"}, network)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return false, fmt.Errorf("failed to get Network resource: %w", err)
 	}
 
+	// If Network resource is missing, assume IPSec is off
 	if err == nil {
-		ipsecConfig, found, err := unstructured.NestedMap(network.Object, "spec", "defaultNetwork", "ovnKubernetesConfig", "ipsecConfig")
-		if err != nil {
-			return false, fmt.Errorf("failed to parse Network resource: %w", err)
-		}
-		if found {
-			mode, ok := ipsecConfig["mode"].(string)
-			if ok && mode != ipsecModeDisabled {
+		// Spec.DefaultNetwork.OVNKubernetesConfig.IPsecConfig is 'disabled' by
+		// default, so treat nils as disabled
+		ovnConfig := network.Spec.DefaultNetwork.OVNKubernetesConfig
+		if ovnConfig != nil {
+			ipsecConfig := network.Spec.DefaultNetwork.OVNKubernetesConfig.IPsecConfig
+			if ipsecConfig != nil && (ipsecConfig.Mode == operatorv1.IPsecModeFull || ipsecConfig.Mode == operatorv1.IPsecModeExternal) {
 				return false, nil
 			}
 		}
@@ -100,7 +91,7 @@ func (a *dirtyfragworkaround) IsRequired(ctx context.Context, clusterVersion ver
 
 // Ensure implements [Workaround].
 func (a *dirtyfragworkaround) Ensure(ctx context.Context) error {
-	mc, err := makeDirtyfragMachineConfig("master")
+	mc, err := makeDirtyfragMachineConfig(a.marshal, "master")
 	if err != nil {
 		return err
 	}
@@ -122,7 +113,7 @@ func (a *dirtyfragworkaround) Remove(ctx context.Context) error {
 	)
 }
 
-func makeDirtyfragMachineConfig(role string) (*mcv1.MachineConfig, error) {
+func makeDirtyfragMachineConfig(marshal func(any) ([]byte, error), role string) (*mcv1.MachineConfig, error) {
 	// File content to write
 	content := `install esp4 /bin/false
 install esp6 /bin/false
@@ -133,17 +124,17 @@ install rxrpc /bin/false
 	encodedContent := base64.StdEncoding.EncodeToString([]byte(content))
 
 	// Create Ignition config
-	ignitionConfig := map[string]interface{}{
-		"ignition": map[string]interface{}{
+	ignitionConfig := map[string]any{
+		"ignition": map[string]any{
 			"version": "3.2.0",
 		},
-		"storage": map[string]interface{}{
-			"files": []map[string]interface{}{
+		"storage": map[string]any{
+			"files": []map[string]any{
 				{
 					"path":      "/etc/modprobe.d/aro-dirtyfrag-mitigation-controlplane.conf",
 					"mode":      420, // 0644 in octal
 					"overwrite": true,
-					"contents": map[string]interface{}{
+					"contents": map[string]any{
 						"source": "data:text/plain;charset=utf-8;base64," + encodedContent,
 					},
 				},
@@ -151,17 +142,12 @@ install rxrpc /bin/false
 		},
 	}
 
-	// Marshal to JSON
-	ignitionJSON, err := marshalDirtyfragIgnition(ignitionConfig)
+	ignitionJSON, err := marshal(ignitionConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal dirtyfrag ignition config: %w", err)
 	}
 
 	return &mcv1.MachineConfig{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: mcv1.SchemeGroupVersion.String(),
-			Kind:       "MachineConfig",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("99-%s-disable-dirtyfrag", role),
 			Labels: map[string]string{

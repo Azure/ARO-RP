@@ -15,6 +15,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/installer"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -67,13 +69,16 @@ func (m *manager) fixMCSCert(ctx context.Context) error {
 		certChanged = true
 
 		if rootCA == nil {
-			pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
-			if err != nil {
+			var pg graph.PersistedGraph
+			if err := arm.Retryable(ctx, func() error {
+				var e error
+				pg, e = m.graph.LoadPersisted(ctx, resourceGroup, account)
+				return e
+			}, m.log, "loading persisted graph"); err != nil {
 				return err
 			}
 
-			err = pg.GetByName(false, "*tls.RootCA", &rootCA)
-			if err != nil {
+			if err := pg.GetByName(false, "*tls.RootCA", &rootCA); err != nil {
 				return err
 			}
 		}

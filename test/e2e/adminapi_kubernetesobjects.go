@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,11 +29,9 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 		const namespace = "openshift"
 		const containerName = "e2e-test-container-name"
 
-		It("should be able to create, get, list, update and delete objects, but force delete is only allowed for pods", func(ctx context.Context) {
+		It("should be able to create, get, list, update and delete both core and non-core group objects", func(ctx context.Context) {
+			const leaseName = "e2e-test-lease"
 			defer func() {
-				// When ran successfully this test should delete the object,
-				// but we need to remove the object in case of failure
-				// to allow us to run this test against the same cluster multiple times.
 				By("deleting the config map via Kubernetes API")
 				CleanupK8sResource[*corev1.ConfigMap](
 					ctx, clients.Kubernetes.CoreV1().ConfigMaps(namespace), objName,
@@ -40,6 +39,10 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				By("deleting the pod via Kubernetes API")
 				CleanupK8sResource[*corev1.Pod](
 					ctx, clients.Kubernetes.CoreV1().Pods(namespace), objName,
+				)
+				By("deleting the Lease via Kubernetes API")
+				CleanupK8sResource[*coordinationv1.Lease](
+					ctx, clients.Kubernetes.CoordinationV1().Leases(namespace), leaseName,
 				)
 			}()
 
@@ -51,6 +54,10 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 			testConfigMapDeleteOK(ctx, objName, namespace)
 			testPodCreateOK(ctx, containerName, objName, namespace)
 			testPodForceDeleteOK(ctx, objName, namespace)
+			testLeaseCreateOK(ctx, leaseName, namespace)
+			testLeaseGetOK(ctx, leaseName, namespace)
+			testLeaseUpdateOK(ctx, leaseName, namespace)
+			testLeaseDeleteOK(ctx, leaseName, namespace)
 		})
 
 		testSecretOperationsForbidden(objName, namespace)
@@ -411,4 +418,87 @@ func mockConfigMap(name, namespace string) corev1.ConfigMap {
 			"key": "value",
 		},
 	}
+}
+
+func mockLease(name, namespace string) coordinationv1.Lease {
+	return coordinationv1.Lease{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Lease",
+			APIVersion: "coordination.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+}
+
+func testLeaseCreateOK(ctx context.Context, name, namespace string) {
+	By("creating a Lease via RP admin API")
+	obj := mockLease(name, namespace)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, true, obj, nil)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+	By("checking that the Lease was created via Kubernetes API")
+	getFunc := clients.Kubernetes.CoordinationV1().Leases(namespace).Get
+	lease := GetK8sObjectWithRetry(ctx, getFunc, name, metav1.GetOptions{})
+	Expect(lease.Name).To(Equal(name))
+	Expect(lease.Namespace).To(Equal(namespace))
+}
+
+func testLeaseGetOK(ctx context.Context, name, namespace string) {
+	By("getting a Lease via RP admin API")
+	params := url.Values{
+		"kind":      []string{"Lease.coordination.k8s.io"},
+		"namespace": []string{namespace},
+		"name":      []string{name},
+	}
+	var obj coordinationv1.Lease
+	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &obj)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+	Expect(obj.Name).To(Equal(name))
+}
+
+func testLeaseUpdateOK(ctx context.Context, name, namespace string) {
+	By("getting the existing Lease via RP admin API")
+	params := url.Values{
+		"kind":      []string{"Lease.coordination.k8s.io"},
+		"namespace": []string{namespace},
+		"name":      []string{name},
+	}
+	var obj coordinationv1.Lease
+	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &obj)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+	By("updating the Lease via RP admin API")
+	obj.Labels = map[string]string{"updated": "true"}
+	resp, err = adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, true, obj, nil)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+	By("checking that the Lease was updated via Kubernetes API")
+	getFunc := clients.Kubernetes.CoordinationV1().Leases(namespace).Get
+	lease := GetK8sObjectWithRetry(ctx, getFunc, name, metav1.GetOptions{})
+	Expect(lease.Labels).To(HaveKeyWithValue("updated", "true"))
+}
+
+func testLeaseDeleteOK(ctx context.Context, name, namespace string) {
+	By("deleting the Lease via RP admin API")
+	params := url.Values{
+		"kind":      []string{"Lease.coordination.k8s.io"},
+		"namespace": []string{namespace},
+		"name":      []string{name},
+	}
+	resp, err := adminRequest(ctx, http.MethodDelete, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, nil)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+	By("waiting for the Lease to be deleted")
+	Eventually(func(g Gomega, ctx context.Context) {
+		_, err = clients.Kubernetes.CoordinationV1().Leases(namespace).Get(ctx, name, metav1.GetOptions{})
+		g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect Lease to be deleted")
+	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 }

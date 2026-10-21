@@ -15,11 +15,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azurezones"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -87,7 +87,7 @@ func MigrateInternalLoadBalancerZones(
 
 	lbZones := []*string{}
 	for _, z := range controlPlaneZones {
-		lbZones = append(lbZones, pointerutils.ToPtr(z))
+		lbZones = append(lbZones, new(z))
 	}
 
 	ilbBackendPoolID := fmt.Sprintf("%s/backendAddressPools/%s", *lb.ID, infraID)
@@ -106,17 +106,19 @@ func MigrateInternalLoadBalancerZones(
 	temporaryFIPName := fmt.Sprintf("%d-ip", _env.Now().Unix())
 	temporaryFIPConfig := &armnetwork_sdk.FrontendIPConfiguration{
 		Properties: &armnetwork_sdk.FrontendIPConfigurationPropertiesFormat{
-			PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork_sdk.IPAllocationMethodDynamic),
+			PrivateIPAllocationMethod: new(armnetwork_sdk.IPAllocationMethodDynamic),
 			Subnet: &armnetwork_sdk.Subnet{
-				ID: pointerutils.ToPtr(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+				ID: new(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 			},
 		},
 		Zones: lbZones,
-		Name:  pointerutils.ToPtr(temporaryFIPName),
+		Name:  new(temporaryFIPName),
 	}
 	// firstly, create a temporary frontend IP configuration
 	lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, temporaryFIPConfig)
-	err = armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	err = arm.Retryable(ctx, func() error {
+		return armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	}, log, "adding temporary frontend IP to load balancer "+lbName)
 	if err != nil {
 		log.Errorf("FAILURE IN CRITICAL SECTION: '%v'", err)
 		return doc, fmt.Errorf("failure updating internal load balancer: %w", err)
@@ -125,11 +127,13 @@ func MigrateInternalLoadBalancerZones(
 	// associate the temporary frontend IP with the PLS (since it always needs one)
 	pls.Properties.LoadBalancerFrontendIPConfigurations = []*armnetwork_sdk.FrontendIPConfiguration{
 		{
-			ID: pointerutils.ToPtr(fmt.Sprintf("%s/frontendIPConfigurations/%s", *lb.ID, temporaryFIPName)),
+			ID: new(fmt.Sprintf("%s/frontendIPConfigurations/%s", *lb.ID, temporaryFIPName)),
 		},
 	}
 	log.Infof("associating temporary frontend IP (%s) to PLS", temporaryFIPName)
-	err = armClusterPrivateLinkServices.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID+"-pls", pls.PrivateLinkService, nil)
+	err = arm.Retryable(ctx, func() error {
+		return armClusterPrivateLinkServices.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID+"-pls", pls.PrivateLinkService, nil)
+	}, log, "associating temporary frontend IP to PLS")
 	if err != nil {
 		log.Errorf("FAILURE IN CRITICAL SECTION - PLS MAY NOW BE DISCONNECTED FROM LB: '%v'", err)
 		return doc, fmt.Errorf("failure disassociating LB frontend IP from PLS: %w", err)
@@ -140,7 +144,9 @@ func MigrateInternalLoadBalancerZones(
 	lb.Properties.FrontendIPConfigurations = []*armnetwork_sdk.FrontendIPConfiguration{temporaryFIPConfig}
 	lb.Properties.LoadBalancingRules = []*armnetwork_sdk.LoadBalancingRule{}
 	log.Info("removing old frontend IP")
-	err = armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	err = arm.Retryable(ctx, func() error {
+		return armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	}, log, "removing old frontend IP from load balancer "+lbName)
 	if err != nil {
 		log.Errorf("FAILURE IN CRITICAL SECTION - API-INT RULES MAY NOW BE MISSING: '%v'", err)
 		return doc, fmt.Errorf("failure updating internal load balancer: %w", err)
@@ -150,14 +156,14 @@ func MigrateInternalLoadBalancerZones(
 	frontendConfigID := fmt.Sprintf("%s/frontendIPConfigurations/%s", *lb.ID, internalLBFrontendIPName)
 	newFrontendIP := &armnetwork_sdk.FrontendIPConfiguration{
 		Properties: &armnetwork_sdk.FrontendIPConfigurationPropertiesFormat{
-			PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork_sdk.IPAllocationMethodStatic),
-			PrivateIPAddress:          pointerutils.ToPtr(doc.OpenShiftCluster.Properties.APIServerProfile.IntIP),
+			PrivateIPAllocationMethod: new(armnetwork_sdk.IPAllocationMethodStatic),
+			PrivateIPAddress:          new(doc.OpenShiftCluster.Properties.APIServerProfile.IntIP),
 			Subnet: &armnetwork_sdk.Subnet{
-				ID: pointerutils.ToPtr(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+				ID: new(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 			},
 		},
 		Zones: lbZones,
-		Name:  pointerutils.ToPtr(internalLBFrontendIPName),
+		Name:  new(internalLBFrontendIPName),
 	}
 
 	lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, newFrontendIP)
@@ -168,48 +174,50 @@ func MigrateInternalLoadBalancerZones(
 
 	lb.Properties.LoadBalancingRules = append(lb.Properties.LoadBalancingRules,
 		&armnetwork_sdk.LoadBalancingRule{
-			Name: pointerutils.ToPtr("api-internal-v4"),
+			Name: new("api-internal-v4"),
 			Properties: &armnetwork_sdk.LoadBalancingRulePropertiesFormat{
 				FrontendIPConfiguration: &armnetwork_sdk.SubResource{
-					ID: pointerutils.ToPtr(frontendConfigID),
+					ID: new(frontendConfigID),
 				},
 				BackendAddressPool: &armnetwork_sdk.SubResource{
-					ID: pointerutils.ToPtr(ilbBackendPoolID),
+					ID: new(ilbBackendPoolID),
 				},
 				Probe: &armnetwork_sdk.SubResource{
-					ID: pointerutils.ToPtr(apiProbeID),
+					ID: new(apiProbeID),
 				},
-				Protocol:             pointerutils.ToPtr(armnetwork_sdk.TransportProtocolTCP),
-				LoadDistribution:     pointerutils.ToPtr(armnetwork_sdk.LoadDistributionDefault),
-				FrontendPort:         pointerutils.ToPtr(int32(6443)),
-				BackendPort:          pointerutils.ToPtr(int32(6443)),
-				IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
-				DisableOutboundSnat:  pointerutils.ToPtr(true),
+				Protocol:             new(armnetwork_sdk.TransportProtocolTCP),
+				LoadDistribution:     new(armnetwork_sdk.LoadDistributionDefault),
+				FrontendPort:         new(int32(6443)),
+				BackendPort:          new(int32(6443)),
+				IdleTimeoutInMinutes: new(int32(30)),
+				DisableOutboundSnat:  new(true),
 			},
 		},
 		&armnetwork_sdk.LoadBalancingRule{
-			Name: pointerutils.ToPtr("sint-v4"),
+			Name: new("sint-v4"),
 			Properties: &armnetwork_sdk.LoadBalancingRulePropertiesFormat{
 				FrontendIPConfiguration: &armnetwork_sdk.SubResource{
-					ID: pointerutils.ToPtr(frontendConfigID),
+					ID: new(frontendConfigID),
 				},
 				BackendAddressPool: &armnetwork_sdk.SubResource{
-					ID: pointerutils.ToPtr(ilbBackendPoolID),
+					ID: new(ilbBackendPoolID),
 				},
 				Probe: &armnetwork_sdk.SubResource{
-					ID: pointerutils.ToPtr(sintProbeID),
+					ID: new(sintProbeID),
 				},
-				Protocol:             pointerutils.ToPtr(armnetwork_sdk.TransportProtocolTCP),
-				LoadDistribution:     pointerutils.ToPtr(armnetwork_sdk.LoadDistributionDefault),
-				FrontendPort:         pointerutils.ToPtr(int32(22623)),
-				BackendPort:          pointerutils.ToPtr(int32(22623)),
-				IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+				Protocol:             new(armnetwork_sdk.TransportProtocolTCP),
+				LoadDistribution:     new(armnetwork_sdk.LoadDistributionDefault),
+				FrontendPort:         new(int32(22623)),
+				BackendPort:          new(int32(22623)),
+				IdleTimeoutInMinutes: new(int32(30)),
 			},
 		},
 	)
 
 	log.Info("updating internal load balancer with zone-redundant frontend IP")
-	err = armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	err = arm.Retryable(ctx, func() error {
+		return armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	}, log, "updating load balancer "+lbName+" with zone-redundant frontend IP")
 	if err != nil {
 		log.Errorf("FAILURE IN CRITICAL SECTION - API-INT RULES MAY NOW BE MISSING: '%v'", err)
 		return doc, fmt.Errorf("failure updating internal load balancer: %w", err)
@@ -219,10 +227,12 @@ func MigrateInternalLoadBalancerZones(
 	log.Info("reassociating frontend IP with PLS")
 	pls.Properties.LoadBalancerFrontendIPConfigurations = []*armnetwork_sdk.FrontendIPConfiguration{
 		{
-			ID: pointerutils.ToPtr(frontendConfigID),
+			ID: new(frontendConfigID),
 		},
 	}
-	err = armClusterPrivateLinkServices.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID+"-pls", pls.PrivateLinkService, nil)
+	err = arm.Retryable(ctx, func() error {
+		return armClusterPrivateLinkServices.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID+"-pls", pls.PrivateLinkService, nil)
+	}, log, "reassociating frontend IP with PLS")
 	if err != nil {
 		log.Errorf("FAILURE IN CRITICAL SECTION - PLS MAY NOW BE DISCONNECTED FROM LB: '%v'", err)
 		return doc, fmt.Errorf("failure disassociating LB frontend IP from PLS: %w", err)
@@ -231,7 +241,9 @@ func MigrateInternalLoadBalancerZones(
 	// STEP FIVE: remove bogus frontend IP to clean up
 	log.Info("cleaning up temporary frontend IP")
 	lb.Properties.FrontendIPConfigurations = []*armnetwork_sdk.FrontendIPConfiguration{newFrontendIP}
-	err = armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	err = arm.Retryable(ctx, func() error {
+		return armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	}, log, "cleaning up temporary frontend IP from load balancer "+lbName)
 	if err != nil {
 		log.Errorf("FAILURE IN CRITICAL SECTION - API-INT RULES MAY NOW BE MISSING: '%v'", err)
 		return doc, fmt.Errorf("failure updating internal load balancer: %w", err)

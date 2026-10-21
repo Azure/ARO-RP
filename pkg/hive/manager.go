@@ -69,8 +69,8 @@ type clusterManager struct {
 }
 
 type SyncSetManager interface {
-	List(ctx context.Context, namespace string, label string, listType reflect.Type) (interface{}, error)
-	Get(ctx context.Context, namespace string, name string, getType reflect.Type) (interface{}, error)
+	List(ctx context.Context, namespace string, label string, listType reflect.Type) (any, error)
+	Get(ctx context.Context, namespace string, name string, getType reflect.Type) (any, error)
 }
 
 type syncSetManager struct {
@@ -349,7 +349,7 @@ func (hr *clusterManager) GetClusterSync(ctx context.Context, oc *api.OpenShiftC
 	return clusterSync, nil
 }
 
-func (hr *syncSetManager) List(ctx context.Context, namespace string, label string, listType reflect.Type) (interface{}, error) {
+func (hr *syncSetManager) List(ctx context.Context, namespace string, label string, listType reflect.Type) (any, error) {
 	list := reflect.New(listType).Interface()
 	objectList, ok := list.(client.ObjectList)
 	if !ok {
@@ -387,7 +387,7 @@ func (hr *clusterManager) GetHiveK8sObject(ctx context.Context, resource, namesp
 	return un.MarshalJSON()
 }
 
-func (hr *syncSetManager) Get(ctx context.Context, namespace string, name string, getType reflect.Type) (interface{}, error) {
+func (hr *syncSetManager) Get(ctx context.Context, namespace string, name string, getType reflect.Type) (any, error) {
 	get := reflect.New(getType).Interface()
 	err := hr.hiveClientset.Get(ctx, client.ObjectKey{
 		Namespace: namespace,

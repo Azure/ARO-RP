@@ -5,6 +5,7 @@ package v20250725
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
 func exampleOpenShiftCluster() *OpenShiftCluster {
@@ -14,23 +15,23 @@ func exampleOpenShiftCluster() *OpenShiftCluster {
 
 // ExampleOpenShiftClusterPatchParameter returns an example OpenShiftCluster
 // object that an end-user might send to create a cluster in a PATCH request
-func ExampleOpenShiftClusterPatchParameter() interface{} {
+func ExampleOpenShiftClusterPatchParameter() any {
 	oc := ExampleOpenShiftClusterPutParameter().(*OpenShiftCluster)
-	oc.Location = ""
+	oc.Location = nil
 	oc.SystemData = nil
 	oc.Properties.WorkerProfilesStatus = nil
-	oc.Identity = &ManagedServiceIdentity{
-		Type: ManagedServiceIdentityUserAssigned,
-		UserAssignedIdentities: map[string]UserAssignedIdentity{
+	oc.Identity = &generated.ManagedServiceIdentity{
+		Type: new(generated.ManagedServiceIdentityTypeUserAssigned),
+		UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 			"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name": {},
 		},
 	}
-	oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-		PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+	oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+		PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 			"": {
-				ResourceID: "",
-				ClientID:   "",
-				ObjectID:   "",
+				ResourceID: new(""),
+				ClientID:   new(""),
+				ObjectID:   new(""),
 			},
 		},
 	}
@@ -40,37 +41,37 @@ func ExampleOpenShiftClusterPatchParameter() interface{} {
 
 // ExampleOpenShiftClusterPutParameter returns an example OpenShiftCluster
 // object that an end-user might send to create a cluster in a PUT request
-func ExampleOpenShiftClusterPutParameter() interface{} {
+func ExampleOpenShiftClusterPutParameter() any {
 	oc := exampleOpenShiftCluster()
-	oc.ID = ""
-	oc.Name = ""
-	oc.Type = ""
-	oc.Identity = &ManagedServiceIdentity{
-		Type: ManagedServiceIdentityUserAssigned,
-		UserAssignedIdentities: map[string]UserAssignedIdentity{
+	oc.ID = nil
+	oc.Name = nil
+	oc.Type = nil
+	oc.Identity = &generated.ManagedServiceIdentity{
+		Type: new(generated.ManagedServiceIdentityTypeUserAssigned),
+		UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 			"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name": {},
 		},
 	}
-	oc.Properties.ProvisioningState = ""
-	oc.Properties.ClusterProfile.Version = ""
-	oc.Properties.ClusterProfile.FipsValidatedModules = FipsValidatedModulesEnabled
-	oc.Properties.ConsoleProfile.URL = ""
-	oc.Properties.APIServerProfile.URL = ""
-	oc.Properties.APIServerProfile.IP = ""
-	oc.Properties.IngressProfiles[0].IP = ""
-	oc.Properties.MasterProfile.EncryptionAtHost = EncryptionAtHostEnabled
+	oc.Properties.ProvisioningState = nil
+	oc.Properties.ClusterProfile.Version = nil
+	oc.Properties.ClusterProfile.FipsValidatedModules = new(generated.FipsValidatedModulesEnabled)
+	oc.Properties.ConsoleProfile.URL = nil
+	oc.Properties.ApiserverProfile.URL = nil
+	oc.Properties.ApiserverProfile.IP = nil
+	oc.Properties.IngressProfiles[0].IP = nil
+	oc.Properties.MasterProfile.EncryptionAtHost = new(generated.EncryptionAtHostEnabled)
 	oc.Properties.WorkerProfilesStatus = nil
-	oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
-		ManagedOutboundIPs: &ManagedOutboundIPs{
-			Count: 1,
+	oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+		ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+			Count: new(int32(1)),
 		},
 	}
-	oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-		PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+	oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+		PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 			"": {
-				ResourceID: "",
-				ClientID:   "",
-				ObjectID:   "",
+				ResourceID: new(""),
+				ClientID:   new(""),
+				ObjectID:   new(""),
 			},
 		},
 	}
@@ -81,27 +82,27 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 
 // ExampleOpenShiftClusterResponse returns an example OpenShiftCluster object
 // that the RP might return to an end-user in a GET response
-func ExampleOpenShiftClusterGetResponse() interface{} {
+func ExampleOpenShiftClusterGetResponse() any {
 	oc := exampleOpenShiftCluster()
-	oc.Properties.ClusterProfile.PullSecret = ""
-	oc.Properties.ClusterProfile.OIDCIssuer = nil
-	oc.Properties.ServicePrincipalProfile.ClientSecret = ""
-	oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
-		EffectiveOutboundIPs: []EffectiveOutboundIP{
+	oc.Properties.ClusterProfile.PullSecret = nil
+	oc.Properties.ClusterProfile.OidcIssuer = nil
+	oc.Properties.ServicePrincipalProfile.ClientSecret = nil
+	oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+		EffectiveOutboundIPs: []*generated.EffectiveOutboundIP{
 			{
-				ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/publicIPAddresses/publicIPAddressName",
+				ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/publicIPAddresses/publicIPAddressName"),
 			},
 		},
-		ManagedOutboundIPs: &ManagedOutboundIPs{
-			Count: 1,
+		ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+			Count: new(int32(1)),
 		},
 	}
-	oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-		PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+	oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+		PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 			"": {
-				ResourceID: "",
-				ClientID:   "",
-				ObjectID:   "",
+				ResourceID: new(""),
+				ClientID:   new(""),
+				ObjectID:   new(""),
 			},
 		},
 	}
@@ -111,10 +112,10 @@ func ExampleOpenShiftClusterGetResponse() interface{} {
 
 // ExampleOpenShiftClusterResponse returns an example OpenShiftCluster object
 // that the RP might return to an end-user in a PUT/PATCH response
-func ExampleOpenShiftClusterPutOrPatchResponse() interface{} {
+func ExampleOpenShiftClusterPutOrPatchResponse() any {
 	oc := exampleOpenShiftCluster()
-	oc.Properties.ClusterProfile.PullSecret = ""
-	oc.Properties.ServicePrincipalProfile.ClientSecret = ""
+	oc.Properties.ClusterProfile.PullSecret = nil
+	oc.Properties.ServicePrincipalProfile.ClientSecret = nil
 	oc.Properties.WorkerProfilesStatus = nil
 
 	return oc
@@ -122,7 +123,7 @@ func ExampleOpenShiftClusterPutOrPatchResponse() interface{} {
 
 // ExampleOpenShiftClusterListResponse returns an example OpenShiftClusterList
 // object that the RP might return to an end-user
-func ExampleOpenShiftClusterListResponse() interface{} {
+func ExampleOpenShiftClusterListResponse() any {
 	return &OpenShiftClusterList{
 		OpenShiftClusters: []*OpenShiftCluster{
 			ExampleOpenShiftClusterGetResponse().(*OpenShiftCluster),

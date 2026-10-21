@@ -18,7 +18,6 @@ import (
 	"k8s.io/client-go/rest"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
@@ -34,6 +33,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/namespace"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -125,7 +125,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	arocli, err := aroclient.NewForConfig(restConfig)
+	arocli, err := aroclient.NewForConfigAndClient(restConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -135,15 +135,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	// lazy discovery will not attempt to reach out to the apiserver immediately
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
-	if err != nil {
-		return nil, err
-	}
-
-	ocpclientset, err := client.New(restConfig, client.Options{
-		Mapper: mapper,
-	})
+	ocpclientset, err := client.New(restConfig, client.Options{HTTPClient: httpClient})
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +162,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		httpClient: httpClient,
 
 		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
-		namespacesToMonitor: []string{},
+		namespacesToMonitor: namespace.MonitoredNamespaces,
 		queryLimit:          50,
 		parallelism:         MONITOR_GOROUTINES_PER_CLUSTER,
 	}
@@ -183,15 +175,11 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mon.emitClusterVersionConditions,
 		mon.emitClusterVersions,
 		mon.emitDaemonsetStatuses,
-		mon.emitDeploymentStatuses,
 		mon.emitMachineConfigPoolConditions,
 		mon.emitMachineConfigPoolUnmanagedNodeCounts,
 		mon.emitMachineConditions,
 		mon.emitNodeConditions,
 		mon.emitPodConditions,
-		mon.emitReplicasetStatuses,
-		mon.emitStatefulsetStatuses,
-		mon.emitJobConditions,
 		mon.emitCNVVirtualMachineInstanceStatuses,
 		mon.emitSummary,
 		mon.emitOperatorFlagsAndSupportBanner,
@@ -284,12 +272,9 @@ func (mon *Monitor) Monitor(ctx context.Context) (_err error) {
 		return errors.Join(errs...)
 	}
 
-	// Determine the list of OpenShift (or ARO) managed namespaces that we will
-	// query for -- this needs to succeed
-	err = mon.timeCall(ctx, mon.fetchManagedNamespaces)
+	err = mon.timeCall(ctx, mon.emitOpenShift5Versions)
 	if err != nil {
 		errs = append(errs, err)
-		return errors.Join(errs...)
 	}
 
 	// Run up to mon.parallelism (default: MONITOR_GOROUTINES_PER_CLUSTER)
@@ -362,21 +347,5 @@ func (mon *Monitor) Close() {
 		if mon.httpClient != nil {
 			mon.httpClient.CloseIdleConnections()
 		}
-		closeAroClientIdleConnections(mon.arocli)
 	})
-}
-
-// The generated fake ARO client returns a typed-nil *rest.RESTClient, so this
-// helper must guard both the type assertion and the resulting value.
-func closeAroClientIdleConnections(arocli aroclient.Interface) {
-	if arocli == nil || arocli.AroV1alpha1() == nil {
-		return
-	}
-
-	restClient, ok := arocli.AroV1alpha1().RESTClient().(*rest.RESTClient)
-	if !ok || restClient == nil || restClient.Client == nil {
-		return
-	}
-
-	restClient.Client.CloseIdleConnections()
 }

@@ -7,12 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 
-	"github.com/go-test/deep"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/maps"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,11 +28,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -144,6 +143,55 @@ func (ch *clientHelper) ensureOne(ctx context.Context, new kruntime.Object) erro
 	})
 }
 
+// Wrappers for regular APIs to log similar to Ensure/EnsureDeleted
+func (ch *clientHelper) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	gvk, err := apiutil.GVKForObject(obj, scheme.Scheme)
+	if err != nil {
+		return err
+	}
+	ch.log.Infof("Patch %s", keyFunc(gvk.GroupKind(), obj.GetNamespace(), obj.GetName()))
+	return ch.Client.Patch(ctx, obj, patch, opts...)
+}
+
+// Interface that top-level kubebuilder ApplyConfigurations implement, as the
+// base ApplyConfiguration doesn't (as it can apply to subresources)
+type applyConfigurationMeta interface {
+	GetKind() *string
+	GetAPIVersion() *string
+	GetName() *string
+	GetNamespace() *string
+}
+
+func (ch *clientHelper) Apply(ctx context.Context, ac kruntime.ApplyConfiguration, opts ...client.ApplyOption) error {
+	obj, ok := ac.(applyConfigurationMeta)
+	if ok {
+		apiversion := ""
+		if obj.GetAPIVersion() != nil {
+			apiversion = *obj.GetAPIVersion()
+		}
+
+		objtype := "unknown"
+		if obj.GetKind() != nil {
+			objtype = *obj.GetKind()
+		}
+
+		name := ""
+		if obj.GetName() != nil {
+			name = *obj.GetName()
+		}
+
+		namespace := ""
+		if obj.GetNamespace() != nil {
+			namespace = *obj.GetNamespace()
+		}
+
+		ch.log.Infof("Apply %s/%s/%s/%s", apiversion, objtype, namespace, name)
+	} else {
+		ch.log.Infof("Apply (unknown object)")
+	}
+	return ch.Client.Apply(ctx, ac, opts...)
+}
+
 // merge takes the existing (old) and desired (new) objects.  It compares them
 // to see if an update is necessary, fixes up the new object if needed, and
 // returns the difference for debugging purposes.
@@ -155,12 +203,25 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 	// 1. Set defaults on new.  This gets rid of many false positive diffs.
 	scheme.Scheme.Default(new)
 
+	// Set schema, which is not always set depending on how we got the object
+	gvks, _, err := scheme.Scheme.ObjectKinds(new)
+	if err != nil {
+		return nil, false, "", fmt.Errorf("unable to find the object kind in schema: %w", err)
+	}
+
+	for _, gvk := range gvks {
+		if len(gvk.Kind) == 0 {
+			continue
+		}
+		if len(gvk.Version) == 0 || gvk.Version == kruntime.APIVersionInternal {
+			continue
+		}
+		new.GetObjectKind().SetGroupVersionKind(gvk)
+		old.GetObjectKind().SetGroupVersionKind(gvk)
+		break
+	}
+
 	// 2. Copy immutable fields from old to new to avoid false positives.
-	oldtypemeta := old.GetObjectKind()
-	newtypemeta := new.GetObjectKind()
-
-	newtypemeta.SetGroupVersionKind(oldtypemeta.GroupVersionKind())
-
 	new.SetSelfLink(old.GetSelfLink())
 	new.SetUID(old.GetUID())
 	new.SetResourceVersion(old.GetResourceVersion())
@@ -172,6 +233,12 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 	switch old.(type) {
 	case *corev1.Namespace:
 		old, new := old.(*corev1.Namespace), new.(*corev1.Namespace)
+
+		if new.Labels == nil {
+			new.Labels = map[string]string{}
+		}
+		new.Labels[corev1.LabelMetadataName] = old.Name
+
 		for _, name := range []string{
 			"openshift.io/sa.scc.mcs",
 			"openshift.io/sa.scc.supplemental-groups",
@@ -190,7 +257,7 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 
 	case *corev1.ServiceAccount:
 		old, new := old.(*corev1.ServiceAccount), new.(*corev1.ServiceAccount)
-		for _, name := range maps.Keys(old.Annotations) {
+		for name := range maps.Keys(old.Annotations) {
 			if strings.HasPrefix(name, "openshift.io/") {
 				copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, name)
 			}
@@ -235,7 +302,7 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 		new.Finalizers = old.Finalizers
 		new.Status = old.Status
 
-		for _, name := range maps.Keys(old.Labels) {
+		for name := range maps.Keys(old.Labels) {
 			if strings.HasPrefix(name, "hive.openshift.io/") {
 				copyLabel(&new.ObjectMeta, &old.ObjectMeta, name)
 			}
@@ -261,19 +328,24 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 			copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, "openshift.io/owning-component")
 		}
 
-	case *machinev1beta1.MachineHealthCheck:
-		old, new := old.(*machinev1beta1.MachineHealthCheck), new.(*machinev1beta1.MachineHealthCheck)
-		new.Status = old.Status
+		if len(new.Data) == 0 {
+			new.Data = map[string]string{}
+		}
+		if len(old.Data) == 0 {
+			old.Data = map[string]string{}
+		}
 	}
+
+	diffContent := strings.TrimSpace(cmp.Diff(old, new))
 
 	var diff string
 	if _, ok := old.(*corev1.Secret); !ok { // Don't show a diff if kind is Secret
-		diff = strings.Join(deep.Equal(old, new), "\n")
+		diff = diffContent
 	} else {
 		diff = "<scrubbed>"
 	}
 
-	return new, !reflect.DeepEqual(old, new), diff, nil
+	return new, len(diffContent) > 0, diff, nil
 }
 
 func copyAnnotation(dst, src *metav1.ObjectMeta, name string) {

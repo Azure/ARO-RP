@@ -5,6 +5,9 @@ set -o errexit \
     -o nounset
 
 main() {
+    # check we are FIPS enabled
+    fips_verify
+
     # transaction attempt retry time in seconds
     # shellcheck disable=SC2034
     local -ri retry_wait_time=30
@@ -14,16 +17,17 @@ main() {
     configure_sshd
 
     local -ri pkg_retry_count=60
+    local -ri repo_retry_count=5
     configure_rpm_repos retry_wait_time \
-                        "$pkg_retry_count"
+                        "$repo_retry_count"
 
     # shellcheck disable=SC2034
-    local -ar exclude_pkgs=(
-        "-x WALinuxAgent"
-        "-x WALinuxAgent-udev"
-    )
+    local -a exclude_pkgs=()
+    if rpm -q WALinuxAgent &>/dev/null; then
+        exclude_pkgs+=("-x" "WALinuxAgent")
+    fi
 
-    dnf_update_pkgs exclude_pkgs \
+    tdnf_update_pkgs exclude_pkgs \
                     retry_wait_time \
                     "$pkg_retry_count"
 
@@ -31,6 +35,8 @@ main() {
     local -ra install_pkgs=(
         azure-cli
         azure-mdsd
+        crun
+        netavark
         podman
         podman-docker
         openssl-perl
@@ -38,16 +44,11 @@ main() {
         python3
         # required for podman networking
         firewalld
-        # Required to enable fips
-        grubby
-        dracut-fips
     )
 
-    dnf_install_pkgs install_pkgs \
+    tdnf_install_pkgs install_pkgs \
                       retry_wait_time \
                       "$pkg_retry_count"
-
-    fips_configure
 
     # shellcheck disable=SC2119
     configure_logrotate
@@ -59,8 +60,8 @@ main() {
     # shellcheck disable=SC2034
     local -r miseimage="${RPIMAGE%%/*}/${MISEIMAGE#*/}"
 
-    # shellcheck disable=SC2153,SC2034
-    local -r otelimage="${RPIMAGE%%/*}/${OTELIMAGE#*/}"
+    # shellcheck disable=SC2034
+    local -r otelimage="$OTELIMAGE"
 
     # shellcheck disable=SC2034
     local -r fluentbit_image="$FLUENTBITIMAGE"
@@ -198,6 +199,7 @@ ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
 ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC='$CLUSTERDEFAULTINSTALLERPULLSPEC'
 ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'
 OIDC_AFD_ENDPOINT='$LOCATION.oic.$RPPARENTDOMAINNAME'
+RP_PARENT_DOMAIN_NAME='$RPPARENTDOMAINNAME'
 OIDC_STORAGE_ACCOUNT_NAME='$OIDCSTORAGEACCOUNTNAME'
 OTEL_AUDIT_QUEUE_SIZE='$OTELAUDITQUEUESIZE'
 MSI_RP_ENDPOINT='$MSIRPENDPOINT'

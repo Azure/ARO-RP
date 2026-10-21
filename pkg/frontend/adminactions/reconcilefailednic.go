@@ -9,6 +9,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -24,5 +25,7 @@ func (a *azureActions) NICReconcileFailedState(ctx context.Context, nicName stri
 		return fmt.Errorf("skipping nic '%s' because it is not in a failed provisioning state", nicName)
 	}
 
-	return a.networkInterfaces.CreateOrUpdateAndWait(ctx, clusterRGName, nicName, nic.Interface, nil)
+	return arm.Retryable(ctx, func() error {
+		return a.networkInterfaces.CreateOrUpdateAndWait(ctx, clusterRGName, nicName, nic.Interface, nil)
+	}, a.log, "reconciling NIC "+nicName)
 }

@@ -52,6 +52,8 @@ func newDev(ctx context.Context, log *logrus.Entry, component ServiceName) (Inte
 	d.clusterGenevaLoggingEnvironment = version.DevGenevaLoggingEnvironment
 	d.clusterGenevaLoggingNamespace = version.DevClusterGenevaLoggingNamespace
 
+	d.rpParentDomainName = "aro.azure.com"
+
 	// ugh: run this again after RP_MODE=development has caused the feature flag
 	// to be set.
 	d.ARMHelper, err = newARMHelper(ctx, log, d)

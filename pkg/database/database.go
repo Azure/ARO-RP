@@ -6,6 +6,7 @@ package database
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net/http"
 	"reflect"
 	"time"
@@ -29,7 +30,6 @@ const (
 	collAsyncOperations                 = "AsyncOperations"
 	collBilling                         = "Billing"
 	collGateway                         = "Gateway"
-	collMonitors                        = "Monitors"
 	collOpenShiftClusters               = "OpenShiftClusters"
 	collOpenShiftVersion                = "OpenShiftVersions"
 	collPlatformWorkloadIdentityRoleSet = "PlatformWorkloadIdentityRoleSets"
@@ -37,10 +37,13 @@ const (
 	collSubscriptions                   = "Subscriptions"
 	collMaintenanceManifests            = "MaintenanceManifests"
 	collMaintenanceSchedules            = "MaintenanceSchedules"
+	collPoolWorkers                     = "PoolWorkers"
 )
 
-type IDable interface {
-	GetID() string
+var ErrLostLease = errors.New("lost lease")
+
+type Keyable interface {
+	GetKey() string
 }
 
 // Generic interface of document iterators from pkg/database/cosmosdb/, used in
@@ -95,12 +98,12 @@ func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
 		return h, nil
 	}
 
-	err := h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, secureBytesExt{aead: aead})
+	err := h.SetInterfaceExt(reflect.TypeFor[api.SecureBytes](), 1, secureBytesExt{aead: aead})
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, secureStringExt{aead: aead})
+	err = h.SetInterfaceExt(reflect.TypeFor[*api.SecureString](), 1, secureStringExt{aead: aead})
 	if err != nil {
 		return nil, err
 	}

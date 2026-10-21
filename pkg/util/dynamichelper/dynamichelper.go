@@ -26,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -104,12 +103,12 @@ func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namesp
 func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
 	for _, o := range objs {
 		if un, ok := o.(*unstructured.Unstructured); ok {
-			// ValidatingAdmissionPolicy and ValidatingAdmissionPolicyBinding
-			// are handled via server-side apply so that all fields are
-			// correctly reconciled. The Gatekeeper-specific path only
-			// compares enforcementAction and would silently skip updates
-			// to other resource types.
-			if isAdmissionRegistrationResource(un) {
+			// ValidatingAdmissionPolicy, ValidatingAdmissionPolicyBinding,
+			// and AdminNetworkPolicy are handled via server-side apply so
+			// that all fields are correctly reconciled. The
+			// Gatekeeper-specific path only compares spec.enforcementAction
+			// and would silently skip updates to other resource types.
+			if shouldUseServerSideApply(un) {
 				if err := dh.ensureByServerSideApply(ctx, un); err != nil {
 					return err
 				}
@@ -177,10 +176,18 @@ func (dh *dynamicHelper) mergeWithLogic(name, groupKind string, old, new kruntim
 	return clienthelper.Merge(old.(client.Object), new.(client.Object))
 }
 
-// isAdmissionRegistrationResource returns true for admissionregistration resources
-// that should be managed via server-side apply rather than the Gatekeeper-specific path.
-func isAdmissionRegistrationResource(uns *unstructured.Unstructured) bool {
-	return uns.GroupVersionKind().Group == "admissionregistration.k8s.io"
+// shouldUseServerSideApply returns true for unstructured resources that should
+// be managed via server-side apply rather than the Gatekeeper-specific path.
+func shouldUseServerSideApply(uns *unstructured.Unstructured) bool {
+	gvk := uns.GroupVersionKind()
+	switch gvk.Group {
+	case "admissionregistration.k8s.io":
+		return gvk.Kind == "ValidatingAdmissionPolicy" || gvk.Kind == "ValidatingAdmissionPolicyBinding"
+	case "policy.networking.k8s.io":
+		return gvk.Kind == "AdminNetworkPolicy"
+	default:
+		return false
+	}
 }
 
 // ensureByServerSideApply creates or updates a single unstructured object
@@ -206,7 +213,7 @@ func (dh *dynamicHelper) ensureByServerSideApply(ctx context.Context, uns *unstr
 			// sole owner of the VAP resources it creates. Do NOT extend
 			// this path to resources whose ownership is shared with
 			// other controllers without revisiting this assumption.
-			Force: pointerutils.ToPtr(true),
+			Force: new(true),
 		})
 	if err != nil {
 		return fmt.Errorf("server-side apply %s/%s: %w", uns.GroupVersionKind().GroupKind(), uns.GetName(), err)

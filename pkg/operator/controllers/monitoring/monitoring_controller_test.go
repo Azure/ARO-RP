@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +17,6 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 
@@ -27,7 +25,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var cmMetadata = metav1.ObjectMeta{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
@@ -53,7 +53,7 @@ func degradedConditions() []operatorv1.OperatorCondition {
 }
 
 func TestReconcileMonitoringConfig(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 	type test struct {
 		name            string
 		configMap       *corev1.ConfigMap
@@ -195,7 +195,7 @@ somethingElse:
 				},
 			}
 
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder(instance)
 			if tt.configMap != nil {
 				clientBuilder.WithObjects(tt.configMap)
 			}
@@ -230,7 +230,6 @@ somethingElse:
 }
 
 func TestReconcilePVC(t *testing.T) {
-	volumeMode := corev1.PersistentVolumeFilesystem
 	tests := []struct {
 		name           string
 		pvcs           []client.Object
@@ -298,12 +297,6 @@ func TestReconcilePVC(t *testing.T) {
 						},
 						ResourceVersion: "1",
 					},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						VolumeMode: &volumeMode,
-					},
-					Status: corev1.PersistentVolumeClaimStatus{
-						Phase: corev1.ClaimPending,
-					},
 				},
 			},
 			wantConditions: defaultConditions(),
@@ -312,6 +305,8 @@ func TestReconcilePVC(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			instance := &arov1alpha1.Cluster{
@@ -325,11 +320,11 @@ func TestReconcilePVC(t *testing.T) {
 				},
 			}
 
-			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance).WithObjects(tt.pvcs...).Build()
+			clientFake := testclienthelper.NewAROFakeClientBuilder(instance).WithObjects(tt.pvcs...).Build()
 
 			r := &MonitoringReconciler{
 				AROController: base.AROController{
-					Log:    logrus.NewEntry(logrus.StandardLogger()),
+					Log:    log,
 					Client: clientFake,
 					Name:   ControllerName,
 				},

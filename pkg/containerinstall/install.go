@@ -14,17 +14,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containers/podman/v5/pkg/bindings/containers"
-	"github.com/containers/podman/v5/pkg/bindings/images"
-	"github.com/containers/podman/v5/pkg/bindings/secrets"
-	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"go.podman.io/podman/v6/pkg/bindings/containers"
+	"go.podman.io/podman/v6/pkg/bindings/images"
+	"go.podman.io/podman/v6/pkg/bindings/secrets"
+	"go.podman.io/podman/v6/pkg/specgen"
 
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
-	"sigs.k8s.io/yaml"
-
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/kubeserializer"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
@@ -53,25 +52,26 @@ func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, do
 		pullPolicy = "always"
 	}
 
-	domain, _, ok := strings.Cut(version.Properties.InstallerPullspec, "/")
-	if !ok {
-		return fmt.Errorf("failed to get domain from %s", version.Properties.InstallerPullspec)
-	}
-	pullSecret, ok := m.pullSecrets[domain]
-	if !ok {
-		return fmt.Errorf("failed to get pullSecret for domain %s", domain)
+	options := (&images.PullOptions{}).
+		WithQuiet(true).
+		WithPolicy(pullPolicy).
+		WithArch("amd64").
+		WithOS("linux")
+
+	if pullPolicy != "never" {
+		domain, _, ok := strings.Cut(version.Properties.InstallerPullspec, "/")
+		if !ok {
+			return fmt.Errorf("failed to get domain from %s", version.Properties.InstallerPullspec)
+		}
+		pullSecret, ok := m.pullSecrets[domain]
+		if !ok {
+			return fmt.Errorf("failed to get pullSecret for domain %s", domain)
+		}
+		options = options.WithUsername(pullSecret.Username).WithPassword(pullSecret.Password)
 	}
 
 	s := []steps.Step{
 		steps.Action(func(context.Context) error {
-			options := (&images.PullOptions{}).
-				WithQuiet(true).
-				WithPolicy(pullPolicy).
-				WithUsername(pullSecret.Username).
-				WithPassword(pullSecret.Password).
-				WithArch("amd64").
-				WithOS("linux")
-
 			_, err := images.Pull(m.conn, version.Properties.InstallerPullspec, options)
 			return err
 		}),
@@ -186,6 +186,8 @@ func (m *manager) containerFinished(context.Context) (bool, error) {
 }
 
 func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument, customManifests map[string]kruntime.Object) error {
+	serializer := kubeserializer.NewYamlSerializer()
+
 	encCluster, err := json.Marshal(doc.OpenShiftCluster)
 	if err != nil {
 		return err
@@ -221,7 +223,7 @@ func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDo
 	}
 
 	for key, manifest := range customManifests {
-		b, err := yaml.Marshal(manifest)
+		b, err := serializer.ToYAML(manifest)
 		if err != nil {
 			return err
 		}

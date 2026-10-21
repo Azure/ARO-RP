@@ -17,6 +17,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
+// transientConflictBody is the ARM body text for transient 409s; undocumented, observed in production.
+const transientConflictBody = "Please retry later"
+
+// federatedIdentityCredentialWrite is the ARM action for writing federated identity credentials.
+const federatedIdentityCredentialWrite = "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write"
+
 const (
 	CODE_AUTHFAILED       = "AuthorizationFailed"
 	CODE_DEPLOYACTIVE     = "DeploymentActive"
@@ -29,9 +35,14 @@ const (
 	// VM SKU availability error codes
 	CODE_INVALIDPARAM          = "InvalidParameter"
 	CODE_NOTAVAILABLEFORSUBSCR = "NotAvailableForSubscription"
+	CODE_OPERATIONNOTALLOWED   = "OperationNotAllowed"
 	CODE_QUOTAEXCEEDED         = "QuotaExceeded"
 	CODE_SKUNOTAVAILABLE       = "SkuNotAvailable"
 )
+
+// quotaKeywords are terms that, combined with OperationNotAllowed, indicate a
+// VM quota error rather than a generic permission denial.
+var quotaKeywords = []string{"quota", "cores", "current limit", "new limit required"}
 
 // VMProfileType identifies which VM profile (master or worker) is affected by an error.
 type VMProfileType int
@@ -199,6 +210,12 @@ func IsClientSecretKeysExpired(err error) bool {
 	return strings.Contains(err.Error(), "AADSTS7000222")
 }
 
+// IsFederatedIdentityCredentialWriteForbiddenError returns true if the error is a 403 Forbidden error
+// that occurred during an attempt to write a federated identity credential.
+func IsFederatedIdentityCredentialWriteForbiddenError(err error) bool {
+	return strings.Contains(err.Error(), "does not have authorization to perform action '"+federatedIdentityCredentialWrite+"'")
+}
+
 // ResourceGroupNotFound returns true if the error is an ResourceGroupNotFound error
 func ResourceGroupNotFound(err error) bool {
 	// Check go-autorest SDK errors (old SDK)
@@ -224,6 +241,35 @@ func ResourceGroupNotFound(err error) bool {
 	}
 
 	return false
+}
+
+// isQuotaOperationNotAllowed checks if a message contains OperationNotAllowed
+// combined with quota-specific wording. Bare OperationNotAllowed without quota
+// context is NOT classified as a quota error.
+// Azure resource quota errors: https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/error-resource-quota
+func isQuotaOperationNotAllowed(msg string) bool {
+	if !strings.Contains(msg, CODE_OPERATIONNOTALLOWED) {
+		return false
+	}
+	msgLower := strings.ToLower(msg)
+	for _, kw := range quotaKeywords {
+		if strings.Contains(msgLower, kw) {
+			return true
+		}
+	}
+	return false
+}
+
+// ContainsVMSKUErrorMessage checks if a message string contains patterns
+// indicating a VM SKU availability or quota error. Use this to inspect raw
+// status messages (e.g. Machine ProviderStatus) for VM-size-related failures.
+func ContainsVMSKUErrorMessage(msg string) bool {
+	if strings.Contains(msg, CODE_SKUNOTAVAILABLE) ||
+		strings.Contains(msg, CODE_NOTAVAILABLEFORSUBSCR) ||
+		strings.Contains(msg, CODE_QUOTAEXCEEDED) {
+		return true
+	}
+	return isQuotaOperationNotAllowed(msg)
 }
 
 // IsVMSKUError checks if the error is a VM SKU availability error and returns
@@ -275,9 +321,7 @@ func IsVMSKUError(err error) (bool, VMProfileType) {
 	}
 
 	errStr := err.Error()
-	if strings.Contains(errStr, CODE_SKUNOTAVAILABLE) ||
-		strings.Contains(errStr, CODE_NOTAVAILABLEFORSUBSCR) ||
-		strings.Contains(errStr, CODE_QUOTAEXCEEDED) {
+	if ContainsVMSKUErrorMessage(errStr) {
 		return true, detectVMProfile(errStr)
 	}
 	if strings.Contains(errStr, CODE_INVALIDPARAM) && strings.Contains(errStr, "SKU") {
@@ -361,13 +405,51 @@ func resourceGroupsFromMessage(msg string) []string {
 	return rgs
 }
 
-// IsRetryableError returns true if the error is a transient/retryable error
-// such as 429 Too Many Requests or contains RetryableError code
+// IsRetryableError returns true for transient ARM errors: 429, Retry-After header present, transientConflictBody, or "RetryableError" in the message.
 func IsRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	// Check for RetryableError in error message (nested Azure errors)
-	return isStatusCodeError(err, http.StatusTooManyRequests) || strings.Contains(err.Error(), "RetryableError")
+	errMsg := err.Error()
+
+	// api.CloudError wraps storage 429s (ThrottlingLimitExceeded) that the ARM roundtripper converts.
+	var cloudErr *api.CloudError
+	if errors.As(err, &cloudErr) && cloudErr.StatusCode == http.StatusTooManyRequests {
+		return true
+	}
+
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		if responseError.StatusCode == http.StatusTooManyRequests {
+			return true
+		}
+		if responseError.RawResponse != nil && responseError.RawResponse.Header.Get("Retry-After") != "" {
+			return true
+		}
+	}
+
+	var detailedErr autorest.DetailedError
+	if errors.As(err, &detailedErr) {
+		if detailedErr.StatusCode == http.StatusTooManyRequests {
+			return true
+		}
+		if detailedErr.Response != nil && detailedErr.Response.Header.Get("Retry-After") != "" {
+			return true
+		}
+	}
+
+	if strings.Contains(errMsg, transientConflictBody) {
+		return true
+	}
+
+	// AADSTS errors indicate transient AAD token propagation failures (e.g. newly
+	// issued secret not yet propagated). These appear in the error message string
+	// once the SDK has deserialized the response. The same codes are also defined
+	// as named constants in azureclient/azuresdk/common/options.go.
+	if strings.Contains(errMsg, "AADSTS7000215") || strings.Contains(errMsg, "AADSTS7000216") {
+		return true
+	}
+
+	return strings.Contains(errMsg, "RetryableError")
 }

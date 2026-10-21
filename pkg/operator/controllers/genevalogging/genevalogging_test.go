@@ -4,20 +4,24 @@ package genevalogging
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/yaml"
 
 	configv1 "github.com/openshift/api/config/v1"
 	securityv1 "github.com/openshift/api/security/v1"
@@ -27,7 +31,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func clusterVersion(version string) configv1.ClusterVersion {
@@ -79,99 +86,160 @@ func TestGetOTelProfiles(t *testing.T) {
 }
 
 func TestSelectOTelConfig(t *testing.T) {
-	full, err := selectOTelConfig(otelProfileMaxLogs, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, batch]") {
-		t.Fatal("full config missing expected processor chain")
-	}
-	if !strings.Contains(full, "logs/journald:") || !strings.Contains(full, "logs/containers:") || !strings.Contains(full, "logs/audit:") {
-		t.Fatal("full config missing expected per-source pipelines")
-	}
-	if strings.Contains(full, "key: EventName") || strings.Contains(full, "key: source_name") {
-		t.Fatal("full config should not include source fields when disabled")
-	}
-	if !strings.Contains(full, "key: ENVIRONMENT") {
-		t.Fatal("full config missing ENVIRONMENT mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"node\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
-		t.Fatal("full config missing node mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"RoleInstance\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
-		t.Fatal("full config missing RoleInstance mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"namespace\"], resource.attributes[\"k8s.namespace.name\"]) where resource.attributes[\"k8s.namespace.name\"] != nil") {
-		t.Fatal("full config missing lowercase namespace mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"pod\"], resource.attributes[\"k8s.pod.name\"]) where resource.attributes[\"k8s.pod.name\"] != nil") {
-		t.Fatal("full config missing lowercase pod mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"container\"], resource.attributes[\"k8s.container.name\"]) where resource.attributes[\"k8s.container.name\"] != nil") {
-		t.Fatal("full config missing lowercase container mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"MESSAGE\"], log.body)") {
-		t.Fatal("full config missing raw MESSAGE mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"raw_json_body\"], log.body)") {
-		t.Fatal("full config missing raw_json_body mapping")
-	}
-	if !strings.Contains(full, "id: logrus_parse") {
-		t.Fatal("full config missing logrus parser for container logs")
+	// All profiles render without error for both control plane and worker nodes.
+	for _, profile := range []otelProfile{otelProfileMaxLogs, otelProfileReducedLogs, otelProfileMinimalLogs} {
+		for _, isControlPlane := range []bool{true, false} {
+			if _, err := renderOTelConfig(profile, isControlPlane); err != nil {
+				t.Errorf("renderOTelConfig(%q, isControlPlane=%v): %v", profile, isControlPlane, err)
+			}
+		}
 	}
 
-	reduced, err := selectOTelConfig(otelProfileReducedLogs, false)
-	if err != nil {
-		t.Fatal(err)
+	// Control plane gets the audit pipeline; workers do not.
+	cp, _ := renderOTelConfig(otelProfileMaxLogs, true)
+	worker, _ := renderOTelConfig(otelProfileMaxLogs, false)
+	if !strings.Contains(cp, "logs/audit:") {
+		t.Fatal("control plane config missing audit pipeline")
 	}
-	if !strings.Contains(reduced, "filter/drop-olm-noise:") {
-		t.Fatal("reduced config missing noise filter")
-	}
-	if !strings.Contains(reduced, "filter/drop-journald-noise:") {
-		t.Fatal("reduced config missing journald noise filter")
-	}
-	if !strings.Contains(reduced, "processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, batch]") {
-		t.Fatal("reduced config missing expected journald processor chain")
-	}
-	if !strings.Contains(reduced, "logs/audit:") || !strings.Contains(reduced, "processors: [memory_limiter, transform/log-parity, attributes/common, batch]") {
-		t.Fatal("reduced config missing unfiltered audit pipeline")
+	if strings.Contains(worker, "logs/audit:") {
+		t.Fatal("worker config must not contain audit pipeline")
 	}
 
-	highSignal, err := selectOTelConfig(otelProfileMinimalLogs, false)
-	if err != nil {
-		t.Fatal(err)
+	// SyncLoop is a control-plane-only pattern gated by the isControlPlane template conditional.
+	cpMin, _ := renderOTelConfig(otelProfileMinimalLogs, true)
+	workerMin, _ := renderOTelConfig(otelProfileMinimalLogs, false)
+	if !strings.Contains(cpMin, "SyncLoop") {
+		t.Fatal("control plane minimal-logs config missing SyncLoop pattern")
 	}
-	if !strings.Contains(highSignal, "filter/keep-only-high-signal:") {
-		t.Fatal("high-signal config missing keep-only-high-signal filter")
-	}
-	if !strings.Contains(highSignal, "filter/drop-journald-noise:") {
-		t.Fatal("high-signal config missing journald noise filter")
-	}
-	if !strings.Contains(highSignal, "filter/keep-journald-high-signal:") {
-		t.Fatal("high-signal config missing journald high-signal filter")
-	}
-	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, batch]") {
-		t.Fatal("high-signal config missing expected journald processor chain")
-	}
-	if !strings.Contains(highSignal, "filter/keep-audit-write-verbs:") {
-		t.Fatal("high-signal config missing audit write-verb filter")
-	}
-	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/keep-audit-write-verbs, transform/log-parity, attributes/common, batch]") {
-		t.Fatal("high-signal config missing expected audit processor chain")
+	if strings.Contains(workerMin, "SyncLoop") {
+		t.Fatal("worker minimal-logs config must not contain SyncLoop")
 	}
 }
 
-func TestSelectOTelConfigIncludesSourceFieldsWhenEnabled(t *testing.T) {
-	full, err := selectOTelConfig(otelProfileMaxLogs, true)
-	if err != nil {
-		t.Fatal(err)
+func TestOTelConfigOTTLExpressionsAreBalanced(t *testing.T) {
+	for _, profile := range []otelProfile{otelProfileMaxLogs, otelProfileReducedLogs, otelProfileMinimalLogs} {
+		for _, isControlPlane := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s/cp=%v", profile, isControlPlane), func(t *testing.T) {
+				rendered, err := renderOTelConfig(profile, isControlPlane)
+				if err != nil {
+					t.Fatalf("renderOTelConfig(%q, %v): %v", profile, isControlPlane, err)
+				}
+
+				var cfg map[string]any
+				if err := yaml.Unmarshal([]byte(rendered), &cfg); err != nil {
+					t.Fatalf("rendered config is not valid YAML: %v", err)
+				}
+
+				processors, ok := cfg["processors"].(map[string]any)
+				if !ok {
+					t.Fatal("rendered config missing top-level 'processors' map")
+				}
+
+				var checked int
+				for name, proc := range processors {
+					procMap, ok := proc.(map[string]any)
+					if !ok {
+						continue
+					}
+					logs, ok := procMap["logs"].(map[string]any)
+					if !ok {
+						continue
+					}
+					logRecord, ok := logs["log_record"].([]any)
+					if !ok {
+						continue
+					}
+					for i, expr := range logRecord {
+						s, ok := expr.(string)
+						if !ok {
+							continue
+						}
+						checked++
+						if err := checkOTTLParenBalance(s); err != nil {
+							t.Errorf("processor %q log_record[%d]: %v\n  expr: %s", name, i, err, s)
+						}
+					}
+				}
+
+				if profile == otelProfileMinimalLogs && checked == 0 {
+					t.Fatal("minimal-logs profile should have filter processors with log_record expressions, but none were found")
+				}
+			})
+		}
 	}
-	if !strings.Contains(full, "key: EventName") || !strings.Contains(full, "key: source_name") {
-		t.Fatal("full config missing source fields when enabled")
+}
+
+func TestKeepOnlyHighSignalExprParensBalanced(t *testing.T) {
+	for _, isControlPlane := range []bool{true, false} {
+		t.Run(fmt.Sprintf("cp=%v", isControlPlane), func(t *testing.T) {
+			var buf bytes.Buffer
+			err := otelConfigParsedTemplate.ExecuteTemplate(&buf, "keep-only-high-signal-expr", struct{ IsControlPlane bool }{isControlPlane})
+			if err != nil {
+				t.Fatalf("failed to render keep-only-high-signal-expr: %v", err)
+			}
+			expr := strings.TrimSpace(buf.String())
+			if err := checkOTTLParenBalance(expr); err != nil {
+				t.Fatalf("keep-only-high-signal-expr (cp=%v): %v\n  rendered: %s", isControlPlane, err, expr)
+			}
+			if !strings.Contains(expr, `\\terror\\t|\\twarn\\t`) {
+				t.Fatalf("keep-only-high-signal-expr missing zap tab-separated error/warn pattern\n  rendered: %s", expr)
+			}
+		})
 	}
-	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
-		t.Fatal("full config missing source processor when enabled")
+}
+
+func TestKeepJournaldHighSignalExprParensBalanced(t *testing.T) {
+	for _, isControlPlane := range []bool{true, false} {
+		t.Run(fmt.Sprintf("cp=%v", isControlPlane), func(t *testing.T) {
+			var buf bytes.Buffer
+			err := otelConfigParsedTemplate.ExecuteTemplate(&buf, "keep-journald-high-signal-expr", struct{ IsControlPlane bool }{isControlPlane})
+			if err != nil {
+				t.Fatalf("failed to render keep-journald-high-signal-expr: %v", err)
+			}
+			expr := strings.TrimSpace(buf.String())
+			if err := checkOTTLParenBalance(expr); err != nil {
+				t.Fatalf("keep-journald-high-signal-expr (cp=%v): %v\n  rendered: %s", isControlPlane, err, expr)
+			}
+		})
 	}
+}
+
+// checkOTTLParenBalance verifies that parentheses in an OTTL expression are
+// balanced, skipping parens inside double-quoted string literals.
+func checkOTTLParenBalance(expr string) error {
+	depth := 0
+	inString := false
+	escaped := false
+	for i, ch := range expr {
+		if escaped {
+			escaped = false
+			continue
+		}
+		if ch == '\\' && inString {
+			escaped = true
+			continue
+		}
+		switch {
+		case ch == '"':
+			inString = !inString
+		case inString:
+			// ignore characters inside string literals
+		case ch == '(':
+			depth++
+		case ch == ')':
+			depth--
+			if depth < 0 {
+				return fmt.Errorf("unexpected ')' at position %d (depth went negative)", i)
+			}
+		}
+	}
+	if inString {
+		return fmt.Errorf("unterminated string literal (unclosed double quote)")
+	}
+	if depth != 0 {
+		return fmt.Errorf("unbalanced parentheses: %d unclosed '('", depth)
+	}
+	return nil
 }
 
 func TestSelectOTelConfigFailsIfPrimaryAndFallbackRenderFail(t *testing.T) {
@@ -183,7 +251,7 @@ func TestSelectOTelConfigFailsIfPrimaryAndFallbackRenderFail(t *testing.T) {
 		renderOTelConfigFn = originalRender
 	}()
 
-	_, err := selectOTelConfig(otelProfileMaxLogs, false)
+	_, err := selectOTelConfig(otelProfileMaxLogs, true)
 	if err == nil {
 		t.Fatal("expected selectOTelConfig to return an error")
 	}
@@ -203,7 +271,7 @@ func TestSelectOTelConfigFallsBackToMinimalLogs(t *testing.T) {
 		renderOTelConfigFn = originalRender
 	}()
 
-	cfg, err := selectOTelConfig(otelProfileMaxLogs, false)
+	cfg, err := selectOTelConfig(otelProfileMaxLogs, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,20 +283,20 @@ func TestSelectOTelConfigFallsBackToMinimalLogs(t *testing.T) {
 	}
 }
 
-func TestGenevaLoggingNamespaceLabels(t *testing.T) {
+func TestGenevaLoggingNamespaceSecurityLabels(t *testing.T) {
 	cv := clusterVersion("4.11.0")
 	r := &Reconciler{
 		AROController: base.AROController{
-			Client: ctrlfake.NewClientBuilder().WithObjects(&cv).Build(),
+			Client: testclienthelper.NewAROFakeClientBuilder(&cv).Build(),
 		},
 	}
 
-	labels, err := r.namespaceLabels(context.Background())
+	labels, err := r.namespaceSecurityLabels(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(labels, privilegedNamespaceLabels) {
-		t.Fatalf("got labels %v, want %v", labels, privilegedNamespaceLabels)
+	if !reflect.DeepEqual(labels, privilegedPodSecurityLabels) {
+		t.Fatalf("got labels %v, want %v", labels, privilegedPodSecurityLabels)
 	}
 }
 
@@ -249,7 +317,7 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 
 	r := &Reconciler{
 		AROController: base.AROController{
-			Client: ctrlfake.NewClientBuilder().WithObjects(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
+			Client: testclienthelper.NewAROFakeClientBuilder(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
 		},
 	}
 
@@ -260,34 +328,166 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 
 	var daemonsetNames []string
 	var foundConfig bool
+	var nsMonitoringLabel string
+	var role *rbacv1.Role
+	var roleBinding *rbacv1.RoleBinding
+	var podMonitor *monitoringv1.PodMonitor
+	var prometheusRule *monitoringv1.PrometheusRule
 	for _, obj := range out {
 		switch typed := obj.(type) {
+		case *corev1.Namespace:
+			if typed.Name == kubeNamespace {
+				nsMonitoringLabel = typed.Labels[clusterMonitoringLabel]
+			}
 		case *corev1.ConfigMap:
 			if typed.Name == otelConfigMapName {
 				foundConfig = true
 			}
 		case *appsv1.DaemonSet:
 			daemonsetNames = append(daemonsetNames, typed.Name)
+		case *rbacv1.Role:
+			if typed.Name == prometheusK8s {
+				role = typed
+			}
+		case *rbacv1.RoleBinding:
+			if typed.Name == prometheusK8s {
+				roleBinding = typed
+			}
+		case *monitoringv1.PodMonitor:
+			if typed.Name == podMonitorName {
+				podMonitor = typed
+			}
+		case *monitoringv1.PrometheusRule:
+			if typed.Name == prometheusRuleName {
+				prometheusRule = typed
+			}
 		}
 	}
 
 	if !foundConfig {
 		t.Fatal("missing expected OTel configmap")
 	}
-	if !reflect.DeepEqual(daemonsetNames, []string{"otel-collector-master", "otel-collector-worker"}) {
+	if !reflect.DeepEqual(daemonsetNames, []string{MasterDaemonsetName, WorkerDaemonsetName}) {
 		t.Fatalf("unexpected daemonsets: %v", daemonsetNames)
+	}
+	if nsMonitoringLabel != "true" {
+		t.Fatalf("namespace label %s not equal to \"true\", got %q", clusterMonitoringLabel, nsMonitoringLabel)
+	}
+	if role == nil {
+		t.Fatal("missing prometheus-k8s Role")
+	} else {
+		if len(role.Rules) != 1 {
+			t.Fatalf("expected 1 role rule, got %d", len(role.Rules))
+		}
+		wantVerbs := []string{"get", "list", "watch"}
+		wantResources := []string{"services", "endpoints", "pods"}
+		if !reflect.DeepEqual(role.Rules[0].Verbs, wantVerbs) {
+			t.Fatalf("unexpected role verbs: got %v, want %v", role.Rules[0].Verbs, wantVerbs)
+		}
+		if !reflect.DeepEqual(role.Rules[0].Resources, wantResources) {
+			t.Fatalf("unexpected role resources: got %v, want %v", role.Rules[0].Resources, wantResources)
+		}
+	}
+	if roleBinding == nil {
+		t.Fatal("missing prometheus-k8s RoleBinding")
+	} else {
+		if len(roleBinding.Subjects) != 1 {
+			t.Fatalf("expected 1 rolebinding subject, got %d", len(roleBinding.Subjects))
+		}
+		if roleBinding.Subjects[0].Name != prometheusK8s || roleBinding.Subjects[0].Namespace != prometheusNamespace {
+			t.Fatalf("unexpected rolebinding subject: got name=%q namespace=%q", roleBinding.Subjects[0].Name, roleBinding.Subjects[0].Namespace)
+		}
+		if roleBinding.RoleRef.Kind != "Role" || roleBinding.RoleRef.Name != prometheusK8s {
+			t.Fatalf("unexpected rolebinding roleref: got kind=%q name=%q", roleBinding.RoleRef.Kind, roleBinding.RoleRef.Name)
+		}
+	}
+	if podMonitor == nil {
+		t.Fatal("missing otel-exporter PodMonitor")
+	} else {
+		if len(podMonitor.Spec.PodMetricsEndpoints) != 1 {
+			t.Fatalf("expected 1 PodMonitor endpoint, got %d", len(podMonitor.Spec.PodMetricsEndpoints))
+		}
+		ep := podMonitor.Spec.PodMetricsEndpoints[0]
+		if ep.Port != "metrics" {
+			t.Fatalf("unexpected PodMonitor endpoint port: %q", ep.Port)
+		}
+		if len(ep.RelabelConfigs) != 1 ||
+			len(ep.RelabelConfigs[0].SourceLabels) != 1 ||
+			ep.RelabelConfigs[0].SourceLabels[0] != "__meta_kubernetes_pod_node_name" ||
+			ep.RelabelConfigs[0].TargetLabel != "node" {
+			t.Fatalf("unexpected PodMonitor relabel configs: %v", ep.RelabelConfigs)
+		}
+		if len(podMonitor.Spec.Selector.MatchExpressions) != 1 {
+			t.Fatalf("expected 1 match expression, got %d", len(podMonitor.Spec.Selector.MatchExpressions))
+		}
+		me := podMonitor.Spec.Selector.MatchExpressions[0]
+		if me.Key != "app" || me.Operator != metav1.LabelSelectorOpIn {
+			t.Fatalf("unexpected PodMonitor selector: %v", me)
+		}
+		if !reflect.DeepEqual(me.Values, []string{MasterDaemonsetName, WorkerDaemonsetName}) {
+			t.Fatalf("unexpected PodMonitor selector values: got %v", me.Values)
+		}
+	}
+	if prometheusRule == nil {
+		t.Fatal("missing otel-exporter-alerts PrometheusRule")
+	} else {
+		if len(prometheusRule.Spec.Groups) != 1 {
+			t.Fatalf("expected 1 rule group, got %d", len(prometheusRule.Spec.Groups))
+		}
+		rules := prometheusRule.Spec.Groups[0].Rules
+		wantAlerts := []string{
+			"OTelExporterNoLogsShippedSRE",
+			"OTelExporterSendFailingSRE",
+			"OTelExporterQueueSaturatedSRE",
+			"OTelExporterLogsRefusedSRE",
+			"OTelExporterRestartLoopingSRE",
+		}
+		if len(rules) != len(wantAlerts) {
+			t.Fatalf("expected %d rules, got %d: %v", len(wantAlerts), len(rules), rules)
+		}
+		byAlert := make(map[string]monitoringv1.Rule, len(rules))
+		for _, r := range rules {
+			byAlert[r.Alert] = r
+		}
+		for _, want := range wantAlerts {
+			if _, ok := byAlert[want]; !ok {
+				t.Fatalf("missing alert %q; got rules %v", want, rules)
+			}
+		}
+		if noLogs := byAlert["OTelExporterNoLogsShippedSRE"]; noLogs.Labels["severity"] != "critical" || string(*noLogs.For) != "10m" {
+			t.Fatalf("NoLogsShipped alert: severity=%q For=%q", noLogs.Labels["severity"], string(*noLogs.For))
+		}
+		// The collector exposes these counters without a _total suffix (verified
+		// on a live cluster), so the alert expressions use the bare names.
+		for _, want := range []string{
+			"otelcol_exporter_sent_log_records",
+			"otelcol_exporter_send_failed_log_records",
+			"otelcol_receiver_refused_log_records",
+		} {
+			found := false
+			for _, r := range rules {
+				expr := r.Expr.String()
+				if strings.Contains(expr, want+"_total") {
+					t.Fatalf("rule references suffixed %q; collector exposes the bare name", want+"_total")
+				}
+				if strings.Contains(expr, want) {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("no rule references %q", want)
+			}
+		}
 	}
 }
 
 func TestOTelDaemonSets(t *testing.T) {
 	r := &Reconciler{}
+	wantImage := version.TelemetryExporterImage("acrDomain")
 	daemonsets, err := r.otelDaemonSets(&arov1alpha1.Cluster{
 		Spec: arov1alpha1.ClusterSpec{
 			ResourceID: testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
 			ACRDomain:  "acrDomain",
-			OperatorFlags: arov1alpha1.OperatorFlags{
-				"aro.environment": "Test",
-			},
 		},
 	}, "10.0.0.8:4317", nil, "master-hash", "worker-hash")
 	if err != nil {
@@ -298,12 +498,12 @@ func TestOTelDaemonSets(t *testing.T) {
 	}
 
 	for _, ds := range daemonsets {
-		collector, ok := getContainer(ds, "otel-collector")
+		exporter, ok := getContainer(ds, "otel-exporter")
 		if !ok {
-			t.Fatalf("missing otel-collector container in %s", ds.Name)
+			t.Fatalf("missing otel-exporter container in %s", ds.Name)
 		}
-		if collector.Image == "" {
-			t.Fatalf("missing image for %s", ds.Name)
+		if exporter.Image != wantImage {
+			t.Fatalf("unexpected image for %s: got %q want %q", ds.Name, exporter.Image, wantImage)
 		}
 		if !hasVolume(ds, "machine-id") {
 			t.Fatalf("missing machine-id volume for %s", ds.Name)
@@ -312,48 +512,116 @@ func TestOTelDaemonSets(t *testing.T) {
 			t.Fatalf("missing priority class for %s", ds.Name)
 		}
 		wantHash := "worker-hash"
-		if ds.Name == "otel-collector-master" {
+		if ds.Name == MasterDaemonsetName {
 			wantHash = "master-hash"
 		}
 		if gotHash := ds.Spec.Template.Annotations["aro.openshift.io/otel-config-sha256"]; gotHash != wantHash {
 			t.Fatalf("unexpected config hash annotation for %s: got %q want %q", ds.Name, gotHash, wantHash)
 		}
-		foundEnvironment := false
-		for _, env := range collector.Env {
-			if env.Name == "ENVIRONMENT" && env.Value == "Test" {
-				foundEnvironment = true
-				break
+		for _, env := range exporter.Env {
+			if env.Name == "ENVIRONMENT" {
+				t.Fatalf("unexpected ENVIRONMENT var for %s", ds.Name)
 			}
 		}
-		if !foundEnvironment {
-			t.Fatalf("missing ENVIRONMENT var for %s", ds.Name)
+		var foundMetricsPort bool
+		for _, p := range exporter.Ports {
+			if p.Name == "metrics" && p.ContainerPort == otelMetricsPort {
+				foundMetricsPort = true
+			}
+		}
+		if !foundMetricsPort {
+			t.Fatalf("missing metrics port %d in %s", otelMetricsPort, ds.Name)
+		}
+	}
+}
+
+func TestOTelDaemonSetsUseConfiguredPullSpec(t *testing.T) {
+	r := &Reconciler{}
+	const overridePullSpec = "example.invalid/otel/exporter:custom"
+	daemonsets, err := r.otelDaemonSets(&arov1alpha1.Cluster{
+		Spec: arov1alpha1.ClusterSpec{
+			ResourceID: testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+			ACRDomain:  "acrDomain",
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				controllerOTelPullSpec: overridePullSpec,
+			},
+		},
+	}, "10.0.0.8:4317", nil, "master-hash", "worker-hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, ds := range daemonsets {
+		exporter, ok := getContainer(ds, "otel-exporter")
+		if !ok {
+			t.Fatalf("missing otel-exporter container in %s", ds.Name)
+		}
+		if exporter.Image != overridePullSpec {
+			t.Fatalf("unexpected overridden image for %s: got %q want %q", ds.Name, exporter.Image, overridePullSpec)
 		}
 	}
 }
 
 func TestTelemetryGatewayTarget(t *testing.T) {
-	target, ready, err := telemetryGatewayTarget(&arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{GatewayPrivateEndpointIP: "10.0.0.8", GatewayTelemetryDomain: "telemetry.eastus.aro.azure.com"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !ready {
-		t.Fatal("expected telemetry target to be ready")
-	}
-	if target.endpoint != "telemetry.eastus.aro.azure.com:4317" {
-		t.Fatalf("got endpoint %q", target.endpoint)
-	}
-	if len(target.hostAliases) != 1 || target.hostAliases[0].IP != "10.0.0.8" {
-		t.Fatalf("unexpected host aliases: %#v", target.hostAliases)
-	}
-}
+	for _, tt := range []struct {
+		name            string
+		cluster         *arov1alpha1.Cluster
+		wantReady       bool
+		wantEndpoint    string
+		wantHostAliases []corev1.HostAlias
+		wantErr         string
+	}{
+		{
+			name:      "not ready when gateway endpoint IP is missing",
+			cluster:   &arov1alpha1.Cluster{},
+			wantReady: false,
+		},
+		{
+			name: "error when gateway endpoint IP is not a valid IP address",
+			cluster: &arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{
+				GatewayPrivateEndpointIP: "not-an-ip",
+				GatewayTelemetryDomain:   "telemetry.eastus.aro.azure.com",
+			}},
+			wantErr: `invalid cluster spec field "gatewayPrivateEndpointIP": "not-an-ip" is not a valid IP address`,
+		},
+		{
+			name: "error when gateway telemetry domain is empty",
+			cluster: &arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{
+				GatewayPrivateEndpointIP: "10.0.0.8",
+				GatewayTelemetryDomain:   "",
+			}},
+			wantErr: `invalid cluster spec field "gatewayTelemetryDomain": empty`,
+		},
+		{
+			name: "ready with lowercased endpoint and host alias",
+			cluster: &arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{
+				GatewayPrivateEndpointIP: "10.0.0.8",
+				GatewayTelemetryDomain:   "telemetry.EastUS.aro.azure.com",
+			}},
+			wantReady:    true,
+			wantEndpoint: "telemetry.eastus.aro.azure.com:4317",
+			wantHostAliases: []corev1.HostAlias{
+				{
+					IP:        "10.0.0.8",
+					Hostnames: []string{"telemetry.eastus.aro.azure.com"},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			target, ready, err := telemetryGatewayTarget(tt.cluster)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
-func TestTelemetryGatewayTargetNotReadyWithoutEndpointIP(t *testing.T) {
-	_, ready, err := telemetryGatewayTarget(&arov1alpha1.Cluster{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if ready {
-		t.Fatal("expected telemetry target to be not ready when gateway endpoint IP is missing")
+			if ready != tt.wantReady {
+				t.Fatalf("got ready %v, want %v", ready, tt.wantReady)
+			}
+			if target.endpoint != tt.wantEndpoint {
+				t.Fatalf("got endpoint %q, want %q", target.endpoint, tt.wantEndpoint)
+			}
+			if !reflect.DeepEqual(target.hostAliases, tt.wantHostAliases) {
+				t.Fatalf("got host aliases %#v, want %#v", target.hostAliases, tt.wantHostAliases)
+			}
+		})
 	}
 }
 
@@ -372,7 +640,7 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 
 	r := &Reconciler{
 		AROController: base.AROController{
-			Client: ctrlfake.NewClientBuilder().WithObjects(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
+			Client: testclienthelper.NewAROFakeClientBuilder(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
 		},
 	}
 
@@ -382,7 +650,7 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 	}
 
 	var daemonsetCount int
-	var foundConfig bool
+	var foundConfig, foundRole, foundRoleBinding, foundPodMonitor, foundPrometheusRule bool
 	for _, obj := range out {
 		switch typed := obj.(type) {
 		case *corev1.ConfigMap:
@@ -391,6 +659,22 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 			}
 		case *appsv1.DaemonSet:
 			daemonsetCount++
+		case *rbacv1.Role:
+			if typed.Name == prometheusK8s {
+				foundRole = true
+			}
+		case *rbacv1.RoleBinding:
+			if typed.Name == prometheusK8s {
+				foundRoleBinding = true
+			}
+		case *monitoringv1.PodMonitor:
+			if typed.Name == podMonitorName {
+				foundPodMonitor = true
+			}
+		case *monitoringv1.PrometheusRule:
+			if typed.Name == prometheusRuleName {
+				foundPrometheusRule = true
+			}
 		}
 	}
 
@@ -399,6 +683,18 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 	}
 	if daemonsetCount != 0 {
 		t.Fatalf("expected no daemonsets before gateway endpoint is ready, got %d", daemonsetCount)
+	}
+	if !foundRole {
+		t.Fatal("missing prometheus-k8s Role before gateway endpoint is ready")
+	}
+	if !foundRoleBinding {
+		t.Fatal("missing prometheus-k8s RoleBinding before gateway endpoint is ready")
+	}
+	if !foundPodMonitor {
+		t.Fatal("missing otel-exporter PodMonitor before gateway endpoint is ready")
+	}
+	if !foundPrometheusRule {
+		t.Fatal("missing otel-exporter-alerts PrometheusRule before gateway endpoint is ready")
 	}
 }
 
@@ -425,7 +721,7 @@ func TestGenevaLoggingResourcesReturnsErrorWhenOTelConfigRenderFails(t *testing.
 
 	r := &Reconciler{
 		AROController: base.AROController{
-			Client: ctrlfake.NewClientBuilder().WithObjects(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
+			Client: testclienthelper.NewAROFakeClientBuilder(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
 		},
 	}
 
@@ -438,20 +734,20 @@ func TestGenevaLoggingResourcesReturnsErrorWhenOTelConfigRenderFails(t *testing.
 func TestClearOTelDaemonSetNodeSelectors(t *testing.T) {
 	ctx := context.Background()
 	master := &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{Name: "otel-collector-master", Namespace: kubeNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: MasterDaemonsetName, Namespace: kubeNamespace},
 		Spec:       appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{NodeSelector: map[string]string{"custom": "true"}}}},
 	}
 	worker := &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{Name: "otel-collector-worker", Namespace: kubeNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: WorkerDaemonsetName, Namespace: kubeNamespace},
 		Spec:       appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{NodeSelector: map[string]string{"custom": "true"}}}},
 	}
 
-	r := &Reconciler{AROController: base.AROController{Client: ctrlfake.NewClientBuilder().WithObjects(master, worker).Build()}}
+	r := &Reconciler{AROController: base.AROController{Client: testclienthelper.NewAROFakeClientBuilder(master, worker).Build()}}
 	if err := r.clearOTelDaemonSetNodeSelectors(ctx); err != nil {
 		t.Fatal(err)
 	}
 
-	for _, name := range []string{"otel-collector-master", "otel-collector-worker"} {
+	for _, name := range []string{MasterDaemonsetName, WorkerDaemonsetName} {
 		ds := &appsv1.DaemonSet{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: name, Namespace: kubeNamespace}, ds); err != nil {
 			t.Fatal(err)
@@ -464,7 +760,6 @@ func TestClearOTelDaemonSetNodeSelectors(t *testing.T) {
 
 func TestCleanupStaleResources(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	mockDh := mock_dynamichelper.NewMockInterface(controller)
 	r := &Reconciler{dh: mockDh}
@@ -476,5 +771,47 @@ func TestCleanupStaleResources(t *testing.T) {
 
 	if err := r.cleanupStaleResources(context.Background()); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestOTelDaemonSetsComponentHealthFlag(t *testing.T) {
+	const gate = "--feature-gates=+extension.healthcheck.useComponentStatus"
+	r := &Reconciler{}
+
+	for _, tt := range []struct {
+		name  string
+		flags arov1alpha1.OperatorFlags
+		want  bool
+	}{
+		{name: "disabled by default", flags: arov1alpha1.OperatorFlags{}, want: false},
+		{name: "enabled via flag", flags: arov1alpha1.OperatorFlags{operator.GenevaLoggingOTelComponentHealth: operator.FlagTrue}, want: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			daemonsets, err := r.otelDaemonSets(&arov1alpha1.Cluster{
+				Spec: arov1alpha1.ClusterSpec{
+					ResourceID:    testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+					ACRDomain:     "acrDomain",
+					OperatorFlags: tt.flags,
+				},
+			}, "10.0.0.8:4317", nil, "master-hash", "worker-hash")
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, ds := range daemonsets {
+				exporter, ok := getContainer(ds, "otel-exporter")
+				if !ok {
+					t.Fatalf("missing otel-exporter container in %s", ds.Name)
+				}
+				hasGate := false
+				for _, a := range exporter.Args {
+					if a == gate {
+						hasGate = true
+					}
+				}
+				if hasGate != tt.want {
+					t.Fatalf("%s: feature-gate present=%v, want %v (args=%v)", ds.Name, hasGate, tt.want, exporter.Args)
+				}
+			}
+		})
 	}
 }

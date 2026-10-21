@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
@@ -20,7 +19,6 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 
@@ -28,8 +26,10 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // failingClient wraps a client and fails on Update operations
@@ -328,12 +328,14 @@ func TestPullSecretReconciler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
-			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.instance).WithObjects(tt.secrets...).Build()
+			clientFake := testclienthelper.NewAROFakeClientBuilder(tt.instance).WithObjects(tt.secrets...).Build()
 			assert.NotNil(t, clientFake)
 
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			r := NewReconciler(log, clientFake)
 			assert.NotNil(t, r)
 
 			if tt.request.Name == "" {
@@ -414,7 +416,9 @@ func TestParseRedHatKeys(t *testing.T) {
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), nil)
+			_, log := testlog.LogForTesting(t)
+
+			r := NewReconciler(log, nil)
 			assert.NotNil(t, r)
 
 			out, err := r.parseRedHatKeys(tt.ps)
@@ -829,15 +833,17 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 			assert.NotNil(t, ctx)
 
-			clientBuilder := ctrlfake.NewClientBuilder()
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder()
 			if tt.initialSecret != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.initialSecret)
 			}
 
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientBuilder.Build())
+			r := NewReconciler(log, clientBuilder.Build())
 			assert.NotNil(t, r)
 
 			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)
@@ -859,6 +865,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 
 func TestEnsureGlobalPullSecretErrorMetric(t *testing.T) {
 	t.Run("Update failure causes error metric", func(t *testing.T) {
+		_, log := testlog.LogForTesting(t)
+
 		ctx := context.Background()
 
 		initialSecret := &corev1.Secret{
@@ -890,13 +898,13 @@ func TestEnsureGlobalPullSecretErrorMetric(t *testing.T) {
 			Type: corev1.SecretTypeDockerConfigJson,
 		}
 
-		clientBuilder := ctrlfake.NewClientBuilder().WithObjects(initialSecret)
+		clientBuilder := testclienthelper.NewAROFakeClientBuilder(initialSecret)
 		failingClientWrapper := &failingClient{
 			Client:       clientBuilder.Build(),
 			failOnUpdate: true,
 		}
 
-		r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), failingClientWrapper)
+		r := NewReconciler(log, failingClientWrapper)
 		assert.NotNil(t, r)
 
 		// Reset metrics before test

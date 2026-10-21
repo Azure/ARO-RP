@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 const (
@@ -126,6 +127,8 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			testInfra := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			defer testInfra.done()
 
@@ -149,7 +152,7 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(http.MethodGet, "/admin"+tt.resourceID+"/serialconsole?vmName="+tt.vmName, nil)
 
-			ctx := context.WithValue(request.Context(), middleware.ContextKeyLog, logrus.NewEntry(logrus.StandardLogger()))
+			ctx := context.WithValue(request.Context(), middleware.ContextKeyLog, log)
 			ctx = context.WithValue(ctx, chi.RouteCtxKey, &chi.Context{
 				URLParams: chi.RouteParams{
 					Keys:   []string{"resourceType", "resourceName", "resourceGroupName"},
@@ -164,10 +167,10 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 			require.Equal(t, tt.wantStatusCode, response.StatusCode)
 
 			if tt.wantError != "" {
-				body := make(map[string]interface{})
+				body := make(map[string]any)
 				err := json.NewDecoder(response.Body).Decode(&body)
 				require.NoError(t, err)
-				require.Contains(t, body["error"].(map[string]interface{})["message"], tt.wantError)
+				require.Contains(t, body["error"].(map[string]any)["message"], tt.wantError)
 			}
 		})
 	}

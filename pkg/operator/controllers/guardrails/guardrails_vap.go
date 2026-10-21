@@ -6,6 +6,7 @@ package guardrails
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"path/filepath"
@@ -20,6 +21,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
+
+const (
+	majorUpgradeDenyPolicyName                 = "aro-cluster-version-major-upgrade-deny"
+	deprecatedMajorUpgradeProtectionPolicyName = "aro-cluster-version-major-upgrade-protection"
+)
+
+var mandatoryVAPPolicyNames = map[string]struct{}{
+	majorUpgradeDenyPolicyName: {},
+}
 
 // vapValidationAction maps a Gatekeeper-style enforcement action to the
 // equivalent VAP validationAction.
@@ -57,6 +67,9 @@ func (r *Reconciler) deployVAP(ctx context.Context) error {
 			continue
 		}
 		policyName := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+		if isMandatoryVAPPolicy(policyName) {
+			continue
+		}
 
 		managed, enforcement, err := r.getPolicyConfig(ctx, instance, entry.Name())
 		if err != nil {
@@ -80,6 +93,33 @@ func (r *Reconciler) deployVAP(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+func isMandatoryVAPPolicy(policyName string) bool {
+	_, ok := mandatoryVAPPolicyNames[policyName]
+	return ok
+}
+
+func isMandatoryVAPResource(name string) bool {
+	return isMandatoryVAPPolicy(strings.TrimSuffix(name, "-binding"))
+}
+
+// ensureMandatoryVAP installs the major-version upgrade guard independently of
+// all optional guardrails flags. Kubernetes excludes admissionregistration
+// resources from admission policy evaluation, so the controller watches and
+// reconciles this policy instead of attempting to protect it with another VAP.
+func (r *Reconciler) ensureMandatoryVAP(ctx context.Context) error {
+	if err := r.removeVAPPolicy(ctx, deprecatedMajorUpgradeProtectionPolicyName); err != nil {
+		return fmt.Errorf("removing deprecated VAP policy %s: %w", deprecatedMajorUpgradeProtectionPolicyName, err)
+	}
+
+	if err := r.ensureVAPPolicy(ctx, majorUpgradeDenyPolicyName+".yaml"); err != nil {
+		return fmt.Errorf("ensuring mandatory VAP policy %s: %w", majorUpgradeDenyPolicyName, err)
+	}
+	if err := r.ensureVAPBinding(ctx, majorUpgradeDenyPolicyName, "Deny"); err != nil {
+		return fmt.Errorf("ensuring mandatory VAP binding for %s: %w", majorUpgradeDenyPolicyName, err)
+	}
 	return nil
 }
 
@@ -130,16 +170,18 @@ func (r *Reconciler) ensureVAPBinding(ctx context.Context, policyName, validatio
 // removeVAPPolicy removes both the ValidatingAdmissionPolicyBinding and the
 // ValidatingAdmissionPolicy for a given policy name.
 func (r *Reconciler) removeVAPPolicy(ctx context.Context, policyName string) error {
+	var errs []error
+
 	bindingGK := "ValidatingAdmissionPolicyBinding.admissionregistration.k8s.io"
 	if err := r.dh.EnsureDeletedGVR(ctx, bindingGK, "", policyName+"-binding", "v1"); err != nil {
-		r.log.Warnf("failed to remove VAP binding %s-binding: %s", policyName, err.Error())
+		errs = append(errs, fmt.Errorf("removing VAP binding %s-binding: %w", policyName, err))
 	}
 
 	policyGK := "ValidatingAdmissionPolicy.admissionregistration.k8s.io"
 	if err := r.dh.EnsureDeletedGVR(ctx, policyGK, "", policyName, "v1"); err != nil {
-		r.log.Warnf("failed to remove VAP policy %s: %s", policyName, err.Error())
+		errs = append(errs, fmt.Errorf("removing VAP policy %s: %w", policyName, err))
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // removeAllVAP removes every VAP policy and binding known to the controller.
@@ -154,6 +196,9 @@ func (r *Reconciler) removeAllVAP(ctx context.Context) error {
 			continue
 		}
 		policyName := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+		if isMandatoryVAPPolicy(policyName) {
+			continue
+		}
 		if err := r.removeVAPPolicy(ctx, policyName); err != nil {
 			r.log.Warnf("failed to remove VAP policy %s: %s", policyName, err.Error())
 		}
@@ -180,6 +225,11 @@ func (r *Reconciler) vapTicker(ctx context.Context, instance *arov1alpha1.Cluste
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			err = r.ensureMandatoryVAP(ctx)
+			if err != nil {
+				r.log.Errorf("vapTicker ensureMandatoryVAP error %s", err.Error())
+				continue
+			}
 			err = r.deployVAP(ctx)
 			if err != nil {
 				r.log.Errorf("vapTicker deployVAP error %s", err.Error())

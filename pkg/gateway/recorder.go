@@ -30,6 +30,9 @@ func newRecorder(c net.Conn) *recorder {
 func (r *recorder) Read(b []byte) (int, error) {
 	if r.record {
 		n, err := r.Conn.Read(b)
+		// n.b. buf is an in-memory replay buffer for raw TLS bytes used to
+		// inspect the SNI; it is never written to an HTTP response, so this is
+		// not a reflected-XSS sink despite static analysis flagging it.
 		r.buf.Write(b[:n])
 		return n, err
 	}

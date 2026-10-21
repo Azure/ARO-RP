@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 type investigateRequest struct {
@@ -58,7 +59,7 @@ func (f *frontend) postAdminOpenShiftClusterInvestigate(w http.ResponseWriter, r
 		if atomic.LoadInt64(&tw.written) > 0 {
 			// Streaming already started — can't send a JSON error response.
 			// Log the error server-side instead.
-			log.WithError(err).Warn("investigation failed after streaming started")
+			log.WithField("error", utillog.Sanitize(err.Error())).Warn("investigation failed after streaming started")
 			return
 		}
 		adminReply(log, tw, nil, nil, err)
@@ -152,7 +153,7 @@ func (f *frontend) _postAdminOpenShiftClusterInvestigate(ctx context.Context, r 
 		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "cluster does not have a private endpoint IP configured")
 	}
 
-	log.Infof("starting Holmes investigation for cluster %s (question_length=%d)", resourceID, len(req.Question))
+	log.Infof("starting Holmes investigation for cluster %s (question_length=%d)", utillog.Sanitize(resourceID), len(req.Question))
 
 	err = f.hiveClusterManager.InvestigateCluster(ctx, hiveNamespace, kubeconfig, f.holmesConfig, apiServerIP, req.Question, w)
 	if err != nil {

@@ -14,12 +14,8 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -27,20 +23,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/holmes"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 const (
 	mockInvestigateSubID    = "00000000-0000-0000-0000-000000000001"
 	mockInvestigateTenantID = "00000000-0000-0000-0000-000000000002"
 )
-
-// fakeTokenCredential implements azcore.TokenCredential for tests that don't
-// exercise AcquireToken (handler pre-condition tests).
-type fakeTokenCredential struct{}
-
-func (fakeTokenCredential) GetToken(_ context.Context, _ policy.TokenRequestOptions) (azcore.AccessToken, error) {
-	return azcore.AccessToken{Token: "fake-token"}, nil
-}
 
 func newTestHolmesConfig() *holmes.HolmesConfig {
 	return holmes.NewHolmesConfigForTest(
@@ -50,7 +39,6 @@ func newTestHolmesConfig() *holmes.HolmesConfig {
 		"azure/gpt-4o",
 		600,
 		20,
-		fakeTokenCredential{},
 	)
 }
 
@@ -204,6 +192,8 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			defer ti.done()
 
@@ -216,7 +206,6 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 
 			if tt.hiveEnabled {
 				controller := gomock.NewController(t)
-				defer controller.Finish()
 				clusterManager := mock_hive.NewMockClusterManager(controller)
 				if tt.mocks != nil {
 					tt.mocks(clusterManager)
@@ -236,7 +225,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			// The URL must include /investigate — the outer handler strips it via filepath.Dir.
 			request := httptest.NewRequest(http.MethodPost, "/admin"+tt.resourceID+"/investigate", nil)
 
-			ctx := context.WithValue(request.Context(), middleware.ContextKeyLog, logrus.NewEntry(logrus.StandardLogger()))
+			ctx := context.WithValue(request.Context(), middleware.ContextKeyLog, log)
 			ctx = context.WithValue(ctx, middleware.ContextKeyBody, []byte(tt.body))
 			ctx = context.WithValue(ctx, chi.RouteCtxKey, &chi.Context{
 				URLParams: chi.RouteParams{

@@ -5,13 +5,17 @@ package azureerrors
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 // The tests in this file contain verbatim copies of errors returned from Azure
@@ -69,7 +73,7 @@ func TestHasAuthorizationFailedError(t *testing.T) {
 			err: &azure.ServiceError{
 				Code:    CODE_DEPLOYFAILED,
 				Message: "At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.",
-				Details: []map[string]interface{}{
+				Details: []map[string]any{
 					{
 						"code":    "Forbidden",
 						"message": "{\r\n  \"error\": {\r\n    \"code\": \"AuthorizationFailed\",\r\n    \"message\": \"The client 'a0f3c32d-647d-416c-8997-fb2463b1dcd5' with object id 'a0f3c32d-647d-416c-8997-fb2463b1dcd5' does not have authorization to perform action 'Microsoft.Storage/storageAccounts/write' over scope '/subscriptions/225e02bc-43d0-43d1-a01a-17e584a4ef69/resourceGroups/test' or the scope is invalid. If access was recently granted, please refresh your credentials.\"\r\n  }\r\n}",
@@ -520,6 +524,195 @@ func TestIsStatusForbiddenError(t *testing.T) {
 	}
 }
 
+func TestIsFederatedIdentityCredentialWriteForbiddenError(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "federated identity credential write is forbidden",
+			err:  errors.New("the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write' over the requested scope"),
+			want: true,
+		},
+		{
+			name: "different action is forbidden",
+			err:  errors.New("the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/read' over the requested scope"),
+		},
+		{
+			name: "unrelated error",
+			err:  errors.New("something happened"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsFederatedIdentityCredentialWriteForbiddenError(tt.err)
+			if got != tt.want {
+				t.Errorf("IsFederatedIdentityCredentialWriteForbiddenError() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsRetryableError(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "nil error",
+		},
+		{
+			name: "generic error",
+			err:  errors.New("something happened"),
+		},
+		{
+			name: "autorest 429",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusTooManyRequests,
+			},
+			want: true,
+		},
+		{
+			name: "azcore 429",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusTooManyRequests,
+			},
+			want: true,
+		},
+		{
+			name: "autorest transient 409 with Please retry later",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Original:   errors.New(`Code="ConflictingConcurrentWriteNotAllowed" Message="The operation was interrupted by a conflicting concurrent write on the same entity. Please retry later."`),
+			},
+			want: true,
+		},
+		{
+			name: "azcore transient 409 with Please retry later",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+					Body:       io.NopCloser(strings.NewReader(`{"code":"ConflictingConcurrentWriteNotAllowed","message":"Please retry later."}`)),
+				},
+				ErrorCode: "ConflictingConcurrentWriteNotAllowed",
+			},
+			want: true,
+		},
+		{
+			name: "azcore LRO failure 200 with Please retry later",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusOK,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"status":"Failed","error":{"code":"RegistrationOfImplicitNicViaArmFailed","message":"Registration of implicit NIC failed with error: ConflictingConcurrentWriteNotAllowed, message: The operation was interrupted by a conflicting concurrent write on the same entity. Please retry later."}}`)),
+				},
+				ErrorCode: "RegistrationOfImplicitNicViaArmFailed",
+			},
+			want: true,
+		},
+		{
+			name: "azcore 409 without Please retry later (not retryable)",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+				},
+				ErrorCode: "ConflictingConcurrentWriteNotAllowed",
+			},
+		},
+		{
+			name: "azcore 409 with Retry-After header",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"5"}},
+				},
+				ErrorCode: "CanceledAndSupersededDueToAnotherOperation",
+			},
+			want: true,
+		},
+		{
+			name: "autorest 409 with Retry-After header",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Original:   errors.New(`Code="CanceledAndSupersededDueToAnotherOperation" Message="Operation was canceled."`),
+				Response: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"5"}},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "azcore non-409 with Retry-After header",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusInternalServerError,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusInternalServerError,
+					Header:     http.Header{"Retry-After": []string{"5"}},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "autorest non-409 with Retry-After header",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusInternalServerError,
+				Response: &http.Response{
+					StatusCode: http.StatusInternalServerError,
+					Header:     http.Header{"Retry-After": []string{"5"}},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "autorest LRO failure 200 with Please retry later",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusOK,
+				Original:   errors.New(`Code="RegistrationOfImplicitNicViaArmFailed" Message="Registration of implicit NIC failed with error: ConflictingConcurrentWriteNotAllowed, message: The operation was interrupted by a conflicting concurrent write on the same entity. Please retry later."`),
+			},
+			want: true,
+		},
+		{
+			name: "autorest permanent 409 without Please retry later",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Original:   errors.New(`Code="ScopeLocked" Message="The scope is locked."`),
+			},
+		},
+		{
+			name: "error containing RetryableError",
+			err:  errors.New("RetryableError: something"),
+			want: true,
+		},
+		{
+			name: "api.CloudError 429 (storage throttling)",
+			err:  &api.CloudError{StatusCode: http.StatusTooManyRequests},
+			want: true,
+		},
+		{
+			name: "AADSTS7000215 invalid client secret",
+			err:  errors.New("AADSTS7000215: Invalid client secret is provided"),
+			want: true,
+		},
+		{
+			name: "AADSTS7000216 missing required parameters",
+			err:  errors.New("AADSTS7000216: Missing required parameters"),
+			want: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsRetryableError(tt.err)
+			if got != tt.want {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestResourceGroupsFromError(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -623,6 +816,200 @@ func TestResourceGroupsFromError(t *testing.T) {
 				if gotRGs[i] != tt.wantRGs[i] {
 					t.Errorf("ResourceGroupsFromError()[%d] = %q, want %q", i, gotRGs[i], tt.wantRGs[i])
 				}
+			}
+		})
+	}
+}
+
+func Test_isQuotaOperationNotAllowed(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		msg  string
+		want bool
+	}{
+		{
+			name: "empty string",
+			msg:  "",
+			want: false,
+		},
+		{
+			name: "bare OperationNotAllowed without quota wording",
+			msg:  `RESPONSE 409, ERROR CODE: OperationNotAllowed, Message: Some generic denial`,
+			want: false,
+		},
+		{
+			name: "OperationNotAllowed with quota keyword",
+			msg:  `RESPONSE 409, ERROR CODE: OperationNotAllowed, Message: Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota`,
+			want: true,
+		},
+		{
+			name: "OperationNotAllowed with Cores keyword",
+			msg:  `OperationNotAllowed: exceeding approved standardDSv5Family Cores`,
+			want: true,
+		},
+		{
+			name: "OperationNotAllowed with Current Limit keyword",
+			msg:  `OperationNotAllowed: Current Limit: 200, Current Usage: 200`,
+			want: true,
+		},
+		{
+			name: "OperationNotAllowed with New Limit Required keyword",
+			msg:  `OperationNotAllowed: (Minimum) New Limit Required: 204`,
+			want: true,
+		},
+		{
+			name: "quota keyword without OperationNotAllowed",
+			msg:  `Some other error with Cores quota exceeded`,
+			want: false,
+		},
+		{
+			name: "realistic Azure quota error",
+			msg:  `{"error":{"code":"OperationNotAllowed","message":"Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota. Additional details - Deployment Model: Resource Manager, Location: centralus, Current Limit: 200, Current Usage: 200, Additional Required: 4, (Minimum) New Limit Required: 204."}}`,
+			want: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isQuotaOperationNotAllowed(tt.msg)
+			if got != tt.want {
+				t.Errorf("isQuotaOperationNotAllowed(%q) = %v, want %v", tt.msg, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestContainsVMSKUErrorMessage(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		msg  string
+		want bool
+	}{
+		{
+			name: "empty string",
+			msg:  "",
+			want: false,
+		},
+		{
+			name: "generic error",
+			msg:  "some random error message",
+			want: false,
+		},
+		{
+			name: "SkuNotAvailable",
+			msg:  `Code="SkuNotAvailable" Message="The requested size is not available"`,
+			want: true,
+		},
+		{
+			name: "NotAvailableForSubscription",
+			msg:  `Restrictions: NotAvailableForSubscription, type: Zone`,
+			want: true,
+		},
+		{
+			name: "QuotaExceeded",
+			msg:  `Code="QuotaExceeded" Message="Exceeded cores quota"`,
+			want: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ContainsVMSKUErrorMessage(tt.msg)
+			if got != tt.want {
+				t.Errorf("ContainsVMSKUErrorMessage(%q) = %v, want %v", tt.msg, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsVMSKUError_OperationNotAllowed(t *testing.T) {
+	for _, tt := range []struct {
+		name            string
+		err             error
+		wantIsVMError   bool
+		wantProfileType VMProfileType
+	}{
+		{
+			name:            "OperationNotAllowed with quota wording - string error",
+			err:             errors.New(`Code="OperationNotAllowed" Message="Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota. Current Limit: 200"`),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "OperationNotAllowed with quota wording and worker profile",
+			err:             errors.New(`Code="OperationNotAllowed" Message="exceeding approved Cores quota" Target="properties.workerProfiles[0].VMSize"`),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileWorker,
+		},
+		{
+			name:            "OperationNotAllowed without quota wording",
+			err:             errors.New(`Code="OperationNotAllowed" Message="Some generic operation not allowed"`),
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "azcore ResponseError with OperationNotAllowed but no quota message",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				ErrorCode:  CODE_OPERATIONNOTALLOWED,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+				},
+			},
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "autorest DetailedError with OperationNotAllowed and quota in ServiceError message",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_OPERATIONNOTALLOWED,
+					Message: "Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota. Current Limit: 200, Current Usage: 200",
+				},
+			},
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "autorest DetailedError with OperationNotAllowed but no quota wording",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_OPERATIONNOTALLOWED,
+					Message: "The operation is not allowed on this resource",
+				},
+			},
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "autorest RequestError with OperationNotAllowed and quota message",
+			err: autorest.DetailedError{
+				Original: &azure.RequestError{
+					ServiceError: &azure.ServiceError{
+						Code:    CODE_OPERATIONNOTALLOWED,
+						Message: "exceeding approved standardDSv5Family Cores quota. Current Limit: 200",
+					},
+				},
+			},
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "sanitized CloudError with QuotaExceeded from worker condition",
+			err:             errors.New(`500: QuotaExceeded: properties.workerProfiles[0].VMSize: Worker VM quota or capacity error detected`),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileWorker,
+		},
+		{
+			name:            "generic minimumWorkerNodesReady timeout does not trigger VM-size retry",
+			err:             errors.New("500: DeploymentFailed: : Minimum number of worker nodes have not been successfully created. Please retry, and if the issue persists, raise an Azure support ticket"),
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			gotIsVMError, gotProfileType := IsVMSKUError(tt.err)
+			if gotIsVMError != tt.wantIsVMError {
+				t.Errorf("IsVMSKUError() isVMError = %v, want %v", gotIsVMError, tt.wantIsVMError)
+			}
+			if gotProfileType != tt.wantProfileType {
+				t.Errorf("IsVMSKUError() profileType = %v, want %v", gotProfileType, tt.wantProfileType)
 			}
 		})
 	}

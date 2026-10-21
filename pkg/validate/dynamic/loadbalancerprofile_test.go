@@ -4,19 +4,17 @@ package dynamic
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"strconv"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestValidateLoadBalancerProfile(t *testing.T) {
@@ -80,10 +78,10 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: pointerutils.ToPtr("PublicIPAddresses"),
+								Value: new("PublicIPAddresses"),
 							},
-							CurrentValue: pointerutils.ToPtr(int64(4)),
-							Limit:        pointerutils.ToPtr(int64(10)),
+							CurrentValue: new(int64(4)),
+							Limit:        new(int64(10)),
 						},
 					}, nil)
 				loadBalancerBackendAddressPoolsClient.EXPECT().
@@ -99,11 +97,11 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			_, log := testlog.LogForTesting(t)
+
+			ctx := t.Context()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			loadBalancerBackendAddressPoolsClient := mock_armnetwork.NewMockLoadBalancerBackendAddressPoolsClient(controller)
 			networkUsageClient := mock_armnetwork.NewMockUsagesClient(controller)
@@ -112,7 +110,7 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 				tt.mocks(networkUsageClient, loadBalancerBackendAddressPoolsClient)
 			}
 			dv := &dynamic{
-				log:                                   logrus.NewEntry(logrus.StandardLogger()),
+				log:                                   log,
 				spNetworkUsage:                        networkUsageClient,
 				loadBalancerBackendAddressPoolsClient: loadBalancerBackendAddressPoolsClient,
 			}
@@ -168,10 +166,10 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: pointerutils.ToPtr("PublicIPAddresses"),
+								Value: new("PublicIPAddresses"),
 							},
-							CurrentValue: pointerutils.ToPtr(int64(4)),
-							Limit:        pointerutils.ToPtr(int64(10)),
+							CurrentValue: new(int64(4)),
+							Limit:        new(int64(10)),
 						},
 					}, nil)
 			},
@@ -211,10 +209,10 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: pointerutils.ToPtr("PublicIPAddresses"),
+								Value: new("PublicIPAddresses"),
 							},
-							CurrentValue: pointerutils.ToPtr(int64(8)),
-							Limit:        pointerutils.ToPtr(int64(10)),
+							CurrentValue: new(int64(8)),
+							Limit:        new(int64(10)),
 						},
 					}, nil)
 			},
@@ -250,10 +248,10 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: pointerutils.ToPtr("PublicIPAddresses"),
+								Value: new("PublicIPAddresses"),
 							},
-							CurrentValue: pointerutils.ToPtr(int64(4)),
-							Limit:        pointerutils.ToPtr(int64(10)),
+							CurrentValue: new(int64(4)),
+							Limit:        new(int64(10)),
 						},
 					}, nil)
 			},
@@ -288,10 +286,10 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: pointerutils.ToPtr("PublicIPAddresses"),
+								Value: new("PublicIPAddresses"),
 							},
-							CurrentValue: pointerutils.ToPtr(int64(8)),
-							Limit:        pointerutils.ToPtr(int64(10)),
+							CurrentValue: new(int64(8)),
+							Limit:        new(int64(10)),
 						},
 					}, nil)
 			},
@@ -299,11 +297,11 @@ func TestValidatePublicIPQuota(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			_, log := testlog.LogForTesting(t)
+
+			ctx := t.Context()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			networkUsageClient := mock_armnetwork.NewMockUsagesClient(controller)
 
@@ -312,7 +310,7 @@ func TestValidatePublicIPQuota(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				log:            logrus.NewEntry(logrus.StandardLogger()),
+				log:            log,
 				spNetworkUsage: networkUsageClient,
 			}
 
@@ -419,11 +417,11 @@ func TestValidateOBRuleV4FrontendPorts(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			_, log := testlog.LogForTesting(t)
+
+			ctx := t.Context()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			loadBalancerBackendAddressPoolsClient := mock_armnetwork.NewMockLoadBalancerBackendAddressPoolsClient(controller)
 
@@ -432,7 +430,7 @@ func TestValidateOBRuleV4FrontendPorts(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				log:                                   logrus.NewEntry(logrus.StandardLogger()),
+				log:                                   log,
 				loadBalancerBackendAddressPoolsClient: loadBalancerBackendAddressPoolsClient,
 			}
 
@@ -444,9 +442,9 @@ func TestValidateOBRuleV4FrontendPorts(t *testing.T) {
 
 func getFakeBackendIPConfigs(ipConfigCount int) []*sdknetwork.InterfaceIPConfiguration {
 	ipConfigs := []*sdknetwork.InterfaceIPConfiguration{}
-	for i := 0; i < ipConfigCount; i++ {
+	for i := range ipConfigCount {
 		ipConfigName := "ip-" + strconv.Itoa(i)
-		ipConfigs = append(ipConfigs, &sdknetwork.InterfaceIPConfiguration{Name: pointerutils.ToPtr(ipConfigName)})
+		ipConfigs = append(ipConfigs, &sdknetwork.InterfaceIPConfiguration{Name: new(ipConfigName)})
 	}
 	return ipConfigs
 }

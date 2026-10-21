@@ -59,7 +59,7 @@ converter := f.apis[r.URL.Query().Get(api.APIVersionKey)].OpenShiftClusterConver
 
 ## Files Per API Version
 
-Each `pkg/api/v*` directory contains:
+For `v20240812preview` and earlier versions, `pkg/api/v*` directory contains:
 
 | File pattern | Purpose |
 |-------------|---------|
@@ -72,20 +72,28 @@ Each `pkg/api/v*` directory contains:
 
 Plus parallel files for: `openshiftclustercredentials`, `openshiftclusteradminkubeconfig`, `openshiftversion`, `platformworkloadidentityroleset`.
 
+For `v20250725` and later versions, there is one additional file:
+
+| File pattern | Purpose |
+|-------------|---------|
+| `openshiftcluster_updatepolicy.go` | Stores an `immutable.Policy` used in static validation |
+
 ## Swagger Generation
 
 ### For v20250725 and later API versions
 
-The source of truth is now the Typespec contained in `api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/*.tsp` rather than the Go types defined in `pkg/api/$VERSION`. Currently the Go types for v20250725 are maintained separately from the TypeSpec, but we aim to generate the Go types from the TypeSpec soon.
+The source of truth is now the Typespec contained in `api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/*.tsp`. The Go API models in `pkg/api/v*` are generated from the TypeSpec and stored in `pkg/api/v*/generated`.
 
 ```
-api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/*.tsp -> hack/api/swagger-from-typespec.sh
+api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/*.tsp -> hack/api/generate-from-typespec.sh swagger
 ```
 
-- Generator: `hack/api/swagger-from-typespec.sh` wraps invocations of the `npm` scripts from `api/package.json`
+- Generator: `hack/api/generate-from-typespec.sh swagger` wraps invocations of the `npm` scripts from `api/package.json`
 - Target: `make generate-swagger-typespec`
 
 ### For v20240812preview and preceding API versions
+
+The Swagger API spec is generated from the handwritten Go model types.
 
 ```
 pkg/api/v*/openshiftcluster.go  →  hack/swagger-legacy/swagger.go  →  swagger/{stable|preview}/{version}/redhatopenshift.json
@@ -94,17 +102,13 @@ pkg/api/v*/openshiftcluster.go  →  hack/swagger-legacy/swagger.go  →  swagge
 - Generator: `hack/swagger-legacy/swagger.go` wraps `pkg/swagger/swagger.go`
 - Target: `make generate-swagger-legacy`
 
-## Client Generation (destructive)
+## Client Generation
 
-```
-swagger/{version}/redhatopenshift.json  →  AutoRest (Docker)  →  pkg/client/services/redhatopenshift/mgmt/{version}/
-```
+`api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/client.tsp`  →  TypeSpec (invoked via npm scripts in api/package.json)  →  `pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift`
 
-- Script: `hack/apiclients/build-dev-api-clients.sh`
-- Requires: Docker image `arointsvc.azurecr.io/autorest:3.7.2` (build with `make image-autorest`)
-- **WARNING**: Deletes `pkg/client/services/redhatopenshift/mgmt/` before regenerating. If it fails, restore: `git checkout -- pkg/client/ python/client/`
-- Generates both Go SDK and Python SDK
-- Only generates for versions in the `client-generate` Makefile target (currently `2024-08-12-preview` and `2025-07-25`)
+- Make target: `make client-generate`
+- Generates both Go SDK and Python SDK clients
+- Generates based on the latest API version in the TypeSpec
 
 ## Adding New VM Sizes Checklist
 

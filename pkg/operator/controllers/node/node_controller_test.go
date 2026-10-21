@@ -10,14 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 
@@ -25,8 +22,10 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestReconciler(t *testing.T) {
@@ -405,7 +404,9 @@ func TestReconciler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			clientBuilder := ctrlfake.NewClientBuilder()
+			_, log := testlog.LogForTesting(t)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder()
+
 			if !tt.clusterNotFound {
 				cluster := &arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
@@ -428,7 +429,7 @@ func TestReconciler(t *testing.T) {
 
 			client := clientBuilder.Build()
 
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), client, fake.NewSimpleClientset(tt.nodeObject))
+			r := NewReconciler(log, client, fake.NewSimpleClientset(tt.nodeObject))
 
 			request := ctrl.Request{}
 			request.Name = tt.nodeName

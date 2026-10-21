@@ -29,27 +29,24 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
 	// Rotate the secret on every deploy of the RP if the most recent
 	// secret is greater than 7 days old
 	rotateSecretAfter = time.Hour * 24 * 7
-	rpRestartScript   = "systemctl restart aro-monitor; systemctl restart aro-portal; systemctl restart aro-rp"
+	// A service reads its secrets once at start-up, so restarting it is how it
+	// picks up a rotated one. The portal session key is the only secret still
+	// rotated via the predeploy process, and aro-portal is the only service
+	// that holds it.
+	portalRestartScript = "systemctl restart aro-portal"
 )
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
 func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) error {
-	// deploy global rbac
-	err := d.deployRPGlobalSubscription(ctx)
-	if err != nil {
-		return err
-	}
-
 	d.log.Infof("deploying rg %s in %s", *d.config.Configuration.SubscriptionResourceGroupName, *d.config.Configuration.SubscriptionResourceGroupLocation)
-	_, err = d.groups.CreateOrUpdate(ctx, *d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
+	_, err := d.groups.CreateOrUpdate(ctx, *d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
 		Location: d.config.Configuration.SubscriptionResourceGroupLocation,
 	})
 	if err != nil {
@@ -177,13 +174,13 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
 	}
@@ -197,7 +194,7 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 		Value: d.config.Configuration.TokenContributorRoleID,
 	}
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		d.log.Infof("deploying %s", deploymentName)
 		err = d.globaldeployments.CreateOrUpdateAndWait(ctx, *d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
@@ -232,13 +229,13 @@ func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 	parameters.Parameters["location"] = &arm.ParametersParameter{
 		Value: d.config.Location,
 	}
@@ -253,56 +250,6 @@ func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
 	})
 }
 
-func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
-	deploymentName := "rp-global-subscription-" + d.config.Location
-
-	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobalSubscription)
-	if err != nil {
-		return err
-	}
-
-	var template map[string]interface{}
-	err = json.Unmarshal(asset, &template)
-	if err != nil {
-		return err
-	}
-
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
-
-	parameters.Parameters["tokenContributorRoleID"] = &arm.ParametersParameter{
-		Value: d.config.Configuration.TokenContributorRoleID,
-	}
-	parameters.Parameters["tokenContributorRoleName"] = &arm.ParametersParameter{
-		Value: d.config.Configuration.TokenContributorRoleName,
-	}
-
-	d.log.Infof("deploying %s", deploymentName)
-	for i := 0; i < 5; i++ {
-		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
-			Properties: &mgmtfeatures.DeploymentProperties{
-				Template:   template,
-				Mode:       mgmtfeatures.Incremental,
-				Parameters: parameters.Parameters,
-			},
-			Location: d.config.Configuration.GlobalResourceGroupLocation,
-		})
-		if serviceErr, ok := err.(*azure.ServiceError); ok &&
-			serviceErr.Code == "DeploymentFailed" &&
-			i < 4 {
-			// Sometimes we see RoleDefinitionUpdateConflict when multiple RPs
-			// are deploying at once.  Retry a few times.
-			d.log.Print(err)
-			continue
-		}
-		if err != nil {
-			return err
-		}
-
-		break
-	}
-	return nil
-}
-
 func (d *deployer) deployRPSubscription(ctx context.Context) error {
 	deploymentName := "rp-production-subscription-" + d.config.Location
 
@@ -311,7 +258,7 @@ func (d *deployer) deployRPSubscription(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
@@ -334,7 +281,7 @@ func (d *deployer) deployManagedIdentity(ctx context.Context, resourceGroupName,
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
@@ -357,18 +304,18 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 	parameters.Parameters["deployNSGs"] = &arm.ParametersParameter{
 		Value: isCreate,
 	}
 	// TODO: ugh
-	if _, ok := template["parameters"].(map[string]interface{})["gatewayResourceGroupName"]; ok {
+	if _, ok := template["parameters"].(map[string]any)["gatewayResourceGroupName"]; ok {
 		parameters.Parameters["gatewayResourceGroupName"] = &arm.ParametersParameter{
 			Value: d.config.GatewayResourceGroupName,
 		}
@@ -388,7 +335,16 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 }
 
 func (d *deployer) configureServiceSecrets(ctx context.Context, lbHealthcheckWaitTimeSec int) error {
-	isRotated := false
+	// True when a new version was written, whether by rotation or because the
+	// secret was absent. Either way aro-portal must be restarted to see it.
+	portalKeyCreatedOrRotated, err := d.ensureAndRotateSecret(ctx, d.portalKeyvault, env.PortalServerSessionKeySecretName, 32)
+	if err != nil {
+		return err
+	}
+
+	// Created if absent and then left alone. Rotating them would require every
+	// service holding a key to be restarted in step, which is not worth doing
+	// until existing documents can be re-sealed and superseded versions retired.
 	for _, s := range []struct {
 		kv         azsecrets.Client
 		secretName string
@@ -396,42 +352,28 @@ func (d *deployer) configureServiceSecrets(ctx context.Context, lbHealthcheckWai
 	}{
 		{d.serviceKeyvault, env.EncryptionSecretV2Name, 64},
 		{d.serviceKeyvault, env.FrontendEncryptionSecretV2Name, 64},
-		{d.portalKeyvault, env.PortalServerSessionKeySecretName, 32},
-	} {
-		isNew, err := d.ensureAndRotateSecret(ctx, s.kv, s.secretName, s.len)
-		isRotated = isNew || isRotated
-		if err != nil {
-			return err
-		}
-	}
-
-	// don't rotate legacy secrets
-	for _, s := range []struct {
-		kv         azsecrets.Client
-		secretName string
-		len        int
-	}{
 		{d.serviceKeyvault, env.EncryptionSecretName, 32},
 		{d.serviceKeyvault, env.FrontendEncryptionSecretName, 32},
 	} {
-		isNew, err := d.ensureSecret(ctx, s.kv, s.secretName, s.len)
-		isRotated = isNew || isRotated
+		_, err := d.ensureSecret(ctx, s.kv, s.secretName, s.len)
 		if err != nil {
 			return err
 		}
 	}
 
-	isNew, err := d.ensureSecretKey(ctx, d.portalKeyvault, env.PortalServerSSHKeySecretName)
-	isRotated = isNew || isRotated
+	// The SSH host key is created if absent and then left alone: ensureSecretKey
+	// returns on finding any version, with no age check, so this code never
+	// supersedes a version a running service already holds. Creation therefore
+	// means initial rollout, where there are no old scale sets to sweep. A
+	// manual delete and purge would also reach it, and would need the readers
+	// restarted by hand. The result is deliberately unused.
+	_, err = d.ensureSecretKey(ctx, d.portalKeyvault, env.PortalServerSSHKeySecretName)
 	if err != nil {
 		return err
 	}
 
-	if isRotated {
-		err = d.restartOldScalesets(ctx, lbHealthcheckWaitTimeSec)
-		if err != nil {
-			return err
-		}
+	if portalKeyCreatedOrRotated {
+		return d.restartOldScalesets(ctx, lbHealthcheckWaitTimeSec)
 	}
 	return nil
 }
@@ -496,7 +438,7 @@ func (d *deployer) createSecret(ctx context.Context, kv azsecrets.Client, secret
 
 	d.log.Infof("setting %s", secretName)
 	_, err = kv.SetSecret(ctx, secretName, azsecretssdk.SetSecretParameters{
-		Value: pointerutils.ToPtr(base64.StdEncoding.EncodeToString(key)),
+		Value: new(base64.StdEncoding.EncodeToString(key)),
 	}, nil)
 	return err
 }
@@ -525,7 +467,7 @@ func (d *deployer) ensureSecretKey(ctx context.Context, kv azsecrets.Client, sec
 
 	d.log.Infof("setting %s", secretName)
 	_, err = kv.SetSecret(ctx, secretName, azsecretssdk.SetSecretParameters{
-		Value: pointerutils.ToPtr(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
+		Value: new(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
 	}, nil)
 	return true, err
 }
@@ -567,8 +509,8 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, lbHe
 	for _, vm := range scalesetVMs {
 		d.log.Printf("waiting for restart script to complete on older rp vmss %s, instance %s", vmssName, *vm.InstanceID)
 		err = d.vmssvms.RunCommandAndWait(ctx, d.config.RPResourceGroupName, vmssName, *vm.InstanceID, mgmtcompute.RunCommandInput{
-			CommandID: pointerutils.ToPtr("RunShellScript"),
-			Script:    &[]string{rpRestartScript},
+			CommandID: new("RunShellScript"),
+			Script:    &[]string{portalRestartScript},
 		})
 		if err != nil {
 			return err

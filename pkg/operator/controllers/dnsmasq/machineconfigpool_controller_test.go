@@ -8,18 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -27,6 +24,7 @@ import (
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestMachineConfigPoolReconciler(t *testing.T) {
@@ -106,19 +104,61 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "missing IngressIP returns error",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.ForceReconciliation: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "custom",
+						Finalizers: []string{MachineConfigPoolControllerName},
+					},
+					Status: mcv1.MachineConfigPoolStatus{},
+					Spec:   mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			request: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name: "custom",
+				},
+			},
+			wantErrMsg: `invalid ingressIP: ParseAddr(""): unable to parse IP`,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable, defaultProgressing, {
+					Type:               MachineConfigPoolControllerName + "ControllerDegraded",
+					Status:             "True",
+					Message:            `invalid ingressIP: ParseAddr(""): unable to parse IP`,
+					LastTransitionTime: transitionTime,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			createTally := make(map[string]int)
 			updateTally := make(map[string]int)
 
-			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
-				WithObjects(tt.objects...).
+			client := testclienthelper.NewHookingClient(testclienthelper.NewAROFakeClientBuilder(tt.objects...).
 				Build())
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			ch := clienthelper.NewWithClient(log, client)
 
 			r := NewMachineConfigPoolReconciler(
@@ -247,6 +287,11 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -283,6 +328,11 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -321,6 +371,11 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled:      operator.FlagTrue,
 							operator.ForceReconciliation: operator.FlagTrue,
@@ -359,8 +414,7 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 			createTally := make(map[string]int)
 			updateTally := make(map[string]int)
 
-			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
-				WithObjects(tt.objects...).
+			client := testclienthelper.NewHookingClient(testclienthelper.NewAROFakeClientBuilder(tt.objects...).
 				WithObjects(&configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "version",
@@ -378,7 +432,7 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			ch := clienthelper.NewWithClient(log, client)
 
 			r := NewMachineConfigPoolReconciler(
@@ -435,6 +489,11 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -471,6 +530,11 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -508,8 +572,7 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 			createTally := make(map[string]int)
 			updateTally := make(map[string]int)
 
-			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
-				WithObjects(tt.objects...).
+			client := testclienthelper.NewHookingClient(testclienthelper.NewAROFakeClientBuilder(tt.objects...).
 				WithObjects(&configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "version",
@@ -526,19 +589,13 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 								Version: "4.18.30",
 							},
 						},
-						Conditions: []configv1.ClusterOperatorStatusCondition{
-							{
-								Type:   configv1.OperatorProgressing,
-								Status: configv1.ConditionTrue,
-							},
-						},
 					},
 				}).
 				Build())
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			ch := clienthelper.NewWithClient(log, client)
 
 			r := NewMachineConfigPoolReconciler(

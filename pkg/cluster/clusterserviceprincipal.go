@@ -54,7 +54,10 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 
 	for _, assignment := range toDelete {
 		m.log.Infof("deleting role assignment %s", *assignment.Name)
-		_, err := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+		err := arm.RetryableDelete(ctx, func() error {
+			_, e := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+			return e
+		}, m.log, "deleting role assignment "+*assignment.Name)
 		if err != nil {
 			return err
 		}
@@ -72,7 +75,9 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 			ContentVersion: "1.0.0.0",
 			Resources:      []*arm.Resource{m.clusterServicePrincipalRBAC()},
 		}
-		err = arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "clustersp", t, nil)
+		err = arm.Retryable(ctx, func() error {
+			return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "clustersp", t, nil)
+		}, m.log, "deploying cluster service principal RBAC")
 		if err != nil {
 			return err
 		}
@@ -84,7 +89,7 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 // cloudConfigSecretFromChanges takes in the kube-system/azure-cloud-provider Secret and a map
 // containing cloud-config data. If the cloud-config data in cf is different from what's currently
 // in the Secret, cloudConfigSecretFromChanges updates and returns the Secret. Otherwise, it returns nil.
-func cloudConfigSecretFromChanges(secret *corev1.Secret, cf map[string]interface{}) (*corev1.Secret, error) {
+func cloudConfigSecretFromChanges(secret *corev1.Secret, cf map[string]any) (*corev1.Secret, error) {
 	data, err := yaml.Marshal(cf)
 	if err != nil {
 		return nil, err
@@ -114,7 +119,7 @@ func (m *manager) servicePrincipalUpdated(ctx context.Context) (*corev1.Secret, 
 		return nil, err
 	}
 
-	var cf map[string]interface{}
+	var cf map[string]any
 	if secret != nil && secret.Data != nil {
 		err = yaml.Unmarshal(secret.Data["cloud-config"], &cf)
 		if err != nil {

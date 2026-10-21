@@ -32,7 +32,7 @@ from azure.cli.core.azclierror import (
 from azure.core.exceptions import ResourceNotFoundError
 import pytest
 
-import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2024_08_12_preview.models as openshiftcluster
+import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.models as openshiftcluster
 
 test_validate_cidr_data = [
     (

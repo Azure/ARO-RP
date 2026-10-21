@@ -14,7 +14,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -87,10 +87,6 @@ func (a *copyfailworkaround) Remove(ctx context.Context) error {
 
 func makeMachineConfig(role string) *mcv1.MachineConfig {
 	return &mcv1.MachineConfig{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: mcv1.SchemeGroupVersion.String(),
-			Kind:       "MachineConfig",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("99-%s-disable-algif-aead", role),
 			Labels: map[string]string{

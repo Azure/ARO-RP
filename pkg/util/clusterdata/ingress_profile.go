@@ -104,7 +104,3 @@ func (ip ingressProfileEnricher) Enrich(
 
 	return nil
 }
-
-func (ip ingressProfileEnricher) SetDefaults(oc *api.OpenShiftCluster) {
-	oc.Properties.IngressProfiles = nil
-}

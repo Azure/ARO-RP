@@ -9,23 +9,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestMachineReconciler(t *testing.T) {
@@ -131,6 +129,8 @@ func TestMachineReconciler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			baseCluster := arov1alpha1.Cluster{
@@ -143,10 +143,10 @@ func TestMachineReconciler(t *testing.T) {
 				},
 			}
 
-			clientFake := fake.NewClientBuilder().WithObjects(&baseCluster).WithObjects(tt.objects...).Build()
+			clientFake := testclienthelper.NewAROFakeClientBuilder(&baseCluster).WithObjects(tt.objects...).Build()
 
 			r := &Reconciler{
-				log:                    logrus.NewEntry(logrus.StandardLogger()),
+				log:                    log,
 				isLocalDevelopmentMode: false,
 				role:                   "master",
 				client:                 clientFake,
@@ -224,7 +224,7 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 		Spec: machinev1beta1.MachineSpec{
 			ProviderSpec: machinev1beta1.ProviderSpec{
 				Value: &kruntime.RawExtension{
-					Raw: []byte(fmt.Sprintf(`{
+					Raw: fmt.Appendf(nil, `{
 "apiVersion": "%v",
 "kind": "AzureMachineProviderSpec",
 "osDisk": {
@@ -235,7 +235,7 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 "offer": "%v"
 },
 "vmSize": "%v"
-}`, apiVersion, diskSize, imagePublisher, offer, vmSize)),
+}`, apiVersion, diskSize, imagePublisher, offer, vmSize),
 				},
 			},
 		},
@@ -249,7 +249,7 @@ func workerMachineSet(name string) *machinev1beta1.MachineSet {
 			Namespace: machineSetsNamespace,
 		},
 		Spec: machinev1beta1.MachineSetSpec{
-			Replicas: pointerutils.ToPtr(int32(1)),
+			Replicas: new(int32(1)),
 		},
 	}
 }

@@ -83,7 +83,7 @@ func TestLogClusterDeployment(t *testing.T) {
 		name    string
 		doc     *api.OpenShiftClusterDocument
 		cd      *hivev1.ClusterDeployment
-		want    interface{}
+		want    any
 		wantErr string
 	}{
 		{
@@ -103,7 +103,6 @@ func TestLogClusterDeployment(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx := context.Background()
 			_, log := testlog.New()
@@ -137,7 +136,7 @@ func TestLogClusterVersion(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		objects []kruntime.Object
-		want    interface{}
+		want    any
 		wantErr string
 	}{
 		{
@@ -172,7 +171,7 @@ func TestLogNodes(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
 		objects  []kruntime.Object
-		want     interface{}
+		want     any
 		wantLogs []testlog.ExpectedLogEntry
 		wantErr  string
 	}{
@@ -222,7 +221,7 @@ func TestLogClusterOperators(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
 		objects  []kruntime.Object
-		want     interface{}
+		want     any
 		wantLogs []testlog.ExpectedLogEntry
 		wantErr  string
 	}{
@@ -267,7 +266,7 @@ func TestLogIngressControllers(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
 		objects  []kruntime.Object
-		want     interface{}
+		want     any
 		wantLogs []testlog.ExpectedLogEntry
 		wantErr  string
 	}{
@@ -307,18 +306,18 @@ func TestLogPodLogs(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
 		objects  []kruntime.Object
-		want     interface{}
+		want     any
 		wantLogs []testlog.ExpectedLogEntry
 		wantErr  string
 	}{
 		{
 			name: "no pods returns empty and logs nothing",
-			want: []interface{}{},
+			want: []any{},
 		},
 		{
 			name:    "outputs status of aro-operator pods and directly logs pod logs",
 			objects: []kruntime.Object{aroOperatorMasterPod, aroOperatorWorkerPod},
-			want: []interface{}{
+			want: []any{
 				fmt.Sprintf("pod status %s: %v", aroOperatorMasterPod.Name, aroOperatorMasterPod.Status),
 				fmt.Sprintf("pod status %s: %v", aroOperatorWorkerPod.Name, aroOperatorWorkerPod.Status),
 			},

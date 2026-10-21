@@ -60,6 +60,7 @@ There are 4 possible ways to test the operator.
 * [Mimicking AdminUpdate when updating the ARO Operator](#mimicking-adminupdate-when-updating-the-aro-operator)
 * [How to create & publish ARO Operator image to ACR/Quay](#how-to-create--publish-aro-operator-image-to-acrquay)
 * [How to run operator e2e tests](#how-to-run-operator-e2e-tests)
+* [Geneva Logging OTEL Developer Guide](./otel-geneva-logging.md)
 
 ### In-cluster deployment
 Using either a local dev cluster or a prod cluster:

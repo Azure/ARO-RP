@@ -10,10 +10,8 @@ import (
 	"testing"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	restfake "k8s.io/client-go/rest/fake"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,11 +19,9 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/namespace"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -46,23 +42,9 @@ func (t *fakeCloseIdleTransport) CloseIdleConnections() {
 
 func TestMonitorCloseClosesIdleConnectionsOnce(t *testing.T) {
 	transport := &fakeCloseIdleTransport{}
-	aroTransport := &fakeCloseIdleTransport{}
-	gv := arov1alpha1.SchemeGroupVersion
-	aroRESTClient, err := rest.RESTClientForConfigAndClient(&rest.Config{
-		Host:    "https://example.com",
-		APIPath: "/apis",
-		ContentConfig: rest.ContentConfig{
-			GroupVersion:         &gv,
-			NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
-		},
-	}, &http.Client{Transport: aroTransport})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	mon := &Monitor{
 		httpClient: &http.Client{Transport: transport},
-		arocli:     aroclient.New(aroRESTClient),
 	}
 
 	mon.Close()
@@ -71,23 +53,6 @@ func TestMonitorCloseClosesIdleConnectionsOnce(t *testing.T) {
 	if transport.closed != 1 {
 		t.Fatalf("expected CloseIdleConnections to be called once, got %d", transport.closed)
 	}
-	if aroTransport.closed != 1 {
-		t.Fatalf("expected ARO client CloseIdleConnections to be called once, got %d", aroTransport.closed)
-	}
-}
-
-func TestMonitorCloseIgnoresFakeAroClientset(t *testing.T) {
-	mon := &Monitor{
-		arocli: arofake.NewSimpleClientset(),
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			t.Fatalf("expected fake ARO client cleanup to be a no-op, got panic: %v", r)
-		}
-	}()
-
-	mon.Close()
 }
 
 func TestMonitor(t *testing.T) {
@@ -108,35 +73,12 @@ func TestMonitor(t *testing.T) {
 		{
 			name:        "happy path",
 			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
-			collectors: func(m *Monitor) []collectorFunc {
-				return []collectorFunc{m.emitReplicasetStatuses, m.emitDaemonsetStatuses}
-			},
 			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
 				{
 					MetricName: "apiserver.healthz.code",
 					Value:      int64(1),
 					Dimensions: map[string]string{
 						"code": "200",
-					},
-				},
-				{
-					MetricName: "replicaset.statuses",
-					Value:      int64(1),
-					Dimensions: map[string]string{
-						"availableReplicas": "1",
-						"name":              "name1",
-						"namespace":         "openshift",
-						"replicas":          "2",
-					},
-				},
-				{
-					MetricName: "daemonset.statuses",
-					Value:      int64(1),
-					Dimensions: map[string]string{
-						"desiredNumberScheduled": "2",
-						"numberAvailable":        "1",
-						"namespace":              "openshift",
-						"name":                   "daemonset",
 					},
 				},
 			},
@@ -159,70 +101,7 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "emitReplicasetStatuses",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "emitDaemonsetStatuses",
-					},
-				},
-			},
-		},
-		{
-			name:        "namespace fetch failure",
-			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
-			hooks: func(hc *testclienthelper.HookingClient) {
-				hc.WithPreListHook(func(obj client.ObjectList, opts *client.ListOptions) error {
-					_, ok := obj.(*corev1.NamespaceList)
-					if ok {
-						return errors.New("failure with ns")
-					}
-					return nil
-				})
-			},
-			expectedErrors: []error{
-				&failureToRunClusterCollector{collectorName: "fetchManagedNamespaces"},
-				errListNamespaces,
-			},
-			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
-				{
-					MetricName: "apiserver.healthz.code",
-					Value:      int64(1),
-					Dimensions: map[string]string{
-						"code": "200",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.error",
-					Value:      int64(1),
-					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
-					},
-				},
-			},
-			expectedFloats: []fakemetrics.MetricsAssertion[float64]{
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "emitAPIServerHealthzCode",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "prefetchClusterVersion",
+						"collector": "emitOpenShift5Versions",
 					},
 				},
 			},
@@ -231,11 +110,11 @@ func TestMonitor(t *testing.T) {
 			name:        "collector failure",
 			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
 			collectors: func(m *Monitor) []collectorFunc {
-				return []collectorFunc{m.emitReplicasetStatuses}
+				return []collectorFunc{m.emitPodConditions}
 			},
 			hooks: func(hc *testclienthelper.HookingClient) {
 				hc.WithPreListHook(func(obj client.ObjectList, opts *client.ListOptions) error {
-					_, ok := obj.(*appsv1.ReplicaSetList)
+					_, ok := obj.(*corev1.PodList)
 					if ok {
 						return innerFailure
 					}
@@ -243,8 +122,7 @@ func TestMonitor(t *testing.T) {
 				})
 			},
 			expectedErrors: []error{
-				&failureToRunClusterCollector{collectorName: "emitReplicasetStatuses"},
-				errListReplicaSets,
+				&failureToRunClusterCollector{collectorName: "emitPodConditions"},
 				innerFailure,
 			},
 			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
@@ -259,7 +137,7 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.error",
 					Value:      int64(1),
 					Dimensions: map[string]string{
-						"collector": "emitReplicasetStatuses",
+						"collector": "emitPodConditions",
 					},
 				},
 			},
@@ -282,7 +160,7 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
+						"collector": "emitOpenShift5Versions",
 					},
 				},
 			},
@@ -291,11 +169,11 @@ func TestMonitor(t *testing.T) {
 			name:        "collector panic does not stop other collectors",
 			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
 			collectors: func(m *Monitor) []collectorFunc {
-				return []collectorFunc{m.emitReplicasetStatuses, m.emitDaemonsetStatuses}
+				return []collectorFunc{m.emitPodConditions, m.emitNodeConditions}
 			},
 			hooks: func(hc *testclienthelper.HookingClient) {
 				hc.WithPreListHook(func(obj client.ObjectList, opts *client.ListOptions) error {
-					_, ok := obj.(*appsv1.ReplicaSetList)
+					_, ok := obj.(*corev1.PodList)
 					if ok {
 						panic(innerFailure)
 					}
@@ -303,7 +181,7 @@ func TestMonitor(t *testing.T) {
 				})
 			},
 			expectedErrors: []error{
-				&failureToRunClusterCollector{collectorName: "emitReplicasetStatuses"},
+				&failureToRunClusterCollector{collectorName: "emitPodConditions"},
 				&collectorPanic{panicValue: innerFailure},
 			},
 			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
@@ -315,20 +193,31 @@ func TestMonitor(t *testing.T) {
 					},
 				},
 				{
-					MetricName: "daemonset.statuses",
-					Value:      int64(1),
-					Dimensions: map[string]string{
-						"desiredNumberScheduled": "2",
-						"numberAvailable":        "1",
-						"namespace":              "openshift",
-						"name":                   "daemonset",
-					},
-				},
-				{
 					MetricName: "monitor.cluster.collector.error",
 					Value:      int64(1),
 					Dimensions: map[string]string{
-						"collector": "emitReplicasetStatuses",
+						"collector": "emitPodConditions",
+					},
+				},
+				{
+					MetricName: "node.count",
+					Value:      int64(0),
+					Dimensions: map[string]string{
+						"role": "master",
+					},
+				},
+				{
+					MetricName: "node.count",
+					Value:      int64(0),
+					Dimensions: map[string]string{
+						"role": "worker",
+					},
+				},
+				{
+					MetricName: "node.count",
+					Value:      int64(0),
+					Dimensions: map[string]string{
+						"role": "infra",
 					},
 				},
 			},
@@ -351,14 +240,14 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
+						"collector": "emitOpenShift5Versions",
 					},
 				},
 				{
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
-						"collector": "emitDaemonsetStatuses",
+						"collector": "emitNodeConditions",
 					},
 				},
 			},
@@ -501,7 +390,7 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
+						"collector": "emitOpenShift5Versions",
 					},
 				},
 				{
@@ -529,43 +418,6 @@ func TestMonitor(t *testing.T) {
 								Version: "4.16.1",
 							},
 						},
-					},
-				},
-				&appsv1.ReplicaSet{ // metrics expected
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "name1",
-						Namespace: "openshift",
-					},
-					Status: appsv1.ReplicaSetStatus{
-						Replicas:          2,
-						AvailableReplicas: 1,
-					},
-				}, &appsv1.ReplicaSet{ // no metric expected
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "name2",
-						Namespace: "openshift",
-					},
-					Status: appsv1.ReplicaSetStatus{
-						Replicas:          2,
-						AvailableReplicas: 2,
-					},
-				}, &appsv1.ReplicaSet{
-					ObjectMeta: metav1.ObjectMeta{ // no metric expected -customer
-						Name:      "name2",
-						Namespace: "customer",
-					},
-					Status: appsv1.ReplicaSetStatus{
-						Replicas:          2,
-						AvailableReplicas: 1,
-					},
-				}, &appsv1.DaemonSet{ // metric expected
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "daemonset",
-						Namespace: "openshift",
-					},
-					Status: appsv1.DaemonSetStatus{
-						DesiredNumberScheduled: 2,
-						NumberAvailable:        1,
 					},
 				},
 			}
@@ -599,13 +451,14 @@ func TestMonitor(t *testing.T) {
 			}
 
 			mon := &Monitor{
-				log:          log,
-				rawClient:    fakeRawClient,
-				ocpclientset: ocpclientset,
-				now:          now,
-				m:            m,
-				queryLimit:   1,
-				parallelism:  1,
+				log:                 log,
+				rawClient:           fakeRawClient,
+				ocpclientset:        ocpclientset,
+				namespacesToMonitor: namespace.MonitoredNamespaces,
+				now:                 now,
+				m:                   m,
+				queryLimit:          1,
+				parallelism:         1,
 			}
 
 			if tt.collectors != nil {
@@ -664,8 +517,6 @@ func TestMonitorAlreadyCancelled(t *testing.T) {
 		queryLimit:   1,
 		now:          now,
 	}
-
-	mon.collectors = []collectorFunc{mon.emitDaemonsetStatuses}
 
 	// Cancel context before it hits the monitor
 	cancel()

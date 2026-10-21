@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
@@ -28,7 +27,9 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestIsClusterDeploymentReady(t *testing.T) {
@@ -119,7 +120,7 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
+			_, log := testlog.LogForTesting(t)
 
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.cd != nil {
@@ -131,7 +132,7 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 
 			c := clusterManager{
 				hiveClientset: fakeClientBuilder.Build(),
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 				env:           mockEnv,
 			}
 
@@ -363,7 +364,7 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
+			_, log := testlog.LogForTesting(t)
 
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.cd != nil {
@@ -380,7 +381,7 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 
 			c := clusterManager{
 				hiveClientset: fakeClientBuilder.Build(),
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 				env:           mockEnv,
 			}
 
@@ -549,13 +550,15 @@ func TestGetClusterDeployment(t *testing.T) {
 		{name: "cd does not exist err returned", wantErr: `clusterdeployments.hive.openshift.io "cluster" not found`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.wantErr == "" {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(cd)
 			}
 			c := clusterManager{
 				hiveClientset: fakeClientBuilder.Build(),
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 			}
 
 			result, err := c.GetClusterDeployment(context.Background(), doc.OpenShiftCluster)
@@ -598,13 +601,15 @@ func TestGetClusterSyncforClusterDeployment(t *testing.T) {
 		{name: "syncset does not exist err returned", wantErr: `clustersyncs.hiveinternal.openshift.io "cluster" not found`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.wantErr == "" {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(cs)
 			}
 			c := clusterManager{
 				hiveClientset: fakeClientBuilder.Build(),
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 			}
 
 			result, err := c.GetClusterSync(context.Background(), doc.OpenShiftCluster)
@@ -618,6 +623,13 @@ func TestGetClusterSyncforClusterDeployment(t *testing.T) {
 			}
 		})
 	}
+}
+
+func toObjectSlice(seq []hivev1.SyncSet) (out []kruntime.Object) {
+	for _, v := range seq {
+		out = append(out, v.DeepCopyObject())
+	}
+	return out
 }
 
 func TestListSyncSet(t *testing.T) {
@@ -648,23 +660,25 @@ func TestListSyncSet(t *testing.T) {
 		{name: "syncsets exists and are returned"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.wantErr == "" {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(syncsetTest)
 			}
 			s := syncSetManager{
 				hiveClientset: fakeClientBuilder.Build(),
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 			}
 
-			result, err := s.List(context.Background(), tt.namespace, tt.label, reflect.TypeOf(hivev1.SyncSetList{}))
+			result, err := s.List(context.Background(), tt.namespace, tt.label, reflect.TypeFor[hivev1.SyncSetList]())
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Fatal(err)
 			}
 
-			if result != nil && reflect.DeepEqual(result, syncsetTest) {
-				t.Fatal("Unexpected syncset list returned", result)
+			if result != nil {
+				testclienthelper.CompareObjectList(t, toObjectSlice(result.(*hivev1.SyncSetList).Items), toObjectSlice(syncsetTest.Items))
 			}
 		})
 	}
@@ -689,23 +703,25 @@ func TestGetSyncSet(t *testing.T) {
 		{name: "syncset does not exist err returned", syncsetname: "", namespace: "", wantErr: `syncsets.hive.openshift.io "" not found`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.wantErr == "" {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(syncsetTest)
 			}
 			s := syncSetManager{
 				hiveClientset: fakeClientBuilder.Build(),
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 			}
 
-			result, err := s.Get(context.Background(), tt.namespace, tt.syncsetname, reflect.TypeOf(hivev1.SyncSet{}))
+			result, err := s.Get(context.Background(), tt.namespace, tt.syncsetname, reflect.TypeFor[hivev1.SyncSet]())
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Fatal(err)
 			}
 
-			if result != nil && reflect.DeepEqual(result, syncsetTest) {
-				t.Fatal("Unexpected syncset is returned", result)
+			if result != nil {
+				testclienthelper.CompareObjects(t, result.(kruntime.Object), syncsetTest)
 			}
 		})
 	}

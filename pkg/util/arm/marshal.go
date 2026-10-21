@@ -31,7 +31,7 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return b, err
 		}
-		dataMap := map[string]interface{}{}
+		dataMap := map[string]any{}
 		err = json.Unmarshal(b, &dataMap)
 		if err != nil {
 			return nil, err
@@ -121,8 +121,8 @@ func (r *Resource) UnmarshalJSON(b []byte) error {
 }
 
 var (
-	stringType         = reflect.TypeOf("")
-	emptyInterfaceType = reflect.ValueOf([]interface{}(nil)).Type().Elem()
+	stringType         = reflect.TypeFor[string]()
+	emptyInterfaceType = reflect.ValueOf([]any(nil)).Type().Elem()
 )
 
 // shadowCopy returns a copy of the input object wherein all the struct types
@@ -131,7 +131,7 @@ var (
 // marshals natively.  Type cycles are permitted, but (as in encoding/json)
 // value cycles are not.  Golang reflect doesn't support dynamically creating
 // named types; to get around this we go weakly typed
-func shadowCopy(i interface{}) interface{} {
+func shadowCopy(i any) any {
 	return _shadowCopy(reflect.ValueOf(i)).Interface()
 }
 
@@ -139,7 +139,7 @@ func _shadowCopy(v reflect.Value) reflect.Value {
 	switch v.Kind() {
 	case reflect.Array:
 		var t reflect.Type
-		if v.Type() == reflect.TypeOf(gofrsuuid.UUID{}) {
+		if v.Type() == reflect.TypeFor[gofrsuuid.UUID]() {
 			// keep uuid.UUID - encoding/json will detect it and marshal it into
 			// a string
 			t = v.Type()
@@ -152,7 +152,7 @@ func _shadowCopy(v reflect.Value) reflect.Value {
 		}
 		return a
 
-	case reflect.Interface, reflect.Ptr:
+	case reflect.Interface, reflect.Pointer:
 		t := emptyInterfaceType
 		if v.IsNil() {
 			return reflect.Zero(t)

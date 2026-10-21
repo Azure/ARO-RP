@@ -7,11 +7,11 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/sirupsen/logrus"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -28,18 +28,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"github.com/openshift/hive/apis/hive/v1/azure"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEnsureDeleted(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctx := context.Background()
 
 	builder := fake.NewClientBuilder().WithRuntimeObjects(&corev1.ConfigMap{
@@ -57,7 +57,7 @@ func TestEnsureDeleted(t *testing.T) {
 			return nil
 		})
 
-	ch := NewWithClient(logrus.NewEntry(logrus.StandardLogger()), client)
+	ch := NewWithClient(log, client)
 
 	err := ch.EnsureDeleted(ctx,
 		schema.GroupVersionKind{Group: "core", Version: "v1", Kind: "ConfigMap"},
@@ -90,54 +90,6 @@ func TestEnsureDeleted(t *testing.T) {
 
 func TestMerge(t *testing.T) {
 	serviceInternalTrafficPolicy := corev1.ServiceInternalTrafficPolicyCluster
-
-	mhc := &machinev1beta1.MachineHealthCheck{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "aro-machinehealthcheck",
-			Namespace: "openshift-machine-api",
-		},
-		Spec: machinev1beta1.MachineHealthCheckSpec{
-			Selector: metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{
-						Key:      "machine.openshift.io/cluster-api-machineset",
-						Operator: metav1.LabelSelectorOpExists,
-					},
-				},
-			},
-			UnhealthyConditions: []machinev1beta1.UnhealthyCondition{
-				{
-					Type:    corev1.NodeReady,
-					Timeout: metav1.Duration{Duration: 15 * time.Minute},
-					Status:  corev1.ConditionFalse,
-				},
-			},
-			NodeStartupTimeout: &metav1.Duration{Duration: 25 * time.Minute},
-		},
-	}
-
-	mhcWithStatus := mhc.DeepCopy()
-	mhcWithStatus.Status = machinev1beta1.MachineHealthCheckStatus{
-		Conditions: machinev1beta1.Conditions{
-			{
-				Type:               machinev1beta1.RemediationAllowedCondition,
-				Status:             corev1.ConditionTrue,
-				LastTransitionTime: metav1.Time{Time: time.Now()},
-			},
-		},
-		CurrentHealthy:      pointerutils.ToPtr(3),
-		ExpectedMachines:    pointerutils.ToPtr(3),
-		RemediationsAllowed: 1,
-	}
-
-	mhcWithAnnotation := mhc.DeepCopy()
-	mhcWithAnnotation.Annotations = map[string]string{
-		"cluster.x-k8s.io/paused": "",
-	}
-
-	mhcWithStatusAndAnnotation := mhc.DeepCopy()
-	mhcWithStatusAndAnnotation.Status = *mhcWithStatus.Status.DeepCopy()
-	mhcWithStatusAndAnnotation.Annotations = mhcWithAnnotation.Annotations
 
 	for _, tt := range []struct {
 		name             string
@@ -222,6 +174,7 @@ func TestMerge(t *testing.T) {
 			name: "Namespace no changes",
 			old: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
+					Name: "testobj",
 					Annotations: map[string]string{
 						"openshift.io/sa.scc.mcs":                 "mcs",
 						"openshift.io/sa.scc.supplemental-groups": "groups",
@@ -229,6 +182,7 @@ func TestMerge(t *testing.T) {
 					},
 					Labels: map[string]string{
 						"olm.operatorgroup.uid/jdfgbdfgdfhg": "test",
+						"kubernetes.io/metadata.name":        "testobj",
 					},
 				},
 				Spec: corev1.NamespaceSpec{
@@ -240,9 +194,10 @@ func TestMerge(t *testing.T) {
 					Phase: corev1.NamespaceActive,
 				},
 			},
-			new: &corev1.Namespace{},
+			new: &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "testobj"}},
 			want: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
+					Name: "testobj",
 					Annotations: map[string]string{
 						"openshift.io/sa.scc.mcs":                 "mcs",
 						"openshift.io/sa.scc.supplemental-groups": "groups",
@@ -250,6 +205,7 @@ func TestMerge(t *testing.T) {
 					},
 					Labels: map[string]string{
 						"olm.operatorgroup.uid/jdfgbdfgdfhg": "test",
+						"kubernetes.io/metadata.name":        "testobj",
 					},
 				},
 				Spec: corev1.NamespaceSpec{
@@ -355,7 +311,6 @@ func TestMerge(t *testing.T) {
 						"config.openshift.io/inject-trusted-cabundle": "",
 					},
 				},
-				Data: map[string]string{},
 			},
 			want: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -418,7 +373,7 @@ func TestMerge(t *testing.T) {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -431,7 +386,7 @@ func TestMerge(t *testing.T) {
 							MaxSurge:       &intstr.IntOrString{IntVal: 0},
 						},
 					},
-					RevisionHistoryLimit: pointerutils.ToPtr(int32(10)),
+					RevisionHistoryLimit: new(int32(10)),
 				},
 			},
 			wantChanged: true,
@@ -472,11 +427,11 @@ func TestMerge(t *testing.T) {
 					UpdatedReplicas:   3,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointerutils.ToPtr(int32(1)),
+					Replicas: new(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -496,8 +451,8 @@ func TestMerge(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    pointerutils.ToPtr(int32(10)),
-					ProgressDeadlineSeconds: pointerutils.ToPtr(int32(600)),
+					RevisionHistoryLimit:    new(int32(10)),
+					ProgressDeadlineSeconds: new(int32(600)),
 				},
 			},
 			wantChanged: true,
@@ -660,7 +615,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -691,7 +646,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -719,7 +674,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -753,7 +708,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -778,7 +733,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -800,7 +755,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -844,11 +799,16 @@ func TestMerge(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Error(cmp.Diff(got, tt.want))
-			}
+			testclienthelper.CompareObjects(t, got, tt.want)
+
 			if changed != tt.wantChanged {
 				t.Error(changed)
+				changediff := strings.SplitSeq(diff, "\n")
+				for i := range changediff {
+					if i != "" {
+						t.Error(i)
+					}
+				}
 			}
 			if diff == "" != tt.wantEmptyDiff {
 				t.Error(diff)
@@ -956,6 +916,7 @@ func TestMergeApply(t *testing.T) {
 					},
 					Labels: map[string]string{
 						"olm.operatorgroup.uid/jdfgbdfgdfhg": "test",
+						"kubernetes.io/metadata.name":        "testobj",
 					},
 				},
 				Spec: corev1.NamespaceSpec{
@@ -1105,7 +1066,8 @@ func TestMergeApply(t *testing.T) {
 						"config.openshift.io/inject-trusted-cabundle": "",
 					},
 				},
-				Data: map[string]string{},
+				// In the round trip, this becomes nil
+				Data: nil,
 			},
 			wantEmptyDiff: true,
 		},
@@ -1165,7 +1127,7 @@ func TestMergeApply(t *testing.T) {
 					Namespace: "testnamespace",
 				},
 				Spec: appsv1.DaemonSetSpec{
-					RevisionHistoryLimit: pointerutils.ToPtr(int32(12)),
+					RevisionHistoryLimit: new(int32(12)),
 				},
 			},
 			want: &appsv1.DaemonSet{
@@ -1185,7 +1147,7 @@ func TestMergeApply(t *testing.T) {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -1198,7 +1160,7 @@ func TestMergeApply(t *testing.T) {
 							MaxSurge:       &intstr.IntOrString{IntVal: 0},
 						},
 					},
-					RevisionHistoryLimit: pointerutils.ToPtr(int32(12)),
+					RevisionHistoryLimit: new(int32(12)),
 				},
 			},
 			wantChanged: true,
@@ -1233,7 +1195,7 @@ func TestMergeApply(t *testing.T) {
 					Namespace: "testnamespace",
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: pointerutils.ToPtr(int32(12)),
+					RevisionHistoryLimit: new(int32(12)),
 				},
 			},
 			want: &appsv1.Deployment{
@@ -1251,11 +1213,11 @@ func TestMergeApply(t *testing.T) {
 					UpdatedReplicas:   3,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointerutils.ToPtr(int32(1)),
+					Replicas: new(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -1275,8 +1237,8 @@ func TestMergeApply(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    pointerutils.ToPtr(int32(12)),
-					ProgressDeadlineSeconds: pointerutils.ToPtr(int32(600)),
+					RevisionHistoryLimit:    new(int32(12)),
+					ProgressDeadlineSeconds: new(int32(600)),
 				},
 			},
 			wantChanged: true,
@@ -1558,6 +1520,8 @@ func TestMergeApply(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			gvks, _, err := scheme.Scheme.ObjectKinds(tt.old)
@@ -1580,7 +1544,7 @@ func TestMergeApply(t *testing.T) {
 
 			ch := &clientHelper{
 				Client: clientFake,
-				log:    logrus.NewEntry(logrus.StandardLogger()),
+				log:    log,
 			}
 
 			err = ch.ensureOne(ctx, tt.new)
@@ -1599,14 +1563,8 @@ func TestMergeApply(t *testing.T) {
 				t.Error(err)
 			}
 
-			// Don't test for the resourceversion
-			gotObj.SetResourceVersion("")
+			testclienthelper.CompareObjects(t, gotObj, tt.want)
 
-			if !reflect.DeepEqual(got, tt.want) {
-				for _, r := range deep.Equal(got, tt.want) {
-					t.Error(r)
-				}
-			}
 			if beenChanged != tt.wantChanged {
 				t.Errorf("changed: %t, want: %t", beenChanged, tt.wantChanged)
 			}
@@ -1627,6 +1585,10 @@ func TestGetOne(t *testing.T) {
 			query: types.NamespacedName{Name: "funobj", Namespace: "somewhere"},
 			existing: []runtime.Object{
 				&corev1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Secret",
+						APIVersion: "v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "funobj",
 						Namespace:       "somewhere",
@@ -1643,10 +1605,6 @@ func TestGetOne(t *testing.T) {
 					Name:            "funobj",
 					Namespace:       "somewhere",
 					ResourceVersion: "1",
-				},
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Secret",
-					APIVersion: "v1",
 				},
 				StringData: map[string]string{
 					"secret": "squirrels",
@@ -1677,10 +1635,12 @@ func TestGetOne(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			clientFake := fake.NewClientBuilder().WithRuntimeObjects(tt.existing...).Build()
-			ch := NewWithClient(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			ch := NewWithClient(log, clientFake)
 
 			gvks, _, err := scheme.Scheme.ObjectKinds(tt.want)
 			if err != nil {

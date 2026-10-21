@@ -28,9 +28,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -75,8 +75,8 @@ func (m *manager) createOIDC(ctx context.Context) error {
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = pointerutils.ToPtr(api.OIDCIssuer(oidcBuilder.GetEndpointUrl()))
-		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = pointerutils.ToPtr(api.SecureString(oidcBuilder.GetPrivateKey()))
+		doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = new(api.OIDCIssuer(oidcBuilder.GetEndpointUrl()))
+		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = new(api.SecureString(oidcBuilder.GetPrivateKey()))
 		return nil
 	})
 
@@ -135,13 +135,16 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		if group.Tags == nil {
 			group.Tags = map[string]*string{}
 		}
-		group.Tags["purge"] = pointerutils.ToPtr("true")
+		group.Tags["purge"] = new("true")
 	}
 
 	// According to https://stackoverflow.microsoft.com/a/245391/62320,
 	// re-PUTting our RG should re-create RP RBAC after a customer subscription
 	// migrates between tenants.
-	_, err = m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
+	err = arm.Retryable(ctx, func() error {
+		_, e := m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
+		return e
+	}, m.log, "creating resource group "+resourceGroup)
 
 	var serviceError *azure.ServiceError
 	// CreateOrUpdate wraps DetailedError wrapping a *RequestError (if error generated in ResourceGroup CreateOrUpdateResponder at least)
@@ -176,7 +179,9 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		return err
 	}
 
-	return m.env.EnsureARMResourceGroupRoleAssignment(ctx, resourceGroup)
+	return arm.Retryable(ctx, func() error {
+		return m.env.EnsureARMResourceGroupRoleAssignment(ctx, resourceGroup)
+	}, m.log, "ensuring RP RBAC on resource group "+resourceGroup)
 }
 
 // deployBaseResourceTemplate is only called during bootstrap
@@ -192,11 +197,14 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		return err
 	}
 
+	clusterStorageAccount := m.storageAccount(clusterStorageAccountName, azureRegion, ocpSubnets, true, true)
+	imageRegistryStorageAccount := m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, ocpSubnets, true, false)
+
 	resources := []*arm.Resource{
-		m.storageAccount(clusterStorageAccountName, azureRegion, ocpSubnets, true, true),
+		clusterStorageAccount,
 		m.storageAccountBlobContainer(clusterStorageAccountName, graph.IgnitionContainer),
 		m.storageAccountBlobContainer(clusterStorageAccountName, graph.GraphContainer),
-		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, ocpSubnets, true, false),
+		imageRegistryStorageAccount,
 		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
 		m.clusterNSG(infraID, azureRegion),
 		m.networkPrivateLinkService(azureRegion),
@@ -232,11 +240,9 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		}
 	}
 
-	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
-		resources = append(resources,
-			m.networkPrivateEndpoint(),
-		)
-	}
+	resources = append(resources,
+		m.networkPrivateEndpoint(),
+	)
 
 	if !m.env.FeatureIsSet(env.FeatureDisableDenyAssignments) {
 		resources = append(resources, m.denyAssignment())
@@ -248,7 +254,25 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		Resources:      resources,
 	}
 
-	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
+	err = arm.Retryable(ctx, func() error {
+		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
+	}, m.log, "deploying base resources")
+	if err != nil {
+		return err
+	}
+
+	validateResourceTemplate := &arm.Template{
+		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+		ContentVersion: "1.0.0.0",
+		Resources: []*arm.Resource{
+			clusterStorageAccount,
+			imageRegistryStorageAccount,
+		},
+	}
+	resourcesToValidate := arm.BuildStorageAccountsValidationMap(clusterStorageAccountName, m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName)
+	mismatches := arm.ValidateDeploymentWithWhatIf(ctx, m.log, m.deployments, resourceGroup, "storage", validateResourceTemplate, resourcesToValidate)
+	arm.EnrichMismatchesWithPolicyContext(ctx, m.log, m.armPolicyRestrictions, resourceGroup, mismatches)
+	return arm.MismatchesToCloudError(mismatches)
 }
 
 func (m *manager) newPublicLoadBalancer(ctx context.Context, resources *[]*arm.Resource) {
@@ -408,16 +432,17 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 				}
 
 				s.Properties.NetworkSecurityGroup = &armnetwork.SecurityGroup{
-					ID: pointerutils.ToPtr(nsgID),
+					ID: new(nsgID),
 				}
 
-				// Because we attempt to attach the NSG immediately after the base resource deployment
-				// finishes, the NSG is sometimes not yet ready to be referenced and used, causing
-				// an error to occur here. So if this particular error occurs, return nil to retry.
-				// But if some other type of error occurs, just return that error.
+				// NSG may not be ready immediately after deployment; nsgNotReadyErrorRegex and IsRetryableError both continue the poll.
 				err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
 				if err != nil {
 					if nsgNotReadyErrorRegex.MatchString(err.Error()) {
+						return false, nil
+					}
+					if azureerrors.IsRetryableError(err) {
+						m.log.Warnf("error attaching NSG to subnet %s, retrying: %v", subnetID, err)
 						return false, nil
 					}
 					return false, err
@@ -455,16 +480,14 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	// already match a desired condition of 'Disabled' or not.
 	var needsUpdate bool
 
-	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
-		if s.Properties.PrivateEndpointNetworkPolicies == nil || *s.Properties.PrivateEndpointNetworkPolicies != armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled {
-			needsUpdate = true
-			s.Properties.PrivateEndpointNetworkPolicies = pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled)
-		}
+	if s.Properties.PrivateEndpointNetworkPolicies == nil || *s.Properties.PrivateEndpointNetworkPolicies != armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled {
+		needsUpdate = true
+		s.Properties.PrivateEndpointNetworkPolicies = new(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled)
 	}
 
 	if s.Properties.PrivateLinkServiceNetworkPolicies == nil || *s.Properties.PrivateLinkServiceNetworkPolicies != armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled {
 		needsUpdate = true
-		s.Properties.PrivateLinkServiceNetworkPolicies = pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled)
+		s.Properties.PrivateLinkServiceNetworkPolicies = new(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled)
 	}
 
 	// return if we do not need to update the subnet
@@ -472,10 +495,12 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 		return nil
 	}
 
-	err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
+	err = arm.Retryable(ctx, func() error {
+		return m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
+	}, m.log, "setting master subnet policies for subnet "+subnetId)
 
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		if strings.Contains(detailedErr.Original.Error(), "RequestDisallowedByPolicy") {
+		if detailedErr.Original != nil && strings.Contains(detailedErr.Original.Error(), "RequestDisallowedByPolicy") {
 			return &api.CloudError{
 				StatusCode: http.StatusBadRequest,
 				CloudErrorBody: &api.CloudErrorBody{
@@ -508,7 +533,7 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 		return errors.New("OIDCIssuer is nil")
 	}
 
-	issuer := pointerutils.ToPtr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
+	issuer := new((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
 
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
@@ -530,20 +555,23 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 				return err
 			}
 
-			_, err = m.clusterMsiFederatedIdentityCredentials.CreateOrUpdate(
-				ctx,
-				identityResourceId.ResourceGroup,
-				identityResourceId.ResourceName,
-				federatedIdentityCredentialResourceName,
-				armmsi.FederatedIdentityCredential{
-					Properties: &armmsi.FederatedIdentityCredentialProperties{
-						Audiences: []*string{pointerutils.ToPtr("openshift")},
-						Issuer:    issuer,
-						Subject:   pointerutils.ToPtr(sa),
+			err = arm.Retryable(ctx, func() error {
+				_, e := m.clusterMsiFederatedIdentityCredentials.CreateOrUpdate(
+					ctx,
+					identityResourceId.ResourceGroup,
+					identityResourceId.ResourceName,
+					federatedIdentityCredentialResourceName,
+					armmsi.FederatedIdentityCredential{
+						Properties: &armmsi.FederatedIdentityCredentialProperties{
+							Audiences: []*string{new("openshift")},
+							Issuer:    issuer,
+							Subject:   new(sa),
+						},
 					},
-				},
-				&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},
-			)
+					&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},
+				)
+				return e
+			}, m.log, "creating federated identity credential "+federatedIdentityCredentialResourceName)
 			if err != nil {
 				return err
 			}

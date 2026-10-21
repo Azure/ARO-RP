@@ -10,14 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -28,6 +27,8 @@ import (
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func clusterVersionForTest(version string) *configv1.ClusterVersion {
@@ -212,14 +213,10 @@ func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Cluster",
-					APIVersion: "aro.openshift.io/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -230,7 +227,7 @@ func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
 			}
 			dep := mock_deployer.NewMockDeployer(controller)
 			dh := mock_dynamichelper.NewMockInterface(controller)
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(cluster, cv)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder(cluster, cv)
 
 			if tt.mocks != nil {
 				tt.mocks(dep, cluster)
@@ -240,7 +237,7 @@ func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				log:               logrus.NewEntry(logrus.StandardLogger()),
+				log:               log,
 				deployer:          dep,
 				dh:                dh,
 				client:            clientBuilder.Build(),
@@ -277,6 +274,10 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsEnabled:       operator.FlagFalse,
 				operator.GuardrailsDeployManaged: operator.FlagTrue,
 			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
 		},
 		{
 			name: "VAP: managed=true, deploys VAP policies",
@@ -288,12 +289,15 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsPolicyMachineDenyEnforcement:       operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyMachineConfigDenyManaged:     operator.FlagTrue,
 				operator.GuardrailsPolicyMachineConfigDenyEnforcement: operator.GuardrailsPolicyDryrun,
+				operator.GuardrailsPolicyNodesDenyManaged:             operator.FlagTrue,
+				operator.GuardrailsPolicyNodesDenyEnforcement:         operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyPrivNamespaceDenyManaged:     operator.FlagTrue,
 				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				// 3 policies + 3 bindings = 6 Ensure calls (server-side apply)
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(6)
+				// 1 mandatory and 4 optional policies, each with one binding.
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(10)
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 			},
 		},
 		{
@@ -306,6 +310,8 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsPolicyMachineDenyEnforcement:       operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyMachineConfigDenyManaged:     operator.FlagTrue,
 				operator.GuardrailsPolicyMachineConfigDenyEnforcement: operator.GuardrailsPolicyDryrun,
+				operator.GuardrailsPolicyNodesDenyManaged:             operator.FlagTrue,
+				operator.GuardrailsPolicyNodesDenyEnforcement:         operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyPrivNamespaceDenyManaged:     operator.FlagTrue,
 				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
 			},
@@ -315,9 +321,9 @@ func TestReconcileVAP(t *testing.T) {
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
 				// cleanupGatekeeper: removePolicy calls EnsureDeletedGVR for GK constraints
-				// then deployVAP: 3 Ensure (policy) + 3 EnsureDeletedGVR (binding delete) + 3 Ensure (binding recreate)
+				// then deployVAP: 1 mandatory and 4 optional policies and bindings
 				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(6)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(10)
 			},
 		},
 		{
@@ -328,8 +334,9 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsMethod:        operator.GuardrailsMethodAuto,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				// 3 policies × (binding delete + policy delete) = 6 deletions
-				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(6)
+				// The mandatory policy remains; 4 optional and 1 deprecated policy and binding are removed.
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(10)
 			},
 		},
 		{
@@ -338,18 +345,18 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsEnabled:       operator.FlagTrue,
 				operator.GuardrailsDeployManaged: "",
 			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Cluster",
-					APIVersion: "aro.openshift.io/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -368,9 +375,9 @@ func TestReconcileVAP(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 				deployer:      dep,
-				client:        ctrlfake.NewClientBuilder().WithObjects(cluster, cv).Build(),
+				client:        testclienthelper.NewAROFakeClientBuilder(cluster, cv).Build(),
 				dh:            dh,
 				cleanupNeeded: tt.cleanupNeeded,
 			}
@@ -410,15 +417,77 @@ func TestVapValidationAction(t *testing.T) {
 	}
 }
 
-func TestDeployVAPUsesLatestClusterState(t *testing.T) {
+func TestIsMandatoryVAPResource(t *testing.T) {
+	for _, name := range []string{
+		majorUpgradeDenyPolicyName,
+		majorUpgradeDenyPolicyName + "-binding",
+	} {
+		if !isMandatoryVAPResource(name) {
+			t.Errorf("isMandatoryVAPResource(%q) = false, want true", name)
+		}
+	}
+
+	for _, name := range []string{
+		"aro-machines-deny",
+		deprecatedMajorUpgradeProtectionPolicyName,
+		deprecatedMajorUpgradeProtectionPolicyName + "-binding",
+	} {
+		if isMandatoryVAPResource(name) {
+			t.Errorf("isMandatoryVAPResource(%q) = true, want false", name)
+		}
+	}
+}
+
+func TestEnsureMandatoryVAP(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
+
+	ensured := map[string]*unstructured.Unstructured{}
+	dh := mock_dynamichelper.NewMockInterface(controller)
+	dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, objs ...any) error {
+		for _, obj := range objs {
+			uns, ok := obj.(*unstructured.Unstructured)
+			if !ok {
+				t.Fatalf("expected unstructured object, got %T", obj)
+			}
+			ensured[uns.GetKind()+"/"+uns.GetName()] = uns
+		}
+		return nil
+	}).Times(2)
+	dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+
+	r := &Reconciler{dh: dh}
+	if err := r.ensureMandatoryVAP(context.Background()); err != nil {
+		t.Fatalf("ensureMandatoryVAP() returned error: %v", err)
+	}
+
+	for _, policyName := range []string{majorUpgradeDenyPolicyName} {
+		policyKey := "ValidatingAdmissionPolicy/" + policyName
+		policy := ensured[policyKey]
+		if policy == nil {
+			t.Fatalf("mandatory policy %s was not ensured", policyName)
+		}
+		failurePolicy, found, err := unstructured.NestedString(policy.Object, "spec", "failurePolicy")
+		if err != nil || !found || failurePolicy != "Fail" {
+			t.Fatalf("mandatory policy %s failurePolicy = %q, found = %t, err = %v", policyName, failurePolicy, found, err)
+		}
+
+		bindingKey := "ValidatingAdmissionPolicyBinding/" + policyName + "-binding"
+		binding := ensured[bindingKey]
+		if binding == nil {
+			t.Fatalf("mandatory binding %s was not ensured", policyName)
+		}
+		actions, found, err := unstructured.NestedStringSlice(binding.Object, "spec", "validationActions")
+		if err != nil || !found || !slices.Equal(actions, []string{"Deny"}) {
+			t.Fatalf("mandatory binding %s validationActions = %v, found = %t, err = %v", policyName, actions, found, err)
+		}
+	}
+}
+
+func TestDeployVAPUsesLatestClusterState(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+	controller := gomock.NewController(t)
 
 	cluster := &arov1alpha1.Cluster{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Cluster",
-			APIVersion: "aro.openshift.io/v1alpha1",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: arov1alpha1.SingletonClusterName,
 		},
@@ -427,6 +496,7 @@ func TestDeployVAPUsesLatestClusterState(t *testing.T) {
 				operator.GuardrailsPolicyMachineDenyManaged:       operator.FlagTrue,
 				operator.GuardrailsPolicyMachineDenyEnforcement:   operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyMachineConfigDenyManaged: operator.FlagFalse,
+				operator.GuardrailsPolicyNodesDenyManaged:         operator.FlagFalse,
 				operator.GuardrailsPolicyPrivNamespaceDenyManaged: operator.FlagFalse,
 			},
 		},
@@ -458,8 +528,8 @@ func TestDeployVAPUsesLatestClusterState(t *testing.T) {
 	dh.EXPECT().IsConstraintTemplateReady(gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
 
 	r := &Reconciler{
-		log:    logrus.NewEntry(logrus.StandardLogger()),
-		client: ctrlfake.NewClientBuilder().WithObjects(cluster).Build(),
+		log:    log,
+		client: testclienthelper.NewAROFakeClientBuilder(cluster).Build(),
 		dh:     dh,
 	}
 
@@ -472,6 +542,9 @@ func TestDeployVAPUsesLatestClusterState(t *testing.T) {
 	}
 	if !slices.Contains(ensured, "ValidatingAdmissionPolicyBinding/aro-machines-deny-binding") {
 		t.Fatalf("expected aro-machines-deny binding to be ensured, got %v", ensured)
+	}
+	if slices.Contains(ensured, "ValidatingAdmissionPolicy/aro-nodes-deny") {
+		t.Fatalf("did not expect aro-nodes-deny policy to be ensured while disabled, got %v", ensured)
 	}
 
 	ensured = nil
@@ -510,8 +583,6 @@ func TestDeployVAPUsesLatestClusterState(t *testing.T) {
 }
 
 func TestResolveGuardrailsMethod(t *testing.T) {
-	r := &Reconciler{log: logrus.NewEntry(logrus.StandardLogger())}
-
 	tests := []struct {
 		method        string
 		lt417         bool
@@ -535,6 +606,9 @@ func TestResolveGuardrailsMethod(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.method+"/"+map[bool]string{true: "lt417", false: "ge417"}[tt.lt417], func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+			r := &Reconciler{log: log}
+
 			got := r.resolveGuardrailsMethod(tt.method, tt.lt417)
 			if got != tt.useGatekeeper {
 				t.Errorf("resolveGuardrailsMethod(%q, lt417=%v) = %v, want %v",
@@ -572,6 +646,7 @@ func TestReconcileMethodSelection(t *testing.T) {
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
 				// stopVAPTicker + best-effort removeAllVAP (no policies managed).
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 		},
@@ -588,6 +663,7 @@ func TestReconcileMethodSelection(t *testing.T) {
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), "gatekeeper-controller-manager").Return(true, nil)
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 		},
@@ -601,24 +677,23 @@ func TestReconcileMethodSelection(t *testing.T) {
 				operator.GuardrailsPolicyMachineDenyEnforcement:       operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyMachineConfigDenyManaged:     operator.FlagTrue,
 				operator.GuardrailsPolicyMachineConfigDenyEnforcement: operator.GuardrailsPolicyDryrun,
+				operator.GuardrailsPolicyNodesDenyManaged:             operator.FlagTrue,
+				operator.GuardrailsPolicyNodesDenyEnforcement:         operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyPrivNamespaceDenyManaged:     operator.FlagTrue,
 				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(6)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(10)
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Cluster",
-					APIVersion: "aro.openshift.io/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: tt.flags,
@@ -636,10 +711,10 @@ func TestReconcileMethodSelection(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				log:               logrus.NewEntry(logrus.StandardLogger()),
+				log:               log,
 				deployer:          dep,
 				dh:                dh,
-				client:            ctrlfake.NewClientBuilder().WithObjects(cluster, cv).Build(),
+				client:            testclienthelper.NewAROFakeClientBuilder(cluster, cv).Build(),
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
 			}

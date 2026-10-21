@@ -9,6 +9,7 @@ const (
 	AzureSubnetsNsgManaged              = "aro.azuresubnets.nsg.managed"
 	AzureSubnetsServiceEndpointManaged  = "aro.azuresubnets.serviceendpoint.managed"
 	BannerEnabled                       = "aro.banner.enabled"
+	CCOPprofNetworkPolicyEnabled        = "aro.ccopprof.enabled"
 	CheckerEnabled                      = "aro.checker.enabled"
 	CPMSEnabled                         = "aro.cpms.enabled"
 	DnsmasqEnabled                      = "aro.dnsmasq.enabled"
@@ -18,6 +19,7 @@ const (
 	GenevaLoggingOTelMasterProfile      = "aro.genevalogging.otel.master.profile"
 	GenevaLoggingOTelWorkerProfile      = "aro.genevalogging.otel.worker.profile"
 	GenevaLoggingOTelEmitSourceFields   = "aro.genevalogging.otel.emitsourcefields"
+	GenevaLoggingOTelComponentHealth    = "aro.genevalogging.otel.componenthealth"
 	GenevaLoggingOTelProfileMaxLogs     = "max-logs"
 	GenevaLoggingOTelProfileReducedLogs = "reduced-logs"
 	GenevaLoggingOTelProfileMinimalLogs = "minimal-logs"
@@ -54,6 +56,8 @@ const (
 	GuardrailsPolicyMachineDenyEnforcement       = "aro.guardrails.policies.aro-machines-deny.enforcement"
 	GuardrailsPolicyMachineConfigDenyManaged     = "aro.guardrails.policies.aro-machine-config-deny.managed"
 	GuardrailsPolicyMachineConfigDenyEnforcement = "aro.guardrails.policies.aro-machine-config-deny.enforcement"
+	GuardrailsPolicyNodesDenyManaged             = "aro.guardrails.policies.aro-nodes-deny.managed"
+	GuardrailsPolicyNodesDenyEnforcement         = "aro.guardrails.policies.aro-nodes-deny.enforcement"
 	GuardrailsPolicyPrivNamespaceDenyManaged     = "aro.guardrails.policies.aro-privileged-namespace-deny.managed"
 	GuardrailsPolicyPrivNamespaceDenyEnforcement = "aro.guardrails.policies.aro-privileged-namespace-deny.enforcement"
 	GuardrailsPolicyDryrun                       = "dryrun"
@@ -82,13 +86,14 @@ func DefaultOperatorFlags() map[string]string {
 		AzureSubnetsNsgManaged:             FlagTrue,
 		AzureSubnetsServiceEndpointManaged: FlagTrue,
 		BannerEnabled:                      FlagFalse,
+		CCOPprofNetworkPolicyEnabled:       FlagTrue,
 		CheckerEnabled:                     FlagTrue,
 		CPMSEnabled:                        FlagFalse,
 		DnsmasqEnabled:                     FlagTrue,
 		RestartDnsmasqEnabled:              FlagFalse,
 		GenevaLoggingEnabled:               FlagTrue,
 		GenevaLoggingOTelProfile:           GenevaLoggingOTelProfileMinimalLogs,
-		GenevaLoggingOTelEmitSourceFields:  FlagFalse,
+		GenevaLoggingOTelComponentHealth:   FlagFalse,
 		ImageConfigEnabled:                 FlagTrue,
 		IngressEnabled:                     FlagTrue,
 		MachineEnabled:                     FlagTrue,
@@ -120,6 +125,8 @@ func DefaultOperatorFlags() map[string]string {
 		GuardrailsPolicyMachineDenyEnforcement:       GuardrailsPolicyDeny,
 		GuardrailsPolicyMachineConfigDenyManaged:     FlagTrue,
 		GuardrailsPolicyMachineConfigDenyEnforcement: GuardrailsPolicyDryrun,
+		GuardrailsPolicyNodesDenyManaged:             FlagTrue,
+		GuardrailsPolicyNodesDenyEnforcement:         GuardrailsPolicyDeny,
 		GuardrailsPolicyPrivNamespaceDenyManaged:     FlagTrue,
 		GuardrailsPolicyPrivNamespaceDenyEnforcement: GuardrailsPolicyDryrun,
 

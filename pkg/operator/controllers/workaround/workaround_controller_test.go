@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -24,6 +23,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_workaround "github.com/Azure/ARO-RP/pkg/util/mocks/operator/controllers/workaround"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 func clusterVersion(ver string) *configv1.ClusterVersion {
@@ -82,7 +82,6 @@ func TestWorkaroundReconciler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			instance := &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -99,7 +98,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 			r := &Reconciler{
 				workarounds: []Workaround{mwa},
 				log:         utillog.GetLogger(),
-				client:      ctrlfake.NewClientBuilder().WithObjects(instance, clusterVersion("4.4.10")).Build(),
+				client:      testclienthelper.NewAROFakeClientBuilder(instance, clusterVersion("4.4.10")).Build(),
 			}
 			tt.mocker(mwa)
 			got, err := r.Reconcile(context.Background(), reconcile.Request{})

@@ -36,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/ssh"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
@@ -138,6 +139,7 @@ func NewPortal(env env.Core,
 func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Prometheus, sshStruct *ssh.SSH) (*mux.Router, error) {
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(p.log))
+	r.Use(middleware.SecurityHeaders())
 
 	assetv2, err := assets.EmbeddedFiles.ReadFile("v2/build/index.html")
 	if err != nil {
@@ -346,7 +348,7 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 	buf := &bytes.Buffer{}
 
-	err := p.templateV2.ExecuteTemplate(buf, "index.html", map[string]interface{}{
+	err := p.templateV2.ExecuteTemplate(buf, "index.html", map[string]any{
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
@@ -361,7 +363,8 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 func (p *portal) indexPrometheus(w http.ResponseWriter, r *http.Request) {
 	buf := &bytes.Buffer{}
 
-	err := p.templatePrometheus.ExecuteTemplate(buf, "index.html", map[string]interface{}{
+	err := p.templatePrometheus.ExecuteTemplate(buf, "index.html", map[string]any{
+		"nonce":          middleware.CSPNonce(r.Context()),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
 	if err != nil {
@@ -428,11 +431,11 @@ func (p *portal) getResourceID(subscriptionID, resourceGroup, clusterName string
 }
 
 func (p *portal) internalServerError(w http.ResponseWriter, err error) {
-	p.log.Warn(err)
+	p.log.Warn(utillog.Sanitize(err.Error()))
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
 func (p *portal) badRequest(w http.ResponseWriter, err error) {
-	p.log.Debug(err)
+	p.log.Debug(utillog.Sanitize(err.Error()))
 	http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 }

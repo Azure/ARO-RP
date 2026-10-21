@@ -4,7 +4,6 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"flag"
 	"fmt"
 
@@ -15,6 +14,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	machinev1 "github.com/openshift/api/machine/v1"
 
@@ -41,6 +41,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machineset"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/networkpolicy"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/node"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/previewfeature"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
@@ -54,7 +55,7 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
-func operator(ctx context.Context, log *logrus.Entry) error {
+func operator(log *logrus.Entry) error {
 	role := flag.Arg(1)
 	switch role {
 	case pkgoperator.RoleMaster, pkgoperator.RoleWorker:
@@ -75,8 +76,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		HealthProbeBindAddress: ":8080",
-		MetricsBindAddress:     ":8888",
-		Port:                   8443,
+		Metrics:                server.Options{BindAddress: ":8888"},
 	})
 	if err != nil {
 		return err
@@ -135,9 +135,9 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", monitoring.ControllerName, err)
 		}
-		if err = (rbac.NewReconciler(
+		if err = rbac.NewReconciler(
 			log.WithField("controller", rbac.ControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			ch).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", rbac.ControllerName, err)
 		}
 		if err = (dnsmasq.NewClusterReconciler(
@@ -206,8 +206,13 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (machinehealthcheck.NewReconciler(
 			log.WithField("controller", machinehealthcheck.ControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
+		}
+		if err = (networkpolicy.NewReconciler(
+			log.WithField("controller", networkpolicy.ControllerName),
+			client, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", networkpolicy.ControllerName, err)
 		}
 		if err = (ingress.NewReconciler(
 			log.WithField("controller", ingress.ControllerName),
@@ -241,12 +246,12 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (etchosts.NewReconciler(
 			log.WithField("controller", etchosts.ControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			client, ch)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", etchosts.ControllerName, err)
 		}
 		if err = (etchosts.NewClusterReconciler(
 			log.WithField("controller", etchosts.ClusterControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			client, ch)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", etchosts.ClusterControllerName, err)
 		}
 

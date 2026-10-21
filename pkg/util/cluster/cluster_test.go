@@ -138,3 +138,35 @@ func TestCluster_GetPlatformWIRoles(t *testing.T) {
 		})
 	}
 }
+
+func TestPolicyNames(t *testing.T) {
+	for _, tt := range []struct {
+		name               string
+		prefix             string
+		wantPolicyName     string
+		wantAssignmentName string
+	}{
+		{
+			name:               "shared prefix produces stable names",
+			prefix:             cluster.TestingPolicyPrefix,
+			wantPolicyName:     "e2e-storage-public-access-validate",
+			wantAssignmentName: "e2e-storage-public-access-validate-assign",
+		},
+		{
+			name:               "custom prefix",
+			prefix:             "custom-prefix",
+			wantPolicyName:     "custom-prefix",
+			wantAssignmentName: "custom-prefix-assign",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			gotPolicy, gotAssignment := cluster.PolicyNames(tt.prefix)
+			if gotPolicy != tt.wantPolicyName {
+				t.Errorf("policyName = %q, want %q", gotPolicy, tt.wantPolicyName)
+			}
+			if gotAssignment != tt.wantAssignmentName {
+				t.Errorf("assignmentName = %q, want %q", gotAssignment, tt.wantAssignmentName)
+			}
+		})
+	}
+}

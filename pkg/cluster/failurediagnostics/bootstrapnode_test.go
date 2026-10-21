@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilssh "github.com/Azure/ARO-RP/pkg/util/ssh"
 	"github.com/Azure/ARO-RP/test/util/bufferedpipe"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -143,7 +142,6 @@ func TestSetupBootstrapNodeSSH(t *testing.T) {
 			_, log := testlog.New()
 
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			m := &manager{
 				log: log,
@@ -222,7 +220,6 @@ func TestWaitForBootstrapNodeSSH(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			_, log := testlog.New()
 			mockEnv := mock_env.NewMockInterface(ctrl)
@@ -280,8 +277,8 @@ func TestEnsureBootstrapLBConfig(t *testing.T) {
 			name: "LB missing only the rule gets rule added",
 			lb: func() armnetwork.LoadBalancer {
 				lb := makeMinimalLB()
-				lb.Properties.Probes = []*armnetwork.Probe{{Name: pointerutils.ToPtr(bootstrapNodeSSHProbeName)}}
-				lb.Properties.BackendAddressPools = []*armnetwork.BackendAddressPool{{Name: pointerutils.ToPtr(bootstrapNodeBackendPool)}}
+				lb.Properties.Probes = []*armnetwork.Probe{{Name: new(bootstrapNodeSSHProbeName)}}
+				lb.Properties.BackendAddressPools = []*armnetwork.BackendAddressPool{{Name: new(bootstrapNodeBackendPool)}}
 				return lb
 			}(),
 			wantChanged: true,
@@ -474,10 +471,10 @@ func TestTOFUHostKeyCallback(t *testing.T) {
 
 func makeMinimalLB() armnetwork.LoadBalancer {
 	return armnetwork.LoadBalancer{
-		ID: pointerutils.ToPtr(bsTestLBID),
+		ID: new(bsTestLBID),
 		Properties: &armnetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
-				{ID: pointerutils.ToPtr(bsTestLBID + "/frontendIPConfigurations/public-lb-ip-v4")},
+				{ID: new(bsTestLBID + "/frontendIPConfigurations/public-lb-ip-v4")},
 			},
 			BackendAddressPools: []*armnetwork.BackendAddressPool{},
 			LoadBalancingRules:  []*armnetwork.LoadBalancingRule{},
@@ -489,13 +486,13 @@ func makeMinimalLB() armnetwork.LoadBalancer {
 func makeTestLBWithBootstrapConfig() armnetwork.LoadBalancer {
 	lb := makeMinimalLB()
 	lb.Properties.Probes = []*armnetwork.Probe{
-		{Name: pointerutils.ToPtr(bootstrapNodeSSHProbeName)},
+		{Name: new(bootstrapNodeSSHProbeName)},
 	}
 	lb.Properties.BackendAddressPools = []*armnetwork.BackendAddressPool{
-		{Name: pointerutils.ToPtr(bootstrapNodeBackendPool)},
+		{Name: new(bootstrapNodeBackendPool)},
 	}
 	lb.Properties.LoadBalancingRules = []*armnetwork.LoadBalancingRule{
-		{Name: pointerutils.ToPtr(bootstrapNodeBackendPool)},
+		{Name: new(bootstrapNodeBackendPool)},
 	}
 	return lb
 }

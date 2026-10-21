@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -91,11 +91,11 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 		}
 		kc.Labels[labelName] = labelValue
 
-		b, err := json.Marshal(map[string]interface{}{
-			"systemReserved": map[string]interface{}{
+		b, err := json.Marshal(map[string]any{
+			"systemReserved": map[string]any{
 				"memory": memReserved,
 			},
-			"evictionHard": map[string]interface{}{
+			"evictionHard": map[string]any{
 				"memory.available":  hardEviction,
 				"nodefs.available":  nodeFsAvailable,
 				"nodefs.inodesFree": nodeFsInodes,

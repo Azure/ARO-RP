@@ -9,12 +9,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
@@ -29,8 +26,9 @@ import (
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_storage "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/storage"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -77,7 +75,7 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 
 	for _, rule := range virtualNetworkResourceIDs {
 		*account.NetworkRuleSet.VirtualNetworkRules = append(*account.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-			VirtualNetworkResourceID: pointerutils.ToPtr(rule),
+			VirtualNetworkResourceID: new(rule),
 			Action:                   mgmtstorage.ActionAllow,
 		})
 	}
@@ -86,19 +84,19 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 
 func getValidSubnet(resourceId string) *armnetwork.Subnet {
 	s := &armnetwork.Subnet{
-		ID: pointerutils.ToPtr(resourceId),
+		ID: new(resourceId),
 		Properties: &armnetwork.SubnetPropertiesFormat{
 			NetworkSecurityGroup: &armnetwork.SecurityGroup{
-				ID: pointerutils.ToPtr(nsgv1MasterResourceId),
+				ID: new(nsgv1MasterResourceId),
 			},
 			ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{},
 		},
 	}
 	for _, endpoint := range api.SubnetsEndpoints {
 		se := &armnetwork.ServiceEndpointPropertiesFormat{
-			Service:           pointerutils.ToPtr(endpoint),
-			Locations:         []*string{pointerutils.ToPtr(location)},
-			ProvisioningState: (*armnetwork.ProvisioningState)(pointerutils.ToPtr(string(armnetwork.ProvisioningStateSucceeded))),
+			Service:           new(endpoint),
+			Locations:         []*string{new(location)},
+			ProvisioningState: (*armnetwork.ProvisioningState)(new(string(armnetwork.ProvisioningStateSucceeded))),
 		}
 		s.Properties.ServiceEndpoints = append(s.Properties.ServiceEndpoints, se)
 	}
@@ -106,7 +104,7 @@ func getValidSubnet(resourceId string) *armnetwork.Subnet {
 }
 
 func TestReconcileManager(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	for _, tt := range []struct {
 		name         string
@@ -362,7 +360,7 @@ func TestReconcileManager(t *testing.T) {
 				newMasterServiceEndpoints := []*armnetwork.ServiceEndpointPropertiesFormat{}
 
 				for _, se := range masterSubnet.Properties.ServiceEndpoints {
-					se.Locations = []*string{pointerutils.ToPtr("not_a_real_place")}
+					se.Locations = []*string{new("not_a_real_place")}
 					newMasterServiceEndpoints = append(newMasterServiceEndpoints, se)
 				}
 
@@ -371,7 +369,7 @@ func TestReconcileManager(t *testing.T) {
 				newWorkerServiceEndpoints := []*armnetwork.ServiceEndpointPropertiesFormat{}
 
 				for _, se := range workerSubnet.Properties.ServiceEndpoints {
-					se.Locations = []*string{pointerutils.ToPtr("not_a_real_place")}
+					se.Locations = []*string{new("not_a_real_place")}
 					newWorkerServiceEndpoints = append(newWorkerServiceEndpoints, se)
 				}
 
@@ -401,7 +399,6 @@ func TestReconcileManager(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			storage := mock_storage.NewMockAccountsClient(controller)
 			kubeSubnet := mock_subnet.NewMockKubeManager(controller)
@@ -428,7 +425,7 @@ func TestReconcileManager(t *testing.T) {
 					},
 				},
 			}
-			clientFake := fake.NewClientBuilder().WithObjects(rc).Build()
+			clientFake := testclienthelper.NewAROFakeClientBuilder(rc).Build()
 
 			r := reconcileManager{
 				log:            log,

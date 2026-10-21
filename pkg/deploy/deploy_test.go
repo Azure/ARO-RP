@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -23,8 +22,8 @@ import (
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_vmsscleaner "github.com/Azure/ARO-RP/pkg/util/mocks/vmsscleaner"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestDeploy(t *testing.T) {
@@ -46,7 +45,7 @@ func TestDeploy(t *testing.T) {
 		d.EXPECT().CreateOrUpdateAndWait(ctx, rgName, deploymentName, *deployment).Return(
 			&azure.ServiceError{
 				Code: "DeploymentFailed",
-				Details: []map[string]interface{}{
+				Details: []map[string]any{
 					{
 						"code":    "BadRequest",
 						"message": "{\r\n  \"code\": \"FooErrorCode\",\r\n  \"message\": \"Not something we can deal with automatically.\"\r\n}",
@@ -59,7 +58,7 @@ func TestDeploy(t *testing.T) {
 		d.EXPECT().CreateOrUpdateAndWait(ctx, rgName, deploymentName, *deployment).Return(
 			&azure.ServiceError{
 				Code: "DeploymentFailed",
-				Details: []map[string]interface{}{
+				Details: []map[string]any{
 					{
 						"code":    "BadRequest",
 						"message": fmt.Sprintf("{\r\n  \"code\": \"ResourceNotFound\",\r\n  \"message\": \"The Resource 'Microsoft.Network/loadBalancers/rp-lb' under resource group '%s' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix Activity ID: 00000000-0000-0000-0000-000000000000.\"\r\n}", rgName),
@@ -139,13 +138,13 @@ func TestDeploy(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 			mockVMSSCleaner := mock_vmsscleaner.NewMockInterface(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log:         logrus.NewEntry(logrus.StandardLogger()),
+				log:         log,
 				deployments: mockDeployments,
 				vmssCleaner: mockVMSSCleaner,
 				config: &RPConfig{
@@ -170,7 +169,7 @@ func TestCheckForKnownError(t *testing.T) {
 
 	rpLBNotFound := &azure.ServiceError{
 		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
+		Details: []map[string]any{
 			{
 				"code":    "BadRequest",
 				"message": fmt.Sprintf("{\r\n  \"code\": \"ResourceNotFound\",\r\n  \"message\": \"The Resource 'Microsoft.Network/loadBalancers/rp-lb' under resource group '%s' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix Activity ID: 00000000-0000-0000-0000-000000000000.\"\r\n}", rgName),
@@ -180,7 +179,7 @@ func TestCheckForKnownError(t *testing.T) {
 
 	unfamiliarError := &azure.ServiceError{
 		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
+		Details: []map[string]any{
 			{
 				"code":    "BadRequest",
 				"message": "{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}",
@@ -190,7 +189,7 @@ func TestCheckForKnownError(t *testing.T) {
 
 	multipleErrors := &azure.ServiceError{
 		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
+		Details: []map[string]any{
 			{
 				"code":    "BadRequest",
 				"message": "{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}",
@@ -204,7 +203,7 @@ func TestCheckForKnownError(t *testing.T) {
 
 	multipleErrorsFirstKnown := &azure.ServiceError{
 		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
+		Details: []map[string]any{
 			{
 				"code":    "BadRequest",
 				"message": fmt.Sprintf("{\r\n  \"code\": \"ResourceNotFound\",\r\n  \"message\": \"The Resource 'Microsoft.Network/loadBalancers/rp-lb' under resource group '%s' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix Activity ID: 00000000-0000-0000-0000-000000000000.\"\r\n}", rgName),
@@ -218,7 +217,7 @@ func TestCheckForKnownError(t *testing.T) {
 
 	nestedErrorDoesntUnmarshal := &azure.ServiceError{
 		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
+		Details: []map[string]any{
 			{
 				"code":    "BadRequest",
 				"message": "I am just a regular string and not a JSON-encoded string representing another ServiceError.",
@@ -272,9 +271,6 @@ func TestCheckForKnownError(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			d := deployer{}
 
 			got, err := d.checkForKnownError(tt.serviceError, tt.deployAttempt)
@@ -289,11 +285,11 @@ func TestCheckForKnownError(t *testing.T) {
 }
 
 func TestGetParameters(t *testing.T) {
-	databaseAccountName := pointerutils.ToPtr("databaseAccountName")
-	adminApiCaBundle := pointerutils.ToPtr("adminApiCaBundle")
+	databaseAccountName := new("databaseAccountName")
+	adminApiCaBundle := new("adminApiCaBundle")
 	for _, tt := range []struct {
 		name   string
-		ps     map[string]interface{}
+		ps     map[string]any
 		config Configuration
 		want   arm.Parameters
 	}{
@@ -305,7 +301,7 @@ func TestGetParameters(t *testing.T) {
 		},
 		{
 			name: "when all parameters present, everything is copied",
-			ps: map[string]interface{}{
+			ps: map[string]any{
 				"adminApiCaBundle":    nil,
 				"databaseAccountName": nil,
 			},
@@ -326,7 +322,7 @@ func TestGetParameters(t *testing.T) {
 		},
 		{
 			name: "when parameters with nil config are present, they are not returned",
-			ps: map[string]interface{}{
+			ps: map[string]any{
 				"adminApiCaBundle":    nil,
 				"databaseAccountName": nil,
 			},
@@ -343,7 +339,7 @@ func TestGetParameters(t *testing.T) {
 		},
 		{
 			name:   "when nil slice parameter is present it is skipped",
-			ps:     map[string]interface{}{},
+			ps:     map[string]any{},
 			config: Configuration{},
 			want: arm.Parameters{
 				Parameters: map[string]*arm.ParametersParameter{},
@@ -351,7 +347,7 @@ func TestGetParameters(t *testing.T) {
 		},
 		{
 			name: "when malformed parameter is present, it is skipped",
-			ps: map[string]interface{}{
+			ps: map[string]any{
 				"dutabaseAccountName": nil,
 			},
 			config: Configuration{
@@ -395,7 +391,6 @@ func TestDisableAutomaticRepairsOnVMSS(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetsClient(controller)
 
@@ -415,8 +410,9 @@ func TestDisableAutomaticRepairsOnVMSS(t *testing.T) {
 				},
 			)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log:  logrus.NewEntry(logrus.StandardLogger()),
+				log:  log,
 				vmss: mockVMSS,
 			}
 
@@ -430,7 +426,6 @@ func TestDisableAutomaticRepairsOnVMSS(t *testing.T) {
 func TestRunCommandWithRetrySuccess(t *testing.T) {
 	ctx := context.Background()
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	input := mgmtcompute.RunCommandInput{}
 	resourceGroupName := "rg"
@@ -440,8 +435,9 @@ func TestRunCommandWithRetrySuccess(t *testing.T) {
 	mockVMSSVMs := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 	mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(nil)
 
+	_, log := testlog.LogForTesting(t)
 	d := deployer{
-		log:     logrus.NewEntry(logrus.StandardLogger()),
+		log:     log,
 		vmssvms: mockVMSSVMs,
 	}
 
@@ -453,7 +449,6 @@ func TestRunCommandWithRetrySuccess(t *testing.T) {
 func TestRunCommandWithRetryRetriesOnOperationPreempted(t *testing.T) {
 	ctx := context.Background()
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	input := mgmtcompute.RunCommandInput{}
 	resourceGroupName := "rg"
@@ -466,8 +461,9 @@ func TestRunCommandWithRetryRetriesOnOperationPreempted(t *testing.T) {
 		mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(nil),
 	)
 
+	_, log := testlog.LogForTesting(t)
 	d := deployer{
-		log:     logrus.NewEntry(logrus.StandardLogger()),
+		log:     log,
 		vmssvms: mockVMSSVMs,
 	}
 
@@ -484,7 +480,6 @@ func TestRunCommandWithRetryRetriesOnOperationPreempted(t *testing.T) {
 func TestRunCommandWithRetryReturnsLastError(t *testing.T) {
 	ctx := context.Background()
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	input := mgmtcompute.RunCommandInput{}
 	resourceGroupName := "rg"
@@ -495,8 +490,9 @@ func TestRunCommandWithRetryReturnsLastError(t *testing.T) {
 	mockVMSSVMs := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 	mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(wantErr).Times(3)
 
+	_, log := testlog.LogForTesting(t)
 	d := deployer{
-		log:     logrus.NewEntry(logrus.StandardLogger()),
+		log:     log,
 		vmssvms: mockVMSSVMs,
 	}
 
@@ -514,7 +510,6 @@ func TestRunCommandWithRetryReturnsLastError(t *testing.T) {
 func TestRunCommandWithRetryReturnsNonRetryableError(t *testing.T) {
 	ctx := context.Background()
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	input := mgmtcompute.RunCommandInput{}
 	resourceGroupName := "rg"
@@ -525,8 +520,9 @@ func TestRunCommandWithRetryReturnsNonRetryableError(t *testing.T) {
 	mockVMSSVMs := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 	mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(wantErr)
 
+	_, log := testlog.LogForTesting(t)
 	d := deployer{
-		log:     logrus.NewEntry(logrus.StandardLogger()),
+		log:     log,
 		vmssvms: mockVMSSVMs,
 	}
 
@@ -539,7 +535,6 @@ func TestRunCommandWithRetryReturnsNonRetryableError(t *testing.T) {
 func TestRunCommandWithRetryContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	input := mgmtcompute.RunCommandInput{}
 	resourceGroupName := "rg"
@@ -555,8 +550,9 @@ func TestRunCommandWithRetryContextCancelled(t *testing.T) {
 		},
 	)
 
+	_, log := testlog.LogForTesting(t)
 	d := deployer{
-		log:     logrus.NewEntry(logrus.StandardLogger()),
+		log:     log,
 		vmssvms: mockVMSSVMs,
 	}
 

@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armdns "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armdns"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -64,13 +63,13 @@ func TestCreate(t *testing.T) {
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
 						Properties: &sdkdns.RecordSetProperties{
 							Metadata: map[string]*string{
-								resourceID: pointerutils.ToPtr(tt.oc.ID),
+								resourceID: new(tt.oc.ID),
 							},
-							TTL: pointerutils.ToPtr(int64(300)),
+							TTL: new(int64(300)),
 						},
 					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
-						IfMatch:     pointerutils.ToPtr(""),
-						IfNoneMatch: pointerutils.ToPtr("*"),
+						IfMatch:     new(""),
+						IfNoneMatch: new("*"),
 					}).
 					Return(sdkdns.RecordSetsClientCreateOrUpdateResponse{
 						RecordSet: sdkdns.RecordSet{},
@@ -104,7 +103,7 @@ func TestCreate(t *testing.T) {
 						RecordSet: sdkdns.RecordSet{
 							Properties: &sdkdns.RecordSetProperties{
 								Metadata: map[string]*string{
-									"resourceId": pointerutils.ToPtr("not us"),
+									"resourceId": new("not us"),
 								},
 							},
 						},
@@ -129,7 +128,6 @@ func TestCreate(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
@@ -186,7 +184,7 @@ func TestUpdate(t *testing.T) {
 					Get(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSetsClientGetResponse{
 						RecordSet: sdkdns.RecordSet{
-							Etag: pointerutils.ToPtr("etag"),
+							Etag: new("etag"),
 							Properties: &sdkdns.RecordSetProperties{
 								Metadata: map[string]*string{
 									"resourceId": &tt.oc.ID,
@@ -199,18 +197,18 @@ func TestUpdate(t *testing.T) {
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, sdkdns.RecordSet{
 						Properties: &sdkdns.RecordSetProperties{
 							Metadata: map[string]*string{
-								resourceID: pointerutils.ToPtr(tt.oc.ID),
+								resourceID: new(tt.oc.ID),
 							},
-							TTL: pointerutils.ToPtr(int64(300)),
+							TTL: new(int64(300)),
 							ARecords: []*sdkdns.ARecord{
 								{
-									IPv4Address: pointerutils.ToPtr("1.2.3.4"),
+									IPv4Address: new("1.2.3.4"),
 								},
 							},
 						},
 					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
-						IfMatch:     pointerutils.ToPtr("etag"),
-						IfNoneMatch: pointerutils.ToPtr(""),
+						IfMatch:     new("etag"),
+						IfNoneMatch: new(""),
 					}).
 					Return(sdkdns.RecordSetsClientCreateOrUpdateResponse{
 						RecordSet: sdkdns.RecordSet{},
@@ -227,7 +225,7 @@ func TestUpdate(t *testing.T) {
 						RecordSet: sdkdns.RecordSet{
 							Properties: &sdkdns.RecordSetProperties{
 								Metadata: map[string]*string{
-									"resourceId": pointerutils.ToPtr("not us"),
+									"resourceId": new("not us"),
 								},
 							},
 						},
@@ -255,7 +253,6 @@ func TestUpdate(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
@@ -319,10 +316,10 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
 						Properties: &sdkdns.RecordSetProperties{
-							TTL: pointerutils.ToPtr(int64(300)),
+							TTL: new(int64(300)),
 							ARecords: []*sdkdns.ARecord{
 								{
-									IPv4Address: pointerutils.ToPtr(tt.routerIP),
+									IPv4Address: new(tt.routerIP),
 								},
 							},
 						},
@@ -349,10 +346,10 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
 						Properties: &sdkdns.RecordSetProperties{
-							TTL: pointerutils.ToPtr(int64(300)),
+							TTL: new(int64(300)),
 							ARecords: []*sdkdns.ARecord{
 								{
-									IPv4Address: pointerutils.ToPtr(tt.routerIP),
+									IPv4Address: new(tt.routerIP),
 								},
 							},
 						},
@@ -376,10 +373,10 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 					Return(sdkdns.RecordSetsClientGetResponse{
 						RecordSet: sdkdns.RecordSet{
 							Properties: &sdkdns.RecordSetProperties{
-								TTL: pointerutils.ToPtr(int64(300)),
+								TTL: new(int64(300)),
 								ARecords: []*sdkdns.ARecord{
 									{
-										IPv4Address: pointerutils.ToPtr(tt.routerIP),
+										IPv4Address: new(tt.routerIP),
 									},
 								},
 							},
@@ -397,10 +394,10 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 					Return(sdkdns.RecordSetsClientGetResponse{
 						RecordSet: sdkdns.RecordSet{
 							Properties: &sdkdns.RecordSetProperties{
-								TTL: pointerutils.ToPtr(int64(300)),
+								TTL: new(int64(300)),
 								ARecords: []*sdkdns.ARecord{
 									{
-										IPv4Address: pointerutils.ToPtr("1.2.3.4"),
+										IPv4Address: new("1.2.3.4"),
 									},
 								},
 							},
@@ -410,10 +407,10 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
 						Properties: &sdkdns.RecordSetProperties{
-							TTL: pointerutils.ToPtr(int64(300)),
+							TTL: new(int64(300)),
 							ARecords: []*sdkdns.ARecord{
 								{
-									IPv4Address: pointerutils.ToPtr(tt.routerIP),
+									IPv4Address: new(tt.routerIP),
 								},
 							},
 						},
@@ -433,7 +430,6 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
@@ -503,7 +499,7 @@ func TestDelete(t *testing.T) {
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSetsClientGetResponse{
 						RecordSet: sdkdns.RecordSet{
-							Etag: pointerutils.ToPtr("etag"),
+							Etag: new("etag"),
 							Properties: &sdkdns.RecordSetProperties{
 								Metadata: map[string]*string{
 									"resourceId": &tt.oc.ID,
@@ -514,13 +510,13 @@ func TestDelete(t *testing.T) {
 
 				recordsets.EXPECT().
 					Delete(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
-						IfMatch: pointerutils.ToPtr(""),
+						IfMatch: new(""),
 					}).
 					Return(sdkdns.RecordSetsClientDeleteResponse{}, nil)
 
 				recordsets.EXPECT().
 					Delete(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
-						IfMatch: pointerutils.ToPtr("etag"),
+						IfMatch: new("etag"),
 					}).
 					Return(sdkdns.RecordSetsClientDeleteResponse{}, nil)
 			},
@@ -535,7 +531,7 @@ func TestDelete(t *testing.T) {
 						RecordSet: sdkdns.RecordSet{
 							Properties: &sdkdns.RecordSetProperties{
 								Metadata: map[string]*string{
-									"resourceId": pointerutils.ToPtr("not us"),
+									"resourceId": new("not us"),
 								},
 							},
 						},
@@ -561,7 +557,6 @@ func TestDelete(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
@@ -624,7 +619,6 @@ func TestManagedDomain(t *testing.T) {
 	} {
 		t.Run(tt.domain, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Domain().AnyTimes().Return("eastus.aroapp.io")
@@ -671,7 +665,6 @@ func TestManagedDomainPrefix(t *testing.T) {
 	} {
 		t.Run(tt.domain, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")

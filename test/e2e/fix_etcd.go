@@ -14,14 +14,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/api/machine/v1beta1"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -46,13 +45,13 @@ var _ = Describe("Master replacement", Label(regressiontest), func() {
 		By("Disabling reconciliation")
 		dep, err := clients.Kubernetes.AppsV1().Deployments("openshift-cluster-version").Get(ctx, "cluster-version-operator", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		dep.Spec.Replicas = pointerutils.ToPtr(int32(0))
+		dep.Spec.Replicas = new(int32(0))
 		_, err = clients.Kubernetes.AppsV1().Deployments("openshift-cluster-version").Update(ctx, dep, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		dep, err = clients.Kubernetes.AppsV1().Deployments("openshift-etcd-operator").Get(ctx, "etcd-operator", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		dep.Spec.Replicas = pointerutils.ToPtr(int32(0))
+		dep.Spec.Replicas = new(int32(0))
 		_, err = clients.Kubernetes.AppsV1().Deployments("openshift-etcd-operator").Update(ctx, dep, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -63,15 +62,22 @@ var _ = Describe("Master replacement", Label(regressiontest), func() {
 		constraintPresent := true
 
 		aroConstraintClient, err := clients.Dynamic.GetClient(templateAroConstraint)
-		Expect(err).NotTo(HaveOccurred())
-		_, err = aroConstraintClient.Get(ctx, "aro-machines-deny", metav1.GetOptions{})
-		if err != nil {
-			if kerrors.IsNotFound(err) {
-				// This cluster does not have guardrails, so we don't need to disable and enable again
-				constraintPresent = false
-			} else {
-				// something else happened and we can't continue testing
-				Expect(err).ToNot(HaveOccurred())
+		if meta.IsNoMatchError(err) {
+			constraintPresent = false
+		} else {
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		if constraintPresent {
+			_, err = aroConstraintClient.Get(ctx, "aro-machines-deny", metav1.GetOptions{})
+			if err != nil {
+				if kerrors.IsNotFound(err) {
+					// This cluster does not have guardrails, so we don't need to disable and enable again
+					constraintPresent = false
+				} else {
+					// something else happened and we can't continue testing
+					Expect(err).ToNot(HaveOccurred())
+				}
 			}
 		}
 
@@ -122,7 +128,7 @@ var _ = Describe("Master replacement", Label(regressiontest), func() {
 		By("Reverting deployments") // cluster-version-operator reconciles etcd-operator.
 		dep, err = clients.Kubernetes.AppsV1().Deployments("openshift-cluster-version").Get(ctx, "cluster-version-operator", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		dep.Spec.Replicas = pointerutils.ToPtr(int32(1))
+		dep.Spec.Replicas = new(int32(1))
 		_, err = clients.Kubernetes.AppsV1().Deployments("openshift-cluster-version").Update(ctx, dep, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 

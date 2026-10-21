@@ -12,13 +12,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clockTesting "k8s.io/utils/clock/testing"
 
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -197,7 +196,7 @@ func TestSetCondition(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			clientFake := fake.NewClientBuilder().WithObjects(&tt.cluster).Build()
+			clientFake := testclienthelper.NewAROFakeClientBuilder(&tt.cluster).Build()
 
 			err := SetCondition(ctx, clientFake, tt.input, role)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)

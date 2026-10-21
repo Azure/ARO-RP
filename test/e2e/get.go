@@ -13,26 +13,26 @@ import (
 var _ = Describe("Get cluster", Label(basichealth, install), func() {
 	It("must be possible get a cluster and retrieve some (enriched) fields", func(ctx context.Context) {
 		By("getting the cluster resource")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking we retrieved the default Ingress Profile (and only this one by default)")
-		Expect(oc.IngressProfiles).NotTo(BeNil())
-		Expect(*oc.IngressProfiles).To(HaveLen(1))
-		ingressProfile := (*oc.IngressProfiles)[0]
+		Expect(oc.Properties.IngressProfiles).NotTo(BeNil())
+		Expect(oc.Properties.IngressProfiles).To(HaveLen(1))
+		ingressProfile := oc.Properties.IngressProfiles[0]
 		Expect(*ingressProfile.Name).To(Equal("default"))
 		Expect(ingressProfile.IP).NotTo(BeNil())
 		Expect(*ingressProfile.IP).NotTo(BeEmpty())
 
 		By("checking we retrieved Cluster version")
-		clusterProfile := oc.ClusterProfile
+		clusterProfile := oc.Properties.ClusterProfile
 		Expect(clusterProfile).NotTo(BeNil())
 		Expect(*clusterProfile.Version).NotTo(BeEmpty())
 
 		By("checking we retrieved at least one Worker Profile")
-		workerProfiles := oc.WorkerProfiles
+		workerProfiles := oc.Properties.WorkerProfiles
 		Expect(workerProfiles).NotTo(BeNil())
-		Expect(*workerProfiles).NotTo(BeEmpty())
+		Expect(workerProfiles).NotTo(BeEmpty())
 
 		By("checking we retrieved associated systemData")
 		systemData := oc.SystemData

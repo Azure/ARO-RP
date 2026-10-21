@@ -30,8 +30,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	utilnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilrecover "github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -63,7 +63,7 @@ func (f *frontend) _postAdminOpenShiftClusterRunJob(ctx context.Context, r *http
 		return err
 	}
 
-	log = log.WithField("resourceID", resourceID)
+	log = log.WithField("resourceID", utillog.Sanitize(resourceID))
 	opCtx, opCancel := context.WithTimeout(ctx, adminActionStreamTimeout)
 	// panic recovery is in runJobStream
 	go func() {
@@ -139,7 +139,7 @@ func parseAndValidateJob(body []byte) (*batchv1.Job, error) {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
 			"Jobs with spec.backoffLimit != 0 are not supported; set it to 0 or omit it.")
 	}
-	job.Spec.BackoffLimit = pointerutils.ToPtr(int32(0))
+	job.Spec.BackoffLimit = new(int32(0))
 
 	// restartPolicy must be Never or OnFailure; "Always" would cause the pod to restart indefinitely.
 	if rp := job.Spec.Template.Spec.RestartPolicy; rp != corev1.RestartPolicyNever && rp != corev1.RestartPolicyOnFailure {

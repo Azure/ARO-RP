@@ -4,7 +4,7 @@ This guide shows how to:
 
 1. Build local test images with Docker
 2. Push them to the connected cluster's internal registry
-3. Point ARO operator + Geneva OTel collectors at those images
+3. Point ARO operator + Geneva OTel exporters at those images
 
 ## Prerequisites
 
@@ -32,6 +32,11 @@ REGISTRY_HOST="$(oc get route default-route -n openshift-image-registry -o jsonp
 docker login -u "$(oc whoami)" -p "$(oc whoami -t)" "${REGISTRY_HOST}"
 ```
 
+> **Not using `oc login`?** If you're on a certificate-based admin kubeconfig
+> (e.g. `userAdminKubeconfig` from `hack/db`), `oc whoami -t` has no token — use a
+> service-account token for the registry login instead:
+> `docker login -u builder -p "$(oc create token builder -n openshift-azure-operator)" "${REGISTRY_HOST}"` (podman: add `--tls-verify=false`).
+
 ## 2. Build and push OTel image (Dockerfile.telemetryexporter)
 
 Use `Dockerfile.telemetryexporter` (includes `systemd`/`journalctl` support needed by `journald` receiver):
@@ -50,7 +55,7 @@ docker build --no-cache \
 docker push "${OTEL_IMG}"
 ```
 
-## 3. Build and push operator image (local binary + minimal Dockerfile)
+## 3. Build and push operator image (local binary + UBI minimal)
 
 Build binary:
 
@@ -64,7 +69,7 @@ Build/push image:
 OP_IMG="${REGISTRY_HOST}/openshift-azure-operator/aro-operator-local:${VERSION}"
 
 cat > /tmp/Dockerfile.aro-operator-local <<'EOF'
-FROM scratch
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 COPY --chmod=0755 aro-operator /usr/local/bin/aro
 USER 1000
 ENV PATH=/usr/local/bin
@@ -74,6 +79,11 @@ EOF
 docker build -f /tmp/Dockerfile.aro-operator-local -t "${OP_IMG}" _out
 docker push "${OP_IMG}"
 ```
+
+**Note**: Upon retry, use `--no-cache` with the `docker build` command, to ensure that all latest dependencies are pulled.
+
+The UBI base supplies the CA trust bundle required by operator controllers that
+connect to Azure services. A scratch image does not include these certificates.
 
 ## 4. Set minimal-logs as baseline feature flags
 
@@ -92,21 +102,21 @@ oc -n openshift-azure-operator rollout status deployment/aro-operator-worker --t
 oc -n openshift-azure-operator rollout status deployment/aro-operator-master --timeout=8m
 ```
 
-## 6. Point Geneva OTel to the local collector image
+## 6. Point Geneva OTel to the local exporter image
 
 ```bash
 oc -n default patch cluster.aro.openshift.io cluster --type merge -p \
   "{\"spec\":{\"operatorflags\":{\"aro.genevalogging.otel.pullSpec\":\"${OTEL_IMG}\"}}}"
 ```
 
-Restart collectors after config/image changes:
+Restart exporters after config/image changes:
 
 ```bash
-oc -n openshift-azure-logging rollout restart daemonset/otel-collector-master
-oc -n openshift-azure-logging rollout restart daemonset/otel-collector-worker
+oc -n openshift-azure-logging rollout restart daemonset/otel-exporter-master
+oc -n openshift-azure-logging rollout restart daemonset/otel-exporter-worker
 
-oc -n openshift-azure-logging rollout status daemonset/otel-collector-master --timeout=8m
-oc -n openshift-azure-logging rollout status daemonset/otel-collector-worker --timeout=8m
+oc -n openshift-azure-logging rollout status daemonset/otel-exporter-master --timeout=8m
+oc -n openshift-azure-logging rollout status daemonset/otel-exporter-worker --timeout=8m
 ```
 
 ## 7. Quick verification
@@ -114,8 +124,8 @@ oc -n openshift-azure-logging rollout status daemonset/otel-collector-worker --t
 ```bash
 oc -n openshift-azure-operator get pods -l app=aro-operator-worker -o wide
 oc -n openshift-azure-operator get pods -l app=aro-operator-master -o wide
-oc -n openshift-azure-logging get pods -l app=otel-collector-worker -o wide
-oc -n openshift-azure-logging get pods -l app=otel-collector-master -o wide
+oc -n openshift-azure-logging get pods -l app=otel-exporter-worker -o wide
+oc -n openshift-azure-logging get pods -l app=otel-exporter-master -o wide
 
 oc -n openshift-azure-logging get configmap otel-config -o jsonpath='{.data.worker-config\.yaml}' | head -n 60
 ```

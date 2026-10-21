@@ -65,10 +65,10 @@ var _ = Describe("[Admin API] Delete managed resource action", Label(install), f
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("getting the newly created k8s service frontend IP configuration")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		rgName := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
+		rgName := stringutils.LastTokenByte(*oc.Properties.ClusterProfile.ResourceGroupID, '/')
 		lbName, err := getInfraID(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -97,21 +97,21 @@ var _ = Describe("[Admin API] Delete managed resource action", Label(install), f
 
 	It("should NOT be possible to delete a resource not within the cluster's managed resource group", func(ctx context.Context) {
 		By("trying to delete the master subnet")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedResourceID": []string{*oc.MasterProfile.SubnetID}}, true, nil, nil)
+		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedResourceID": []string{*oc.Properties.MasterProfile.SubnetID}}, true, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 	})
 
 	It("should NOT be possible to delete the private link service in the cluster's managed resource group", func(ctx context.Context) {
 		By("trying to delete the private link service")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Fake name prevents accidentally deleting the PLS but still validates guardrail logic works.
-		plsResourceID := fmt.Sprintf("%s/providers/Microsoft.Network/PrivateLinkServices/%s", *oc.ClusterProfile.ResourceGroupID, "fake-pls")
+		plsResourceID := fmt.Sprintf("%s/providers/Microsoft.Network/PrivateLinkServices/%s", *oc.Properties.ClusterProfile.ResourceGroupID, "fake-pls")
 
 		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedResourceID": []string{plsResourceID}}, true, nil, nil)
 		Expect(err).NotTo(HaveOccurred())

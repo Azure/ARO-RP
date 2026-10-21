@@ -5,8 +5,8 @@ package subnets
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -126,39 +126,33 @@ func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
 		return err
 	}
 
-	var combinedErrors []string
+	var combinedErrors []error
 
 	// This potentially calls an update twice for the same loop, but this is the price
 	// to pay for keeping logic split, separate, and simple
 	for _, s := range subnets {
+		subnetName := stringutils.LastTokenByte(s.ResourceID, '/')
 		if r.instance.Spec.OperatorFlags.GetSimpleBoolean(operator.AzureSubnetsNsgManaged) {
-			err = r.ensureSubnetNSG(ctx, s)
-			if err != nil {
-				combinedErrors = append(combinedErrors, err.Error())
+			if err = r.ensureSubnetNSG(ctx, s); err != nil {
+				combinedErrors = append(combinedErrors, fmt.Errorf("failed to reconcile subnet: %s: %w", subnetName, err))
 			}
 		}
 
 		if r.instance.Spec.OperatorFlags.GetSimpleBoolean(controllerServiceEndpointManaged) {
-			err = r.ensureSubnetServiceEndpoints(ctx, s)
-			if err != nil {
-				combinedErrors = append(combinedErrors, err.Error())
+			if err = r.ensureSubnetServiceEndpoints(ctx, s); err != nil {
+				combinedErrors = append(combinedErrors, fmt.Errorf("failed to reconcile subnet: %s: %w", subnetName, err))
 			}
 		}
 	}
-
-	if len(combinedErrors) > 0 {
-		return fmt.Errorf("%s", strings.Join(combinedErrors, "\n"))
-	}
-
-	return nil
+	return errors.Join(combinedErrors...)
 }
 
 // SetupWithManager creates the controller
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
-		Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(predicates.MachineRoleMaster)).    // to reconcile on master machine replacement
-		Watches(&source.Kind{Type: &machinev1beta1.MachineSet{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(predicates.MachineRoleWorker)). // to reconcile on worker machines
+		Watches(&machinev1beta1.Machine{}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(predicates.MachineRoleMaster)).    // to reconcile on master machine replacement
+		Watches(&machinev1beta1.MachineSet{}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(predicates.MachineRoleWorker)). // to reconcile on worker machines
 		Named(ControllerName).
 		Complete(r)
 }

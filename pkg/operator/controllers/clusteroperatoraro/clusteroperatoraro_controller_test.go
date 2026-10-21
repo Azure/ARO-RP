@@ -9,24 +9,23 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestConditions(t *testing.T) {
@@ -226,17 +225,17 @@ func TestConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			cluster := &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Status: arov1alpha1.ClusterStatus{
 					Conditions: tt.controllerConditions,
 				},
 			}
-			clientFake := ctrlfake.NewClientBuilder().
-				WithObjects(cluster).
-				Build()
+			clientFake := testclienthelper.NewAROFakeClientBuilder(cluster).Build()
 
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			r := NewReconciler(log, clientFake)
 
 			request := ctrl.Request{}
 			ctx := context.Background()
@@ -266,8 +265,8 @@ func TestConditions(t *testing.T) {
 				APIVersion:         arov1alpha1.GroupVersion.Identifier(),
 				Kind:               "Cluster",
 				Name:               arov1alpha1.SingletonClusterName,
-				Controller:         pointerutils.ToPtr(true),
-				BlockOwnerDeletion: pointerutils.ToPtr(true),
+				Controller:         new(true),
+				BlockOwnerDeletion: new(true),
 			}}
 			if diff := cmp.Diff(wantOwnerReference, operator.OwnerReferences); diff != "" {
 				t.Error(diff)

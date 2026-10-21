@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -27,9 +26,9 @@ import (
 	mock_checkaccess "github.com/Azure/ARO-RP/pkg/util/mocks/checkaccess"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestValidateClusterUserAssignedIdentity(t *testing.T) {
@@ -110,12 +109,12 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 				Permissions: []*sdkauthorization.Permission{
 					{
 						Actions: []*string{
-							pointerutils.ToPtr("FakeMSIAction1"),
-							pointerutils.ToPtr("FakeMSIAction2"),
+							new("FakeMSIAction1"),
+							new("FakeMSIAction2"),
 						},
 						DataActions: []*string{
-							pointerutils.ToPtr("FakeMSIDataAction1"),
-							pointerutils.ToPtr("FakeMSIDataAction2"),
+							new("FakeMSIDataAction1"),
+							new("FakeMSIDataAction2"),
 						},
 					},
 				},
@@ -155,7 +154,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 					msiRequiredPermissionsList,
 					validTestToken,
 				).AnyTimes().Return(&msiAuthZRequest, nil)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 any) {
 					cancel()
 				}).Return(&msiAllowedActions, nil).AnyTimes()
 			},
@@ -197,7 +196,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 					msiRequiredPermissionsList,
 					validTestToken,
 				).AnyTimes().Return(&msiAuthZRequest, nil)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 any) {
 					cancel()
 				}).Return(&msiNotAllowedActions, nil).AnyTimes()
 			},
@@ -217,7 +216,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 					msiRequiredPermissionsList,
 					validTestToken,
 				).AnyTimes().Return(&msiAuthZRequest, nil)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 any) {
 					cancel()
 				}).Return(&msiActionMissing, nil).AnyTimes()
 			},
@@ -225,8 +224,9 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			_env := mock_env.NewMockInterface(controller)
 			roleDefinitions := mock_armauthorization.NewMockRoleDefinitionsClient(controller)
@@ -236,7 +236,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 			dv := &dynamic{
 				env:                        _env,
 				authorizerType:             AuthorizerClusterUserAssignedIdentity,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				log:                        log,
 				pdpClient:                  pdpClient,
 				checkAccessSubjectInfoCred: tokenCred,
 			}
@@ -256,8 +256,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 }
 
 func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	msiResourceID := resourceGroupID + "/providers/Microsoft.ManagedIdentity/userAssignedIdentities/miwi-msi-resource"
 	clusterResourceId, _ := azure.ParseResourceID(clusterID)
 	platformIdentity1ResourceId, _ := azure.ParseResourceID(platformIdentity1)
@@ -303,12 +302,12 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Permissions: []*sdkauthorization.Permission{
 					{
 						Actions: []*string{
-							pointerutils.ToPtr("FakeAction1"),
-							pointerutils.ToPtr("FakeAction2"),
+							new("FakeAction1"),
+							new("FakeAction2"),
 						},
 						DataActions: []*string{
-							pointerutils.ToPtr("FakeDataAction1"),
-							pointerutils.ToPtr("FakeDataAction2"),
+							new("FakeDataAction1"),
+							new("FakeDataAction2"),
 						},
 					},
 				},
@@ -342,7 +341,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -373,7 +372,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -390,7 +389,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						{
 							Name: &expectedPlatformIdentity1FederatedCredName,
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Audiences: []*string{new("openshift")},
 								Issuer:    &expectedOIDCIssuer,
 								Subject:   &platformIdentity1SAName,
 							},
@@ -417,7 +416,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -435,7 +434,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						{
 							Name: &expectedPlatformIdentity1FederatedCredName,
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Audiences: []*string{new("openshift")},
 								Issuer:    &expectedOIDCIssuer,
 								Subject:   &platformIdentity1SAName,
 							},
@@ -443,9 +442,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						{
 							Name: &expectedPlatformIdentity1ExtraFederatedCredName,
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Audiences: []*string{new("openshift")},
 								Issuer:    &expectedOIDCIssuer,
-								Subject:   pointerutils.ToPtr("something else"),
+								Subject:   new("something else"),
 							},
 						},
 					}, nil)
@@ -463,11 +462,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
-						UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+						UpgradeableTo:              new(api.UpgradeableTo("4.15.40")),
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -537,7 +536,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -552,8 +551,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 							Permissions: []*sdkauthorization.Permission{
 								{
 									Actions: []*string{
-										pointerutils.ToPtr("FakeAction2"), // Duplicate
-										pointerutils.ToPtr("FakeAction3"), // New
+										new("FakeAction2"), // Duplicate
+										new("FakeAction3"), // New
 									},
 									// No DataActions
 								},
@@ -585,7 +584,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -614,7 +613,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -626,9 +625,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
 						{
-							Name: pointerutils.ToPtr("something-else"),
+							Name: new("something-else"),
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("something else")},
+								Audiences: []*string{new("something else")},
 								Issuer:    &expectedOIDCIssuer,
 								Subject:   &platformIdentity1SAName,
 							},
@@ -659,7 +658,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -671,7 +670,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
 						{
-							Name: pointerutils.ToPtr("something-else"),
+							Name: new("something-else"),
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
 								Audiences: nil,
 								Issuer:    &expectedOIDCIssuer,
@@ -704,7 +703,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -716,10 +715,10 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
 						{
-							Name: pointerutils.ToPtr("something-else"),
+							Name: new("something-else"),
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("openshift")},
-								Issuer:    pointerutils.ToPtr("something else"),
+								Audiences: []*string{new("openshift")},
+								Issuer:    new("something else"),
 								Subject:   &platformIdentity1SAName,
 							},
 						},
@@ -749,7 +748,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -761,9 +760,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
 						{
-							Name: pointerutils.ToPtr("something-else"),
+							Name: new("something-else"),
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Audiences: []*string{new("openshift")},
 								Issuer:    nil,
 								Subject:   &platformIdentity1SAName,
 							},
@@ -795,7 +794,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -810,7 +809,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						{
 							Name: &expectedPlatformIdentity1FederatedCredName,
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Audiences: []*string{new("openshift")},
 								Issuer:    &expectedOIDCIssuer,
 								Subject:   &platformIdentity1SAName,
 							},
@@ -841,7 +840,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -871,7 +870,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -886,7 +885,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						{
 							Name: nil,
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Audiences: []*string{new("openshift")},
 								Issuer:    &expectedOIDCIssuer,
 								Subject:   &platformIdentity1SAName,
 							},
@@ -910,7 +909,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -938,11 +937,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
-						UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+						UpgradeableTo:              new(api.UpgradeableTo("4.15.40")),
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -967,11 +966,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
-						UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.14.60")),
+						UpgradeableTo:              new(api.UpgradeableTo("4.14.60")),
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -996,11 +995,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
-						UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.13.60")),
+						UpgradeableTo:              new(api.UpgradeableTo("4.13.60")),
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -1022,7 +1021,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -1051,7 +1050,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -1073,7 +1072,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -1101,7 +1100,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -1124,7 +1123,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
-						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+						OIDCIssuer: new(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -1139,8 +1138,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			_env := mock_env.NewMockInterface(controller)
 			roleDefinitions := mock_armauthorization.NewMockRoleDefinitionsClient(controller)
@@ -1149,7 +1149,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			dv := &dynamic{
 				env:            _env,
 				authorizerType: AuthorizerWorkloadIdentity,
-				log:            logrus.NewEntry(logrus.StandardLogger()),
+				log:            log,
 			}
 
 			if tt.mocks != nil {

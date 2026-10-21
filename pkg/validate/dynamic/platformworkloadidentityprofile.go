@@ -125,7 +125,7 @@ func (dv *dynamic) ValidateClusterUserAssignedIdentity(ctx context.Context, plat
 		}
 
 		err = dv.validateActionsByOID(ctx, &pid, actions, nil)
-		if err == wait.ErrWaitTimeout {
+		if wait.Interrupted(err) {
 			return api.NewCloudError(
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidClusterMSIPermissions,

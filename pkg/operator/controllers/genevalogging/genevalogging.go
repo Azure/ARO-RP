@@ -8,10 +8,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"net"
+	"strings"
+
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -23,11 +28,10 @@ import (
 
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-var privilegedNamespaceLabels = map[string]string{
+var privilegedPodSecurityLabels = map[string]string{
 	"pod-security.kubernetes.io/enforce": "privileged",
 	"pod-security.kubernetes.io/audit":   "privileged",
 	"pod-security.kubernetes.io/warn":    "privileged",
@@ -36,9 +40,18 @@ var privilegedNamespaceLabels = map[string]string{
 const (
 	masterRoleLabel       = "node-role.kubernetes.io/master"
 	controlPlaneRoleLabel = "node-role.kubernetes.io/control-plane"
+
+	MasterDaemonsetName    = "otel-exporter-master"
+	WorkerDaemonsetName    = "otel-exporter-worker"
+	podMonitorName         = "otel-exporter"
+	prometheusRuleName     = "otel-exporter-alerts"
+	prometheusNamespace    = "openshift-monitoring"
+	prometheusK8s          = "prometheus-k8s"
+	otelMetricsPort        = 8888
+	clusterMonitoringLabel = "openshift.io/cluster-monitoring"
 )
 
-var renderOTelConfigFn = renderOTelConfig
+var renderOTelConfigFn func(otelProfile, bool) (string, error) = renderOTelConfig
 
 func (r *Reconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
 	scc := &securityv1.SecurityContextConstraints{}
@@ -55,16 +68,16 @@ func (r *Reconciler) securityContextConstraints(ctx context.Context, name, servi
 	return scc, nil
 }
 
-// namespaceLabels adds proper namespace labels for the privileged geneva logging
-// daemonset on OpenShift 4.11+
-func (r *Reconciler) namespaceLabels(ctx context.Context) (map[string]string, error) {
+// namespaceSecurityLabels returns the pod security admission labels for the
+// privileged geneva logging namespace on OpenShift 4.11+.
+func (r *Reconciler) namespaceSecurityLabels(ctx context.Context) (map[string]string, error) {
 	usePodSecurityAdmission, err := pkgoperator.ShouldUsePodSecurityStandard(ctx, r.Client)
 	if err != nil {
 		return nil, err
 	}
 
 	if usePodSecurityAdmission {
-		return privilegedNamespaceLabels, nil
+		return privilegedPodSecurityLabels, nil
 	}
 
 	return map[string]string{}, nil
@@ -76,10 +89,12 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 		return nil, err
 	}
 
-	nsLabels, err := r.namespaceLabels(ctx)
+	podSecurityLabels, err := r.namespaceSecurityLabels(ctx)
 	if err != nil {
 		return nil, err
 	}
+	nsLabels := maps.Clone(podSecurityLabels)
+	nsLabels[clusterMonitoringLabel] = "true"
 
 	resources := []kruntime.Object{
 		&corev1.Namespace{
@@ -96,6 +111,155 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 			},
 		},
 		scc,
+		&rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prometheusK8s,
+				Namespace: kubeNamespace,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"services", "endpoints", "pods"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
+		},
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prometheusK8s,
+				Namespace: kubeNamespace,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     prometheusK8s,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      prometheusK8s,
+					Namespace: prometheusNamespace,
+				},
+			},
+		},
+		&monitoringv1.PodMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      podMonitorName,
+				Namespace: kubeNamespace,
+			},
+			Spec: monitoringv1.PodMonitorSpec{
+				Selector: metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "app",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{MasterDaemonsetName, WorkerDaemonsetName},
+						},
+					},
+				},
+				PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
+					{
+						Port: "metrics",
+						RelabelConfigs: []monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_node_name"},
+								TargetLabel:  "node",
+							},
+						},
+					},
+				},
+			},
+		},
+		&monitoringv1.PrometheusRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prometheusRuleName,
+				Namespace: kubeNamespace,
+			},
+			Spec: monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{
+					{
+						Name: "sre-otel-exporter-alerts",
+						Rules: []monitoringv1.Rule{
+							{
+								Alert: "OTelExporterNoLogsShippedSRE",
+								For:   new(monitoringv1.Duration("10m")),
+								Expr: intstr.FromString(
+									`kube_pod_info{namespace="` + kubeNamespace + `",created_by_kind="DaemonSet",pod=~"otel-exporter-.*"} unless on(pod) ((up{namespace="` + kubeNamespace + `"} == 1) * on(pod) group_left() (sum by (pod) (rate(otelcol_exporter_sent_log_records{namespace="` + kubeNamespace + `"}[1h])) > 0))`,
+								),
+								Labels: map[string]string{
+									"severity":  "critical",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter on {{ $labels.node }} has not shipped logs`,
+									"description": `OTel exporter pod {{ $labels.pod }} on node {{ $labels.node }} has not exported any log records in the past hour`,
+								},
+							},
+							{
+								Alert: "OTelExporterSendFailingSRE",
+								For:   new(monitoringv1.Duration("15m")),
+								Expr: intstr.FromString(
+									`sum by (pod) (rate(otelcol_exporter_send_failed_log_records{namespace="` + kubeNamespace + `"}[10m])) > 0`,
+								),
+								Labels: map[string]string{
+									"severity":  "warning",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter {{ $labels.pod }} failing to send logs`,
+									"description": `OTel exporter pod {{ $labels.pod }} has been failing to send log records to the gateway for 15m`,
+								},
+							},
+							{
+								Alert: "OTelExporterQueueSaturatedSRE",
+								For:   new(monitoringv1.Duration("15m")),
+								Expr: intstr.FromString(
+									`max by (pod) (otelcol_exporter_queue_size{namespace="` + kubeNamespace + `"} / otelcol_exporter_queue_capacity{namespace="` + kubeNamespace + `"}) > 0.9`,
+								),
+								Labels: map[string]string{
+									"severity":  "warning",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter {{ $labels.pod }} sending queue near capacity`,
+									"description": `OTel exporter pod {{ $labels.pod }} sending queue has been over 90% full for 15m; sustained backpressure risks dropping logs`,
+								},
+							},
+							{
+								Alert: "OTelExporterLogsRefusedSRE",
+								For:   new(monitoringv1.Duration("15m")),
+								Expr: intstr.FromString(
+									`sum by (pod) (rate(otelcol_receiver_refused_log_records{namespace="` + kubeNamespace + `"}[10m])) > 0`,
+								),
+								Labels: map[string]string{
+									"severity":  "warning",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter {{ $labels.pod }} refusing logs at ingestion`,
+									"description": `OTel exporter pod {{ $labels.pod }} has been refusing log records at ingestion for 15m; a receiver or parse failure may be dropping a log stream (for example audit)`,
+								},
+							},
+							{
+								Alert: "OTelExporterRestartLoopingSRE",
+								For:   new(monitoringv1.Duration("15m")),
+								Expr: intstr.FromString(
+									`increase(kube_pod_container_status_restarts_total{namespace="` + kubeNamespace + `",container="otel-exporter"}[1h]) >= 5`,
+								),
+								Labels: map[string]string{
+									"severity":  "warning",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter {{ $labels.pod }} restart-looping`,
+									"description": `OTel exporter pod {{ $labels.pod }} has restarted 5 or more times in the past hour; the collector is crash/restart-looping`,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	profiles, err := getOTelProfiles(cluster.Spec.OperatorFlags)
@@ -103,10 +267,8 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 		return nil, err
 	}
 
-	emitSourceFields := cluster.Spec.OperatorFlags.GetSimpleBoolean(pkgoperator.GenevaLoggingOTelEmitSourceFields)
-
 	renderProfileConfig := func(nodeRole string, profile otelProfile) (string, error) {
-		cfg, err := selectOTelConfig(profile, emitSourceFields)
+		cfg, err := selectOTelConfig(profile, nodeRole != "worker")
 		if err != nil {
 			return "", fmt.Errorf("rendering %s otel config: %w", nodeRole, err)
 		}
@@ -172,10 +334,10 @@ func otelConfigSHA256(config string) string {
 
 // selectOTelConfig renders the requested profile and falls back to minimal logs if needed.
 // If both renders fail, return an error so reconciliation fails fast instead of writing an empty config.
-func selectOTelConfig(profile otelProfile, emitSourceFields bool) (string, error) {
-	cfg, err := renderOTelConfigFn(profile, emitSourceFields)
+func selectOTelConfig(profile otelProfile, isControlPlane bool) (string, error) {
+	cfg, err := renderOTelConfigFn(profile, isControlPlane)
 	if err != nil {
-		cfg, minimalErr := renderOTelConfigFn(otelProfileMinimalLogs, emitSourceFields)
+		cfg, minimalErr := renderOTelConfigFn(otelProfileMinimalLogs, isControlPlane)
 		if minimalErr != nil {
 			return "", fmt.Errorf("failed to render otel config for profile %q (%v) and fallback profile %q (%v)", profile, err, otelProfileMinimalLogs, minimalErr)
 		}
@@ -199,12 +361,10 @@ func telemetryGatewayTarget(cluster *arov1alpha1.Cluster) (telemetryGatewayTarge
 	}
 
 	if cluster.Spec.GatewayTelemetryDomain == "" {
-		return telemetryGatewayTargetSpec{
-			endpoint: net.JoinHostPort(gatewayPrivateEndpointIP.String(), "4317"),
-		}, true, nil
+		return telemetryGatewayTargetSpec{}, false, fmt.Errorf("invalid cluster spec field %q: empty", "gatewayTelemetryDomain")
 	}
 
-	gatewayHostname := cluster.Spec.GatewayTelemetryDomain
+	gatewayHostname := strings.ToLower(cluster.Spec.GatewayTelemetryDomain)
 	return telemetryGatewayTargetSpec{
 		endpoint: net.JoinHostPort(gatewayHostname, "4317"),
 		hostAliases: []corev1.HostAlias{
@@ -219,11 +379,23 @@ func telemetryGatewayTarget(cluster *arov1alpha1.Cluster) (telemetryGatewayTarge
 func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoint string, hostAliases []corev1.HostAlias, masterConfigHash, workerConfigHash string) ([]*appsv1.DaemonSet, error) {
 	otelPullspec := cluster.Spec.OperatorFlags.GetWithDefault(controllerOTelPullSpec, "")
 	if otelPullspec == "" {
-		otelPullspec = version.OTelImage(cluster.Spec.ACRDomain)
+		otelPullspec = version.TelemetryExporterImage(cluster.Spec.ACRDomain)
 	}
-	environment := cluster.Spec.OperatorFlags.GetWithDefault("aro.environment", "")
+
+	// When enabled (opt-in), make the healthcheck extension report status from
+	// collector component events so a failed export pipeline — not just a dead
+	// process — fails the /healthz liveness probe and the pod is restarted.
+	// Requires a collector image that supports the gate; an image that rejects
+	// the unknown gate fails to start (a crash loop caught by the
+	// OTelExporterRestartLooping alert), so this defaults off and rolls out
+	// per-fleet after validation.
+	componentHealth := cluster.Spec.OperatorFlags.GetSimpleBoolean(pkgoperator.GenevaLoggingOTelComponentHealth)
 
 	newDaemonSet := func(name string, cpuLimit string, nodeSelectorTerms []corev1.NodeSelectorTerm, configKey, configHash string) *appsv1.DaemonSet {
+		args := []string{"--config", "/etc/otel/" + configKey}
+		if componentHealth {
+			args = append(args, "--feature-gates=+extension.healthcheck.useComponentStatus")
+		}
 		return &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -241,7 +413,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 					Spec: corev1.PodSpec{
 						PriorityClassName:            "system-cluster-critical",
 						ServiceAccountName:           "geneva",
-						AutomountServiceAccountToken: pointerutils.ToPtr(false),
+						AutomountServiceAccountToken: new(false),
 						HostAliases:                  hostAliases,
 						Affinity: &corev1.Affinity{
 							NodeAffinity: &corev1.NodeAffinity{
@@ -274,7 +446,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
 										Path: "/var/lib/otelcol/file_storage",
-										Type: pointerutils.ToPtr(corev1.HostPathDirectoryOrCreate),
+										Type: new(corev1.HostPathDirectoryOrCreate),
 									},
 								},
 							},
@@ -283,7 +455,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
 										Path: "/etc/machine-id",
-										Type: pointerutils.ToPtr(corev1.HostPathFile),
+										Type: new(corev1.HostPathFile),
 									},
 								},
 							},
@@ -300,17 +472,13 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 						},
 						Containers: []corev1.Container{
 							{
-								Name:  "otel-collector",
+								Name:  "otel-exporter",
 								Image: otelPullspec,
-								Args:  []string{"--config", "/etc/otel/" + configKey},
+								Args:  args,
 								Env: []corev1.EnvVar{
 									{
 										Name:  "GENEVA_GATEWAY_ENDPOINT",
 										Value: gatewayEndpoint,
-									},
-									{
-										Name:  "ENVIRONMENT",
-										Value: environment,
 									},
 									{
 										Name: "MONITORING_ROLE_INSTANCE",
@@ -326,6 +494,10 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 									{
 										Name:          "health",
 										ContainerPort: 13133,
+									},
+									{
+										Name:          "metrics",
+										ContainerPort: otelMetricsPort,
 									},
 								},
 								LivenessProbe: &corev1.Probe{
@@ -361,8 +533,8 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									RunAsUser:                pointerutils.ToPtr(int64(0)),
-									AllowPrivilegeEscalation: pointerutils.ToPtr(false),
+									RunAsUser:                new(int64(0)),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities: &corev1.Capabilities{
 										Drop: []corev1.Capability{"ALL"},
 									},
@@ -433,7 +605,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 	}
 
 	return []*appsv1.DaemonSet{
-		newDaemonSet("otel-collector-master", "300m", []corev1.NodeSelectorTerm{isMasterTerm, isControlPlaneTerm}, otelMasterConfigKey, masterConfigHash),
-		newDaemonSet("otel-collector-worker", "200m", []corev1.NodeSelectorTerm{notMasterOrControlPlaneTerm}, otelWorkerConfigKey, workerConfigHash),
+		newDaemonSet(MasterDaemonsetName, "2", []corev1.NodeSelectorTerm{isMasterTerm, isControlPlaneTerm}, otelMasterConfigKey, masterConfigHash),
+		newDaemonSet(WorkerDaemonsetName, "200m", []corev1.NodeSelectorTerm{notMasterOrControlPlaneTerm}, otelWorkerConfigKey, workerConfigHash),
 	}, nil
 }

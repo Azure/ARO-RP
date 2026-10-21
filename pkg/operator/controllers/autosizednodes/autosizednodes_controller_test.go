@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/sirupsen/logrus"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,15 +17,15 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestAutosizednodesReconciler(t *testing.T) {
@@ -55,36 +54,36 @@ func TestAutosizednodesReconciler(t *testing.T) {
 	}{
 		{
 			name:       "is not needed",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(false)).Build(),
+			client:     testclienthelper.NewAROFakeClientBuilder(aro(false)).Build(),
 			wantConfig: &emptyConfig,
 			wantErrMsg: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
 		},
 		{
 			name:       "is needed and not present already",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true)).Build(),
+			client:     testclienthelper.NewAROFakeClientBuilder(aro(true)).Build(),
 			wantConfig: &config,
 		},
 		{
 			name:       "is needed and present already",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true), &config).Build(),
+			client:     testclienthelper.NewAROFakeClientBuilder(aro(true), &config).Build(),
 			wantConfig: &config,
 		},
 		{
 			name:       "is not needed and is present",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(false), &config).Build(),
+			client:     testclienthelper.NewAROFakeClientBuilder(aro(false), &config).Build(),
 			wantConfig: &emptyConfig,
 			wantErrMsg: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
 		},
 		{
 			name: "is needed and config got modified",
-			client: fake.NewClientBuilder().WithRuntimeObjects(
+			client: testclienthelper.NewAROFakeClientBuilder(
 				aro(true),
 				&mcv1.KubeletConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: configName,
 					},
 					Spec: mcv1.KubeletConfigSpec{
-						AutoSizingReserved: pointerutils.ToPtr(false),
+						AutoSizingReserved: new(false),
 						MachineConfigPoolSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
@@ -101,10 +100,12 @@ func TestAutosizednodesReconciler(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 			r := Reconciler{
 				client: test.client,
-				log:    logrus.NewEntry(logrus.StandardLogger()),
+				log:    log,
 			}
 			result, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "openshift-azure-operator", Name: "aro"}})
 			if err != nil {

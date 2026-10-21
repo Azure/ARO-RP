@@ -26,7 +26,7 @@ type PlatformWorkloadIdentityRoleSet struct {
 	Type string `json:"type,omitempty" mutable:"case"`
 
 	// The properties for the PlatformWorkloadIdentityRoleSet resource.
-	Properties PlatformWorkloadIdentityRoleSetProperties `json:"properties,omitempty"`
+	Properties PlatformWorkloadIdentityRoleSetProperties `json:"properties"`
 }
 
 // PlatformWorkloadIdentityRoleSetProperties represents the properties of a PlatformWorkloadIdentityRoleSet resource.

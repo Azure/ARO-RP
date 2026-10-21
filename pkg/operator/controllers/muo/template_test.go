@@ -18,13 +18,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 //go:embed test_files/local.yaml
@@ -32,7 +32,6 @@ var expectedLocalConfig []byte
 
 func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	setPullSpec := "MyMUOPullSpec"
 	cluster := &arov1alpha1.Cluster{
@@ -41,7 +40,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 		},
 	}
 
-	clientFake := ctrlfake.NewClientBuilder().Build()
+	clientFake := testclienthelper.NewAROFakeClientBuilder().Build()
 	dh := mock_dynamichelper.NewMockInterface(controller)
 
 	// When the DynamicHelper is called, count the number of objects it creates
@@ -100,7 +99,6 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 
 func TestDeployConfig(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	cluster := &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -120,7 +118,7 @@ func TestDeployConfig(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		clientFake := ctrlfake.NewClientBuilder().Build()
+		clientFake := testclienthelper.NewAROFakeClientBuilder().Build()
 		dh := mock_dynamichelper.NewMockInterface(controller)
 
 		// When the DynamicHelper is called, capture configmaps to inspect them
@@ -146,10 +144,10 @@ func TestDeployConfig(t *testing.T) {
 			if cms.Name == "managed-upgrade-operator-config" && cms.Namespace == "openshift-managed-upgrade-operator" {
 				foundConfig = true
 
-				expectedMap := make(map[string]interface{})
+				expectedMap := make(map[string]any)
 				yaml.Unmarshal(tt.expected, &expectedMap)
 
-				resultMap := make(map[string]interface{})
+				resultMap := make(map[string]any)
 				yaml.Unmarshal([]byte(cms.Data["config.yaml"]), &resultMap)
 
 				err := deep.Equal(expectedMap, resultMap)

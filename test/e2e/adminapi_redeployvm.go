@@ -33,9 +33,9 @@ var _ = Describe("[Admin API] VM redeploy action", Label(regressiontest), func()
 
 	It("must trigger a selected VM to redeploy", func(ctx context.Context) {
 		By("getting the resource group where the VM instances live in")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
-		clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
+		clusterResourceGroup := stringutils.LastTokenByte(*oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
 		By("picking the first VM to redeploy")
 		vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)
@@ -131,15 +131,15 @@ func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error
 		return time.Time{}, err
 	}
 	defer stream.Close()
-	message := ""
+	var message strings.Builder
 	reader := bufio.NewScanner(stream)
 	for reader.Scan() {
 		select {
 		case <-ctx.Done():
 		default:
 			line := reader.Text()
-			message += line
+			message.WriteString(line)
 		}
 	}
-	return time.Parse(uptimeStrFmt, strings.TrimSpace(message))
+	return time.Parse(uptimeStrFmt, strings.TrimSpace(message.String()))
 }

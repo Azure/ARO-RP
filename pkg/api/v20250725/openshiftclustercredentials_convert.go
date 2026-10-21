@@ -5,6 +5,7 @@ package v20250725
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
 type openShiftClusterCredentialsConverter struct{}
@@ -14,10 +15,14 @@ type openShiftClusterCredentialsConverter struct{}
 // fields that appear in the external representation.  ToExternal does not
 // modify its argument; there is no pointer aliasing between the passed and
 // returned objects.
-func (openShiftClusterCredentialsConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
+func (openShiftClusterCredentialsConverter) ToExternal(oc *api.OpenShiftCluster) any {
 	out := &OpenShiftClusterCredentials{
-		KubeadminUsername: "kubeadmin",
-		KubeadminPassword: string(oc.Properties.KubeadminPassword),
+		OpenShiftClusterCredentials: generated.OpenShiftClusterCredentials{
+			KubeadminUsername: new("kubeadmin"),
+		},
+	}
+	if oc.Properties.KubeadminPassword != "" {
+		out.KubeadminPassword = new(string(oc.Properties.KubeadminPassword))
 	}
 
 	return out

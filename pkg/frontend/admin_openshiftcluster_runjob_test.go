@@ -31,22 +31,23 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestAdminPostRunJob(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	method := http.MethodPost
 
-	minimalJobBody := map[string]interface{}{
+	minimalJobBody := map[string]any{
 		"kind":       "Job",
 		"apiVersion": "batch/v1",
-		"metadata":   map[string]interface{}{"name": "test-job"},
-		"spec": map[string]interface{}{
-			"template": map[string]interface{}{
-				"spec": map[string]interface{}{
+		"metadata":   map[string]any{"name": "test-job"},
+		"spec": map[string]any{
+			"template": map[string]any{
+				"spec": map[string]any{
 					"restartPolicy": "Never",
-					"containers": []interface{}{
-						map[string]interface{}{
+					"containers": []any{
+						map[string]any{
 							"name":  "worker",
 							"image": "busybox",
 						},
@@ -55,11 +56,11 @@ func TestAdminPostRunJob(t *testing.T) {
 			},
 		},
 	}
-	minimalTemplate := minimalJobBody["spec"].(map[string]interface{})["template"]
+	minimalTemplate := minimalJobBody["spec"].(map[string]any)["template"]
 
 	type test struct {
 		name                    string
-		body                    interface{}
+		body                    any
 		noClusterDoc            bool
 		kubeActionsFactory      func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
 		mocks                   func(*test, *mock_adminactions.MockKubeActions)
@@ -79,11 +80,11 @@ func TestAdminPostRunJob(t *testing.T) {
 					DoAndReturn(func(_ context.Context, _ *unstructured.Unstructured, _ string) (watch.Interface, error) {
 						go func() {
 							fakeWatcher.Add(&unstructured.Unstructured{
-								Object: map[string]interface{}{
+								Object: map[string]any{
 									"kind":       "Pod",
 									"apiVersion": "v1",
-									"metadata":   map[string]interface{}{"name": "test-pod"},
-									"status":     map[string]interface{}{"phase": "Running"},
+									"metadata":   map[string]any{"name": "test-pod"},
+									"status":     map[string]any{"phase": "Running"},
 								},
 							})
 						}()
@@ -124,11 +125,11 @@ func TestAdminPostRunJob(t *testing.T) {
 					DoAndReturn(func(_ context.Context, _ *unstructured.Unstructured, _ string) (watch.Interface, error) {
 						go func() {
 							fakeWatcher.Add(&unstructured.Unstructured{
-								Object: map[string]interface{}{
+								Object: map[string]any{
 									"kind":       "Pod",
 									"apiVersion": "v1",
-									"metadata":   map[string]interface{}{"name": "test-pod"},
-									"status":     map[string]interface{}{"phase": "Failed"},
+									"metadata":   map[string]any{"name": "test-pod"},
+									"status":     map[string]any{"phase": "Failed"},
 								},
 							})
 						}()
@@ -159,11 +160,11 @@ func TestAdminPostRunJob(t *testing.T) {
 					DoAndReturn(func(_ context.Context, _ *unstructured.Unstructured, _ string) (watch.Interface, error) {
 						go func() {
 							fakeWatcher.Add(&unstructured.Unstructured{
-								Object: map[string]interface{}{
+								Object: map[string]any{
 									"kind":       "Pod",
 									"apiVersion": "v1",
-									"metadata":   map[string]interface{}{"name": "test-pod"},
-									"status":     map[string]interface{}{"phase": "Succeeded"},
+									"metadata":   map[string]any{"name": "test-pod"},
+									"status":     map[string]any{"phase": "Succeeded"},
 								},
 							})
 						}()
@@ -230,16 +231,16 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name:                    "wrong kind returns 400",
-			body:                    map[string]interface{}{"kind": "Pod"},
+			body:                    map[string]any{"kind": "Pod"},
 			wantStatusCode:          http.StatusBadRequest,
 			wantResponseContentType: "application/json",
 			wantError:               "400: InvalidParameter: : Expected kind 'Job', got 'Pod'.",
 		},
 		{
 			name: "missing name returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":     "Job",
-				"metadata": map[string]interface{}{"name": ""},
+				"metadata": map[string]any{"name": ""},
 			},
 			wantStatusCode:          http.StatusBadRequest,
 			wantResponseContentType: "application/json",
@@ -247,9 +248,9 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "invalid name returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":     "Job",
-				"metadata": map[string]interface{}{"name": "invalid name!"},
+				"metadata": map[string]any{"name": "invalid name!"},
 			},
 			wantStatusCode:          http.StatusBadRequest,
 			wantResponseContentType: "application/json",
@@ -257,9 +258,9 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "customer namespace returns 403",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":     "Job",
-				"metadata": map[string]interface{}{"name": "test-job", "namespace": "customer-app"},
+				"metadata": map[string]any{"name": "test-job", "namespace": "customer-app"},
 			},
 			wantStatusCode:          http.StatusForbidden,
 			wantResponseContentType: "application/json",
@@ -267,9 +268,9 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "invalid namespace returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":     "Job",
-				"metadata": map[string]interface{}{"name": "test-job", "namespace": "bad namespace!"},
+				"metadata": map[string]any{"name": "test-job", "namespace": "bad namespace!"},
 			},
 			wantStatusCode:          http.StatusBadRequest,
 			wantResponseContentType: "application/json",
@@ -277,11 +278,11 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "parallelism > 1 returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
 					"parallelism": 2,
 					"template":    minimalTemplate,
 				},
@@ -292,11 +293,11 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "completions > 1 returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
 					"completions": 3,
 					"template":    minimalTemplate,
 				},
@@ -307,11 +308,11 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "backoffLimit != 0 returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
 					"backoffLimit": 3,
 					"template":     minimalTemplate,
 				},
@@ -322,16 +323,16 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "empty restartPolicy returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
+					"template": map[string]any{
+						"spec": map[string]any{
 							"restartPolicy": "",
-							"containers": []interface{}{
-								map[string]interface{}{"name": "worker", "image": "busybox"},
+							"containers": []any{
+								map[string]any{"name": "worker", "image": "busybox"},
 							},
 						},
 					},
@@ -343,15 +344,15 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "zero containers returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
+					"template": map[string]any{
+						"spec": map[string]any{
 							"restartPolicy": "Never",
-							"containers":    []interface{}{},
+							"containers":    []any{},
 						},
 					},
 				},
@@ -362,17 +363,17 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "multiple containers returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
+					"template": map[string]any{
+						"spec": map[string]any{
 							"restartPolicy": "Never",
-							"containers": []interface{}{
-								map[string]interface{}{"name": "c1", "image": "busybox"},
-								map[string]interface{}{"name": "c2", "image": "busybox"},
+							"containers": []any{
+								map[string]any{"name": "c1", "image": "busybox"},
+								map[string]any{"name": "c2", "image": "busybox"},
 							},
 						},
 					},
@@ -384,16 +385,16 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "empty container name returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
+					"template": map[string]any{
+						"spec": map[string]any{
 							"restartPolicy": "Never",
-							"containers": []interface{}{
-								map[string]interface{}{"name": "", "image": "busybox"},
+							"containers": []any{
+								map[string]any{"name": "", "image": "busybox"},
 							},
 						},
 					},
@@ -405,16 +406,16 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "invalid container name returns 400",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": "test-job"},
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"spec": map[string]interface{}{
+				"metadata":   map[string]any{"name": "test-job"},
+				"spec": map[string]any{
+					"template": map[string]any{
+						"spec": map[string]any{
 							"restartPolicy": "Never",
-							"containers": []interface{}{
-								map[string]interface{}{"name": "bad name!", "image": "busybox"},
+							"containers": []any{
+								map[string]any{"name": "bad name!", "image": "busybox"},
 							},
 						},
 					},
@@ -426,10 +427,10 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "name longer than 57 chars is truncated to produce a 63-char final name",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": strings.Repeat("a", 70)},
+				"metadata":   map[string]any{"name": strings.Repeat("a", 70)},
 				"spec":       minimalJobBody["spec"],
 			},
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
@@ -453,10 +454,10 @@ func TestAdminPostRunJob(t *testing.T) {
 		},
 		{
 			name: "all-dash name longer than 57 chars reduces to empty after truncation",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"kind":       "Job",
 				"apiVersion": "batch/v1",
-				"metadata":   map[string]interface{}{"name": strings.Repeat("-", 70)},
+				"metadata":   map[string]any{"name": strings.Repeat("-", 70)},
 				"spec":       minimalJobBody["spec"],
 			},
 			wantStatusCode:          http.StatusBadRequest,
@@ -581,6 +582,7 @@ func TestWaitForJobPod_ErrorBranches(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			fw := watch.NewFake()
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -593,7 +595,7 @@ func TestWaitForJobPod_ErrorBranches(t *testing.T) {
 				cancel()
 			}
 
-			podName, err := waitForJobPod(ctx, logrus.NewEntry(logrus.New()), fw)
+			podName, err := waitForJobPod(ctx, log, fw)
 			if tt.wantErrContains != "" {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -615,11 +617,13 @@ func TestWaitForJobPod_ErrorBranches(t *testing.T) {
 
 // TestWaitForJobPod_ClosedChannelWithCancelledContext verifies ctx.Err() is preferred over generic error.
 func TestWaitForJobPod_ClosedChannelWithCancelledContext(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	fw := watch.NewFake()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()  // cancel first so ctx.Err() is non-nil
 	fw.Stop() // close the channel; the !ok branch should inspect ctx.Err()
-	_, err := waitForJobPod(ctx, logrus.NewEntry(logrus.New()), fw)
+	_, err := waitForJobPod(ctx, log, fw)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -630,8 +634,9 @@ func TestWaitForJobPod_ClosedChannelWithCancelledContext(t *testing.T) {
 
 // TestWaitForJobTerminal_MaxErrors verifies exit after maxConsecutiveErrors consecutive failures.
 func TestWaitForJobTerminal_MaxErrors(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	// KubeGet always returns an error → hits maxConsecutiveErrors (10) and exits.
@@ -639,7 +644,7 @@ func TestWaitForJobTerminal_MaxErrors(t *testing.T) {
 		Return(nil, errors.New("apiserver down")).
 		Times(10)
 
-	result := waitForJobTerminal(context.Background(), logrus.NewEntry(logrus.New()), k, "test-ns", "test-job", 0)
+	result := waitForJobTerminal(context.Background(), log, k, "test-ns", "test-job", 0)
 	if !strings.Contains(result, "fetching job status") {
 		t.Errorf("unexpected result %q; want it to contain 'fetching job status'", result)
 	}
@@ -686,7 +691,6 @@ func TestJobResult(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 
 			k.EXPECT().KubeGet(gomock.Any(), kubeJobResource, "ns", "job").
@@ -714,8 +718,9 @@ func TestJobResult(t *testing.T) {
 
 // TestRunJobStream_LogStreamingError verifies log failure writes error then continues.
 func TestRunJobStream_LogStreamingError(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	fw := watch.NewFake()
@@ -724,9 +729,9 @@ func TestRunJobStream_LogStreamingError(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Succeeded"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Succeeded"},
 			},
 		})
 	}()
@@ -756,7 +761,7 @@ func TestRunJobStream_LogStreamingError(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(context.Background(), logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(context.Background(), log, k, job, wc, 0)
 
 	got := buf.String()
 	if !strings.Contains(got, "Log streaming error:") {
@@ -769,8 +774,9 @@ func TestRunJobStream_LogStreamingError(t *testing.T) {
 
 // TestRunJobStream_CleanupFailure verifies KubeDelete failure writes "Cleanup failed:".
 func TestRunJobStream_CleanupFailure(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	fw := watch.NewFake()
@@ -780,9 +786,9 @@ func TestRunJobStream_CleanupFailure(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Succeeded"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Succeeded"},
 			},
 		})
 	}()
@@ -814,7 +820,7 @@ func TestRunJobStream_CleanupFailure(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(context.Background(), logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(context.Background(), log, k, job, wc, 0)
 
 	if !wc.closed {
 		t.Error("expected Close to be called on the WriteCloser")
@@ -827,8 +833,9 @@ func TestRunJobStream_CleanupFailure(t *testing.T) {
 
 // TestRunJobStream_CleanupNotFound verifies 404 during cleanup is treated as success.
 func TestRunJobStream_CleanupNotFound(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	fw := watch.NewFake()
@@ -837,9 +844,9 @@ func TestRunJobStream_CleanupNotFound(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Succeeded"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Succeeded"},
 			},
 		})
 	}()
@@ -871,7 +878,7 @@ func TestRunJobStream_CleanupNotFound(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(context.Background(), logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(context.Background(), log, k, job, wc, 0)
 
 	if !wc.closed {
 		t.Error("expected Close to be called on the WriteCloser")
@@ -887,8 +894,9 @@ func TestRunJobStream_CleanupNotFound(t *testing.T) {
 
 // TestRunJobStream_ContextCancellation verifies cancel skips terminal status writes.
 func TestRunJobStream_ContextCancellation(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -900,9 +908,9 @@ func TestRunJobStream_ContextCancellation(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Succeeded"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Succeeded"},
 			},
 		})
 	}()
@@ -936,7 +944,7 @@ func TestRunJobStream_ContextCancellation(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(ctx, logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(ctx, log, k, job, wc, 0)
 
 	if !wc.closed {
 		t.Error("expected Close to be called on the WriteCloser")
@@ -949,8 +957,9 @@ func TestRunJobStream_ContextCancellation(t *testing.T) {
 
 // TestRunJobStream_PollExhausted verifies exit after maxConsecutiveErrors writes "Job polling exhausted".
 func TestRunJobStream_PollExhausted(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	fw := watch.NewFake()
@@ -959,9 +968,9 @@ func TestRunJobStream_PollExhausted(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Succeeded"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Succeeded"},
 			},
 		})
 	}()
@@ -986,7 +995,7 @@ func TestRunJobStream_PollExhausted(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(context.Background(), logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(context.Background(), log, k, job, wc, 0)
 
 	if !strings.Contains(buf.String(), "Job polling exhausted") {
 		t.Errorf("output %q does not contain 'Job polling exhausted'", buf.String())
@@ -995,8 +1004,9 @@ func TestRunJobStream_PollExhausted(t *testing.T) {
 
 // TestRunJobStream_WaitForPodErrorWithCleanupFailure verifies pod error is streamed, cleanup error is logged.
 func TestRunJobStream_WaitForPodErrorWithCleanupFailure(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	fw := watch.NewFake()
@@ -1021,7 +1031,7 @@ func TestRunJobStream_WaitForPodErrorWithCleanupFailure(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(context.Background(), logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(context.Background(), log, k, job, wc, 0)
 
 	got := buf.String()
 	if !strings.Contains(got, "Error waiting for pod:") {
@@ -1034,8 +1044,9 @@ func TestRunJobStream_WaitForPodErrorWithCleanupFailure(t *testing.T) {
 
 // TestRunJobStream_ContextCancellationWithCleanupFailure verifies cancel skips all pipe writes.
 func TestRunJobStream_ContextCancellationWithCleanupFailure(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1047,9 +1058,9 @@ func TestRunJobStream_ContextCancellationWithCleanupFailure(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Succeeded"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Succeeded"},
 			},
 		})
 	}()
@@ -1076,7 +1087,7 @@ func TestRunJobStream_ContextCancellationWithCleanupFailure(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(ctx, logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(ctx, log, k, job, wc, 0)
 	if !wc.closed {
 		t.Error("expected WriteCloser to be closed")
 	}
@@ -1089,8 +1100,9 @@ func TestRunJobStream_ContextCancellationWithCleanupFailure(t *testing.T) {
 
 // TestRunJobStream_LogErrorWithCancelledContext verifies log errors are suppressed when cancelled.
 func TestRunJobStream_LogErrorWithCancelledContext(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1102,9 +1114,9 @@ func TestRunJobStream_LogErrorWithCancelledContext(t *testing.T) {
 
 	go func() {
 		fw.Add(&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Running"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Running"},
 			},
 		})
 	}()
@@ -1130,7 +1142,7 @@ func TestRunJobStream_LogErrorWithCancelledContext(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(ctx, logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(ctx, log, k, job, wc, 0)
 
 	got := buf.String()
 	if strings.Contains(got, "Log streaming error:") {
@@ -1150,8 +1162,9 @@ func (w *bufferedTestWatcher) ResultChan() <-chan watch.Event { return w.ch }
 
 // TestRunJobStream_ContextCancelledBetweenPodAndLogs verifies log streaming is skipped on cancel.
 func TestRunJobStream_ContextCancelledBetweenPodAndLogs(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1174,9 +1187,9 @@ func TestRunJobStream_ContextCancelledBetweenPodAndLogs(t *testing.T) {
 	wCh <- watch.Event{
 		Type: watch.Added,
 		Object: &unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{"name": "test-pod"},
-				"status":   map[string]interface{}{"phase": "Running"},
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test-pod"},
+				"status":   map[string]any{"phase": "Running"},
 			},
 		},
 	}
@@ -1193,7 +1206,7 @@ func TestRunJobStream_ContextCancelledBetweenPodAndLogs(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(ctx, logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(ctx, log, k, job, wc, 0)
 
 	if !wc.closed {
 		t.Error("expected Close to be called on the WriteCloser")
@@ -1210,7 +1223,6 @@ func TestRunJobStream_ContextCancelledBetweenPodAndLogs(t *testing.T) {
 // TestCleanupJob_TransientRetry verifies retry on transient errors then success.
 func TestCleanupJob_TransientRetry(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	// Zero the backoff duration so the retry fires immediately in the unit test.
@@ -1260,20 +1272,20 @@ func TestAdminPostRunJob_DBGroupError(t *testing.T) {
 	resp, b, err := ti.request(http.MethodPost,
 		fmt.Sprintf("https://server/admin%s/runjob", resourceID),
 		http.Header{"Content-Type": []string{"application/json"}},
-		map[string]interface{}{
+		map[string]any{
 			"apiVersion": "batch/v1",
 			"kind":       "Job",
-			"metadata":   map[string]interface{}{"name": "test-job", "namespace": "openshift-azure-operator"},
-			"spec": map[string]interface{}{
+			"metadata":   map[string]any{"name": "test-job", "namespace": "openshift-azure-operator"},
+			"spec": map[string]any{
 				"backoffLimit": 0,
-				"template": map[string]interface{}{
-					"spec": map[string]interface{}{
+				"template": map[string]any{
+					"spec": map[string]any{
 						"restartPolicy": "Never",
-						"containers": []interface{}{
-							map[string]interface{}{
+						"containers": []any{
+							map[string]any{
 								"name":    "worker",
 								"image":   "busybox",
-								"command": []interface{}{"sh", "-c", "echo hi"},
+								"command": []any{"sh", "-c", "echo hi"},
 							},
 						},
 					},

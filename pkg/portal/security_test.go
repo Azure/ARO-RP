@@ -18,7 +18,6 @@ import (
 
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -41,7 +40,7 @@ var (
 
 func TestSecurity(t *testing.T) {
 	ctx := context.Background()
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	_, portalAccessLog := testlog.New()
 	_, portalLog := testlog.New()
@@ -49,7 +48,6 @@ func TestSecurity(t *testing.T) {
 	otelAudit := testlog.NewOtelAuditClient()
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	_env := mock_env.NewMockCore(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
@@ -344,6 +342,14 @@ func TestSecurity(t *testing.T) {
 					tt.checkResponse(t, tt2.authenticated, tt2.elevated, resp)
 				}
 
+				// Every matched portal response must carry the hardening
+				// headers set by the SecurityHeaders middleware.  Unmatched
+				// routes (e.g. /doesnotexist) are served by mux's 404 handler,
+				// which the middleware chain does not run, so skip those.
+				if tt.name != "/doesnotexist" {
+					assertSecurityHeaders(t, resp)
+				}
+
 				// no audit logs for https://server/doesnotexist
 				if tt.authenticatedWantStatusCode == http.StatusNotFound {
 					return
@@ -406,6 +412,33 @@ func TestSecurity(t *testing.T) {
 	}
 }
 
+func assertSecurityHeaders(t *testing.T, resp *http.Response) {
+	t.Helper()
+
+	csp := resp.Header.Get("Content-Security-Policy")
+	// script-src must be strict (no 'unsafe-inline') so that cluster-authored
+	// inline <script> and event-handler attributes cannot execute on the portal
+	// origin.
+	if !strings.Contains(csp, "script-src 'self' 'nonce-") {
+		t.Errorf("Content-Security-Policy missing strict nonce-based script-src: %q", csp)
+	}
+	if strings.Contains(csp, "script-src") && strings.Contains(csp, "'unsafe-inline'") &&
+		!strings.Contains(csp, "style-src 'self' 'unsafe-inline'") {
+		t.Errorf("Content-Security-Policy unexpectedly allows unsafe-inline for script: %q", csp)
+	}
+	if !strings.Contains(csp, "frame-ancestors 'none'") {
+		t.Errorf("Content-Security-Policy missing frame-ancestors 'none': %q", csp)
+	}
+
+	if got := resp.Header.Get("X-Frame-Options"); got != "DENY" {
+		t.Errorf("X-Frame-Options = %q, want %q", got, "DENY")
+	}
+
+	if got := resp.Header.Get("Referrer-Policy"); got != "no-referrer" {
+		t.Errorf("Referrer-Policy = %q, want %q", got, "no-referrer")
+	}
+}
+
 func addCSRF(req *http.Request) error {
 	if req.Method != http.MethodPost {
 		return nil
@@ -428,7 +461,7 @@ func addCSRF(req *http.Request) error {
 func addAuth(req *http.Request, groups []string) error {
 	store := sessions.NewCookieStore(make([]byte, 32))
 
-	cookie, err := securecookie.EncodeMulti(middleware.SessionName, map[interface{}]interface{}{
+	cookie, err := securecookie.EncodeMulti(middleware.SessionName, map[any]any{
 		middleware.SessionKeyUsername: "username",
 		middleware.SessionKeyGroups:   groups,
 		middleware.SessionKeyExpires:  time.Now().Add(time.Hour).Unix(),

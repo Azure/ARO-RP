@@ -50,6 +50,6 @@ func injectSubscriptions(c *cosmosdb.FakeSubscriptionDocumentClient) {
 	c.SetTriggerHandler("retryLater", fakeBillingRetryLaterTrigger)
 
 	c.SetSorter(func(in []*api.SubscriptionDocument) {
-		slices.SortFunc(in, func(a, b *api.SubscriptionDocument) int { return CompareIDable(a, b) })
+		slices.SortFunc(in, func(a, b *api.SubscriptionDocument) int { return CompareKeyable(a, b) })
 	})
 }

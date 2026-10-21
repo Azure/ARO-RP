@@ -1,0 +1,86 @@
+# Geneva Logging OTEL Developer Guide
+
+This guide captures how OTEL collector behavior is wired in ARO, how gateway targeting is derived, and how to roll out collector changes via operator flags (including MIMO operator-flags updates).
+
+## Ownership and code locations
+
+- Controller: `pkg/operator/controllers/genevalogging/`
+- OTEL template: `pkg/operator/controllers/genevalogging/staticfiles/otel-config.yaml.tmpl`
+- OTEL template renderer: `pkg/operator/controllers/genevalogging/otel_config_template.go`
+- Operator flags: `pkg/operator/flags.go`
+- Gateway fields population: `pkg/operator/deploy/deploy.go`
+
+## Gateway dependency and endpoint resolution
+
+The OTEL daemonsets are created only when `spec.gatewayPrivateEndpointIP` is populated and valid. Until then, the controller still creates OTEL config resources and waits for gateway readiness.
+
+A private endpoint is provisioned for all clusters (not just gateway-enabled ones) and connected to the regional gateway private link service. Once the PE is approved and the gateway database record is created, deploy logic sets:
+
+- `spec.gatewayPrivateEndpointIP`
+- `spec.gatewayTelemetryDomain` (formatted as `telemetry.<location>.<appSuffix>`)
+
+If `gatewayPrivateEndpointIP` is absent for any reason after the OTEL logging stack has rolled out, `spec.gatewayTelemetryDomain` is explicitly cleared to `""` — this allows problem clusters to be identified via a search on that field.
+
+Collector endpoint selection:
+
+If `gatewayTelemetryDomain` exists: use `<gatewayTelemetryDomain>:4317` and add a pod level host alias to `gatewayPrivateEndpointIP`.
+
+The controller always creates the OTEL config ConfigMap first (`config.yaml`, `master-config.yaml`, `worker-config.yaml`) and only creates daemonsets once gateway endpoint data is ready.
+
+## Current OTEL log shape
+
+All log records include `node`, `source_name`, and `EventName` in `LogsAttributes`. Container log records additionally include `namespace`, `pod`, and `container`.
+
+### Journald entries
+
+The OTel journald receiver places all journal fields in the log record body as a map. `transform/log-parity` processes this as follows:
+
+- `Body` is set to the `MESSAGE` string.
+- `LogsAttributes.SYSLOG_IDENTIFIER` is promoted for use by the Kusto ingestion mapping.
+- `LogsAttributes.journald` is a structured map containing the curated journald fields: `PRIORITY`, `MESSAGE`, `SYSLOG_IDENTIFIER`, `UNIT`, structured logging fields (`CODE_FILE`, `CODE_LINE`, `CODE_FUNC`, `TID`), and allowlisted underscore fields (`_PID`, `_SYSTEMD_UNIT`, `_BOOT_ID`). Noisy and low-value fields are pruned.
+- `SeverityText` and `SeverityNumber` are mapped from `PRIORITY` per [OTel log data model Appendix B](https://opentelemetry.io/docs/specs/otel/logs/data-model-appendix/#appendix-b-severitynumber-example-mappings).
+
+### Container and audit entries
+
+- `LogsAttributes.raw_json_body` contains the parsed log body after `transform/log-parity` processing.
+- For audit logs, `requestObject` and `responseObject` are removed before `raw_json_body` is set to prevent oversized payload ingestion from `WriteRequestBodies` / `RequestResponse` audit profiles.
+
+### Memory limiter
+
+The OTEL `memory_limiter` is configured as a percentage of container memory (`limit_percentage: 80`, `spike_limit_percentage: 15`) so it scales automatically if container memory limits are adjusted.
+
+Worker collectors do not include the audit receiver; audit logs are collected on the master/control-plane collector config only.
+
+## OTEL operator flags
+
+| Flag | Meaning | Default |
+| --- | --- | --- |
+| `aro.genevalogging.enabled` | Enables Geneva logging behavior. | `true` |
+| `aro.genevalogging.otel.profile` | Global profile (`max-logs`, `reduced-logs`, `minimal-logs`). | `minimal-logs` | Default is Minimal
+| `aro.genevalogging.otel.master.profile` | Optional master override. | unse which defaults to the global profile |
+| `aro.genevalogging.otel.worker.profile` | Optional worker override. | unset which defaults to the global profile |
+
+## Rollout paths
+
+### Admin Update (single-cluster)
+
+PATCH admin cluster with `operatorFlags` and optional `operatorFlagsMergeStrategy`:
+
+- `merge` (default): overlay provided flags on current cluster flags
+- `reset`: reset to defaults, then overlay provided flags
+
+### MIMO (Single Cluster Update)
+MIMO task ID for operator flags update:
+- `b41749fc-af26-4ab7-b5a1-e03f3ee4cba6` (`OPERATOR_FLAGS_UPDATE_ID`)
+Use this task in manifests/schedules to roll out OTEL flag updates across selected clusters.
+While not necessarily expected, task IDs can change, please see pkg/mimo/const.go for the most current task IDs.
+
+### MIMO (fleet rollout)
+To change the fleet within a region apply the task via the Create or Update Schedule Manifest MIMO Action
+
+
+### Profile Render Failure Fallback
+If the new profile fails to render for any reason the minimal-logs profile will act as the fallback.
+
+
+

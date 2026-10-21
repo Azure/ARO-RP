@@ -6,11 +6,22 @@ import "github.com/Azure/ARO-RP/pkg/api"
 // Licensed under the Apache License 2.0.
 
 const (
-	TLS_CERT_ROTATION_ID     api.MIMOTaskID = "9b741734-6505-447f-8510-85eb0ae561a2"
-	OPERATOR_FLAGS_UPDATE_ID api.MIMOTaskID = "b41749fc-af26-4ab7-b5a1-e03f3ee4cba6"
-	ACR_TOKEN_CHECKER_ID     api.MIMOTaskID = "082978ce-3700-4972-835f-53d48658d291"
-	MDSD_CERT_ROTATION_ID    api.MIMOTaskID = "a4477c3a-ddbb-41a0-88e8-b5cda67b623a"
-	MSI_CERT_RENEWAL_ID      api.MIMOTaskID = "7c3f8e2d-9a4b-4f1e-8c5d-2b6a9e7f3d1c"
-	MIGRATE_LB_ZONES_ID      api.MIMOTaskID = "c28a07c1-462f-42d2-8031-4b0222256596"
-	FIX_SSH_ID               api.MIMOTaskID = "888fc221-b059-49db-bd02-22ad86cccd6b"
+	TLS_CERT_ROTATION_ID            api.MIMOTaskID = "9b741734-6505-447f-8510-85eb0ae561a2"
+	OPERATOR_VERSION_RESET_ID       api.MIMOTaskID = "75ab83d0-9a56-4ae3-843d-0db43679b082"
+	OPERATOR_FLAGS_UPDATE_ID        api.MIMOTaskID = "b41749fc-af26-4ab7-b5a1-e03f3ee4cba6"
+	OPERATOR_UPDATE_ID              api.MIMOTaskID = "258efb3b-a695-4a40-93ed-38fb1a19be6f"
+	OPERATOR_SYNC_CLUSTER_OBJECT_ID api.MIMOTaskID = "f83e56af-25dc-4990-b4f9-3ee25b2f62e0"
+	ACR_TOKEN_ROTATE_ID             api.MIMOTaskID = "dba570db-5257-47c8-bb49-b2b6e8a2e9be"
+	ACR_TOKEN_FORCE_ROTATE_ID       api.MIMOTaskID = "9673ee50-c5a4-4c70-8145-5a65b0b11e90"
+	ACR_TOKEN_CHECKER_ID            api.MIMOTaskID = "082978ce-3700-4972-835f-53d48658d291"
+	MSI_CERT_RENEWAL_ID             api.MIMOTaskID = "7c3f8e2d-9a4b-4f1e-8c5d-2b6a9e7f3d1c"
+	MIGRATE_LB_ZONES_ID             api.MIMOTaskID = "c28a07c1-462f-42d2-8031-4b0222256596"
+	FIX_SSH_ID                      api.MIMOTaskID = "888fc221-b059-49db-bd02-22ad86cccd6b"
+	ENSURE_CSP_RBAC_ID              api.MIMOTaskID = "3d2a7f16-5c48-4b91-9e03-7a1f8cbe4d52"
+
+	// Operator Flag setting tasks
+	OPERATOR_FLAG_SET_GENEVA_OTEL                      api.MIMOTaskID = "eb0360af-4748-42a3-9788-dfffae58dff6"
+	OPERATOR_FLAG_SET_GENEVA_OTEL_PROFILE_MAX_LOGS     api.MIMOTaskID = "fbfa4ce6-117a-4c2e-8317-0834e51d6f6f"
+	OPERATOR_FLAG_SET_GENEVA_OTEL_PROFILE_REDUCED_LOGS api.MIMOTaskID = "62e61118-78ff-4d11-abaa-e171ae1edd39"
+	OPERATOR_FLAG_SET_GENEVA_OTEL_PROFILE_MINIMAL_LOGS api.MIMOTaskID = "59444b6f-c5e1-4d12-84b2-81d8ed5af9c9"
 )

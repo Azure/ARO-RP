@@ -10,9 +10,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/loadbalancer"
 )
@@ -24,7 +25,7 @@ var denyList = []string{
 }
 
 func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID string) error {
-	idParts, err := arm.ParseResourceID(resourceID)
+	idParts, err := armsdk.ParseResourceID(resourceID)
 	if err != nil {
 		return err
 	}
@@ -59,7 +60,9 @@ func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID str
 		return a.deleteLoadBalancingRule(ctx, resourceID, idParts.ResourceGroupName, idParts.Parent.Name)
 	}
 
-	return a.resources.DeleteByIDAndWait(ctx, resourceID, apiVersion)
+	return arm.RetryableDelete(ctx, func() error {
+		return a.resources.DeleteByIDAndWait(ctx, resourceID, apiVersion)
+	}, a.log, "deleting resource "+resourceID)
 }
 
 func (a *azureActions) deleteFrontendIPConfiguration(ctx context.Context, resourceID string, rg string, loadBalancerName string) error {
@@ -73,7 +76,9 @@ func (a *azureActions) deleteFrontendIPConfiguration(ctx context.Context, resour
 		return err
 	}
 
-	return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, loadBalancerName, lb.LoadBalancer, nil)
+	return arm.Retryable(ctx, func() error {
+		return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, loadBalancerName, lb.LoadBalancer, nil)
+	}, a.log, "deleting frontend IP configuration from load balancer "+loadBalancerName)
 }
 
 func (a *azureActions) deleteHealthProbe(ctx context.Context, resourceID string, rg string, loadBalancerName string) error {
@@ -87,7 +92,9 @@ func (a *azureActions) deleteHealthProbe(ctx context.Context, resourceID string,
 		return err
 	}
 
-	return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, loadBalancerName, lb.LoadBalancer, nil)
+	return arm.Retryable(ctx, func() error {
+		return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, loadBalancerName, lb.LoadBalancer, nil)
+	}, a.log, "deleting health probe from load balancer "+loadBalancerName)
 }
 
 func (a *azureActions) deleteLoadBalancingRule(ctx context.Context, resourceID string, rg string, loadBalancerName string) error {
@@ -101,5 +108,7 @@ func (a *azureActions) deleteLoadBalancingRule(ctx context.Context, resourceID s
 		return err
 	}
 
-	return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, loadBalancerName, lb.LoadBalancer, nil)
+	return arm.Retryable(ctx, func() error {
+		return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, loadBalancerName, lb.LoadBalancer, nil)
+	}, a.log, "deleting load balancing rule from load balancer "+loadBalancerName)
 }

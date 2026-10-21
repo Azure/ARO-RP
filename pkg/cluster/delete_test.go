@@ -12,9 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
@@ -26,6 +28,7 @@ import (
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_armmsi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armmsi"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
@@ -33,8 +36,8 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_msidataplane "github.com/Azure/ARO-RP/pkg/util/mocks/msidataplane"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestDeleteNic(t *testing.T) {
@@ -62,7 +65,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "nic is in succeeded provisioning state",
 			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
-				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
+				nic.Properties.ProvisioningState = new(armnetwork.ProvisioningStateSucceeded)
 				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
 				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(nil)
 			},
@@ -70,7 +73,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "nic is in failed provisioning state",
 			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
-				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateFailed)
+				nic.Properties.ProvisioningState = new(armnetwork.ProvisioningStateFailed)
 				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
 				armNetworkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic.Interface, nil).Return(nil)
 				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(nil)
@@ -79,7 +82,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "provisioning state is failed and CreateOrUpdateAndWait returns error",
 			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
-				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateFailed)
+				nic.Properties.ProvisioningState = new(armnetwork.ProvisioningStateFailed)
 				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
 				armNetworkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic.Interface, nil).Return(fmt.Errorf("Failed to update"))
 			},
@@ -97,7 +100,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "DeleteAndWait returns error",
 			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
-				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
+				nic.Properties.ProvisioningState = new(armnetwork.ProvisioningStateSucceeded)
 				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
 				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(fmt.Errorf("Failed to delete"))
 			},
@@ -108,7 +111,6 @@ func TestDeleteNic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
@@ -117,8 +119,9 @@ func TestDeleteNic(t *testing.T) {
 
 			tt.mocks(armNetworkInterfaces)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -177,17 +180,17 @@ func TestShouldDeleteResourceGroup(t *testing.T) {
 		},
 		{
 			name:             "resource group not managed (empty string)",
-			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: pointerutils.ToPtr("")},
+			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: new("")},
 			wantShouldDelete: false,
 		},
 		{
 			name:             "resource group not managed by cluster",
-			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: pointerutils.ToPtr("/somethingelse")},
+			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: new("/somethingelse")},
 			wantShouldDelete: false,
 		},
 		{
 			name:             "resource group managed by cluster",
-			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: pointerutils.ToPtr(clusterResourceId)},
+			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: new(clusterResourceId)},
 			wantShouldDelete: true,
 		},
 	}
@@ -195,13 +198,13 @@ func TestShouldDeleteResourceGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			resourceGroups := mock_features.NewMockResourceGroupsClient(controller)
 			resourceGroups.EXPECT().Get(gomock.Any(), gomock.Eq(managedRGName)).Return(tt.getResourceGroup, tt.getErr)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID: clusterResourceId,
@@ -263,13 +266,13 @@ func TestDeleteResourceGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			resourceGroups := mock_features.NewMockResourceGroupsClient(controller)
 			resourceGroups.EXPECT().DeleteAndWait(gomock.Any(), gomock.Eq(managedRGName)).Return(tt.deleteErr).Times(1)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID: clusterResourceId,
@@ -304,7 +307,7 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_armnetwork.MockSubnetsClient) {
 				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
 					SecurityGroup: armnetwork.SecurityGroup{
-						ID: pointerutils.ToPtr(nsgId),
+						ID: new(nsgId),
 						Properties: &armnetwork.SecurityGroupPropertiesFormat{
 							Subnets: []*armnetwork.Subnet{},
 						},
@@ -320,11 +323,11 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 				invalidSubnetId := "invalid-subnet-id"
 				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
 					SecurityGroup: armnetwork.SecurityGroup{
-						ID: pointerutils.ToPtr(nsgId),
+						ID: new(nsgId),
 						Properties: &armnetwork.SecurityGroupPropertiesFormat{
 							Subnets: []*armnetwork.Subnet{
 								{
-									ID: pointerutils.ToPtr(invalidSubnetId),
+									ID: new(invalidSubnetId),
 								},
 							},
 						},
@@ -343,11 +346,11 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 				subnetId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
 				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
 					SecurityGroup: armnetwork.SecurityGroup{
-						ID: pointerutils.ToPtr(nsgId),
+						ID: new(nsgId),
 						Properties: &armnetwork.SecurityGroupPropertiesFormat{
 							Subnets: []*armnetwork.Subnet{
 								{
-									ID: pointerutils.ToPtr(subnetId),
+									ID: new(subnetId),
 								},
 							},
 						},
@@ -356,16 +359,16 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
 				subnets.EXPECT().Get(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", nil).Return(armnetwork.SubnetsClientGetResponse{
 					Subnet: armnetwork.Subnet{
-						ID: pointerutils.ToPtr(subnetId),
+						ID: new(subnetId),
 						Properties: &armnetwork.SubnetPropertiesFormat{
 							NetworkSecurityGroup: &armnetwork.SecurityGroup{
-								ID: pointerutils.ToPtr(nsgId),
+								ID: new(nsgId),
 							},
 						},
 					},
 				}, nil).Times(1)
 				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", armnetwork.Subnet{
-					ID: pointerutils.ToPtr(subnetId),
+					ID: new(subnetId),
 					Properties: &armnetwork.SubnetPropertiesFormat{
 						NetworkSecurityGroup: nil,
 					},
@@ -377,15 +380,15 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
 			subnets := mock_armnetwork.NewMockSubnetsClient(controller)
 
 			tt.mocks(securityGroups, subnets)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log:               logrus.NewEntry(logrus.StandardLogger()),
+				log:               log,
 				armSecurityGroups: securityGroups,
 				armSubnets:        subnets,
 			}
@@ -397,6 +400,55 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestDisconnectSecurityGroupRetryExhausted verifies that when the azcore subnet call fails, the error is propagated.
+func TestDisconnectSecurityGroupRetryExhausted(t *testing.T) {
+	origBackoff := arm.TransientBackoff
+	arm.TransientBackoff = wait.Backoff{Steps: 1, Duration: time.Millisecond, Factor: 2.0} // Steps: 1 = 1 attempt, 0 retries
+	defer func() { arm.TransientBackoff = origBackoff }()
+
+	subscription := "00000000-0000-0000-0000-000000000000"
+	resourceGroup := "test-rg"
+	nsgID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkSecurityGroups/test-nsg", subscription, resourceGroup)
+	subnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
+
+	controller := gomock.NewController(t)
+
+	securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
+	subnets := mock_armnetwork.NewMockSubnetsClient(controller)
+
+	securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(armnetwork.SecurityGroupsClientGetResponse{
+		SecurityGroup: armnetwork.SecurityGroup{
+			ID: new(nsgID),
+			Properties: &armnetwork.SecurityGroupPropertiesFormat{
+				Subnets: []*armnetwork.Subnet{{ID: new(subnetID)}},
+			},
+		},
+	}, nil)
+	subnets.EXPECT().Get(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", nil).Return(armnetwork.SubnetsClientGetResponse{
+		Subnet: armnetwork.Subnet{
+			ID: new(subnetID),
+			Properties: &armnetwork.SubnetPropertiesFormat{
+				NetworkSecurityGroup: &armnetwork.SecurityGroup{ID: new(nsgID)},
+			},
+		},
+	}, nil)
+	subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", gomock.Any(), nil).Return(
+		autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
+	)
+
+	_, log := testlog.LogForTesting(t)
+	m := manager{
+		log:               log,
+		armSecurityGroups: securityGroups,
+		armSubnets:        subnets,
+	}
+
+	err := m.disconnectSecurityGroup(context.Background(), nsgID)
+	require.Error(t, err)
+	var cloudErr *api.CloudError
+	assert.ErrorAs(t, err, &cloudErr, "expected *api.CloudError wrapping the exhausted retry error")
 }
 
 func TestDeleteClusterMsiCertificate(t *testing.T) {
@@ -484,10 +536,10 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: tt.doc,
 			}
 
@@ -563,8 +615,8 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			Value:      &credentialsObjectString,
 			Attributes: &azsecrets.SecretAttributes{},
 			Tags: map[string]*string{
-				dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
-				dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(2 * time.Hour).Format(time.RFC3339)),
+				dataplane.RenewAfterKeyVaultTag:       new(now().Add(1 * time.Hour).Format(time.RFC3339)),
+				dataplane.CannotRenewAfterKeyVaultTag: new(now().Add(2 * time.Hour).Format(time.RFC3339)),
 			},
 		},
 	}
@@ -588,7 +640,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: new(api.UpgradeableTo("4.15.40")),
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
@@ -610,7 +662,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: nil,
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: new(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -639,7 +691,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: new(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -676,7 +728,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: new(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -703,7 +755,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						{
 							Name: &ccmFedCredName,
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Audiences: []*string{new("openshift")},
 								Issuer:    &oidcIssuer,
 								Subject:   &ccmServiceAccountName,
 							},
@@ -714,7 +766,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						{
 							Name: &ingressFedCredName,
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Audiences: []*string{new("openshift")},
 								Issuer:    &oidcIssuer,
 								Subject:   &ccmServiceAccountName,
 							},
@@ -740,7 +792,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: new(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -763,24 +815,24 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						{
 							Name: &ccmFedCredName,
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Audiences: []*string{new("openshift")},
 								Issuer:    &oidcIssuer,
 								Subject:   &ccmServiceAccountName,
 							},
 						},
 						{
-							Name: pointerutils.ToPtr("fedCredWithWrongAudience"),
+							Name: new("fedCredWithWrongAudience"),
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("something-else")},
+								Audiences: []*string{new("something-else")},
 								Issuer:    &oidcIssuer,
 								Subject:   &ccmServiceAccountName,
 							},
 						},
 						{
-							Name: pointerutils.ToPtr("fedCredWithWrongIssuer"),
+							Name: new("fedCredWithWrongIssuer"),
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("openshift")},
-								Issuer:    pointerutils.ToPtr("someOtherIssuer"),
+								Audiences: []*string{new("openshift")},
+								Issuer:    new("someOtherIssuer"),
 								Subject:   &ccmServiceAccountName,
 							},
 						},
@@ -806,7 +858,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: new(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster",
@@ -838,7 +890,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: new(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -873,7 +925,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: new(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -896,7 +948,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						{
 							Name: &ccmFedCredName,
 							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
-								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Audiences: []*string{new("openshift")},
 								Issuer:    &oidcIssuer,
 								Subject:   &ccmServiceAccountName,
 							},
@@ -922,7 +974,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: new(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -946,7 +998,6 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			federatedIdentityCredentials := mock_armmsi.NewMockFederatedIdentityCredentialsClient(controller)
 			if tt.mocks != nil {
@@ -968,8 +1019,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			}
 			factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log:                                    logrus.NewEntry(logrus.StandardLogger()),
+				log:                                    log,
 				doc:                                    tt.doc,
 				clusterMsiFederatedIdentityCredentials: federatedIdentityCredentials,
 				clusterMsiKeyVaultStore:                mockKvClient,
@@ -979,6 +1031,232 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 
 			err := m.deleteFederatedCredentials(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+// doneFutureAPI is a minimal azure.FutureAPI implementation that reports immediate completion.
+// Used in tests to avoid actual HTTP polling on azure.Future.
+type doneFutureAPI struct{}
+
+func (d *doneFutureAPI) Response() *http.Response               { return nil }
+func (d *doneFutureAPI) Status() string                         { return "Succeeded" }
+func (d *doneFutureAPI) PollingMethod() azure.PollingMethodType { return azure.PollingUnknown }
+func (d *doneFutureAPI) DoneWithContext(context.Context, autorest.Sender) (bool, error) {
+	return true, nil
+}
+func (d *doneFutureAPI) GetPollingDelay() (time.Duration, bool)                      { return 0, false }
+func (d *doneFutureAPI) WaitForCompletionRef(context.Context, autorest.Client) error { return nil }
+func (d *doneFutureAPI) MarshalJSON() ([]byte, error)                                { return []byte(`{}`), nil }
+func (d *doneFutureAPI) UnmarshalJSON([]byte) error                                  { return nil }
+func (d *doneFutureAPI) PollingURL() string                                          { return "" }
+func (d *doneFutureAPI) GetResult(autorest.Sender) (*http.Response, error)           { return nil, nil }
+
+func TestDeleteResourcesRetry(t *testing.T) {
+	subscription := "00000000-0000-0000-0000-000000000000"
+	resourceGroup := "test-rg"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/publicIPAddresses/test-pip", subscription, resourceGroup)
+
+	for _, tt := range []struct {
+		name     string
+		firstErr error
+	}{
+		{
+			name:     "retry on 429 (autorest): succeeds on second attempt",
+			firstErr: autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
+		},
+		{
+			name:     "retry on 409 Please retry later (autorest): succeeds on second attempt",
+			firstErr: autorest.DetailedError{StatusCode: http.StatusConflict, Original: errors.New("ConflictingConcurrentWriteNotAllowed: Please retry later.")},
+		},
+		{
+			name:     "retry on 429 (azcore): succeeds on second attempt",
+			firstErr: &azcore.ResponseError{StatusCode: http.StatusTooManyRequests},
+		},
+		{
+			name: "retry on azcore 409+Retry-After: succeeds on second attempt",
+			firstErr: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"1"}},
+				},
+			},
+		},
+		{
+			name: "retry on autorest 409+Retry-After: succeeds on second attempt",
+			firstErr: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Response: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"1"}},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			origBackoff := arm.TransientBackoff
+			arm.TransientBackoff = wait.Backoff{Steps: 2, Duration: time.Millisecond, Factor: 2.0}
+			defer func() { arm.TransientBackoff = origBackoff }()
+
+			controller := gomock.NewController(t)
+
+			resources := mock_features.NewMockResourcesClient(controller)
+			resources.EXPECT().ListByResourceGroup(gomock.Any(), resourceGroup, "", "", nil).Return(
+				[]mgmtfeatures.GenericResourceExpanded{
+					{
+						ID:   new(resourceID),
+						Type: new("Microsoft.Network/publicIPAddresses"),
+					},
+				}, nil,
+			)
+			first := resources.EXPECT().DeleteByID(gomock.Any(), resourceID, gomock.Any()).Return(
+				mgmtfeatures.ResourcesDeleteByIDFuture{}, tt.firstErr,
+			)
+			resources.EXPECT().DeleteByID(gomock.Any(), resourceID, gomock.Any()).Return(
+				mgmtfeatures.ResourcesDeleteByIDFuture{FutureAPI: &doneFutureAPI{}}, nil,
+			).After(first)
+			resources.EXPECT().Client().Return(autorest.Client{})
+
+			_, log := testlog.LogForTesting(t)
+			m := manager{
+				log: log,
+				doc: &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", subscription, resourceGroup),
+							},
+						},
+					},
+				},
+				resources: resources,
+			}
+
+			assert.NoError(t, m.deleteResources(context.Background()))
+		})
+	}
+}
+
+// TestDeleteResourcesRetryExhausted verifies that retry exhaustion propagates the error.
+// Uses a single representative error (autorest 429); the exhaustion path is the same for all retryable errors.
+func TestDeleteResourcesRetryExhausted(t *testing.T) {
+	origBackoff := arm.TransientBackoff
+	arm.TransientBackoff = wait.Backoff{Steps: 1, Duration: time.Millisecond, Factor: 2.0} // Steps: 1 = 1 attempt, 0 retries
+	defer func() { arm.TransientBackoff = origBackoff }()
+
+	subscription := "00000000-0000-0000-0000-000000000000"
+	resourceGroup := "test-rg"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/publicIPAddresses/test-pip", subscription, resourceGroup)
+
+	controller := gomock.NewController(t)
+
+	resources := mock_features.NewMockResourcesClient(controller)
+	resources.EXPECT().ListByResourceGroup(gomock.Any(), resourceGroup, "", "", nil).Return(
+		[]mgmtfeatures.GenericResourceExpanded{
+			{
+				ID:   new(resourceID),
+				Type: new("Microsoft.Network/publicIPAddresses"),
+			},
+		}, nil,
+	)
+	resources.EXPECT().DeleteByID(gomock.Any(), resourceID, gomock.Any()).Return(
+		mgmtfeatures.ResourcesDeleteByIDFuture{}, autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
+	)
+
+	_, log := testlog.LogForTesting(t)
+	m := manager{
+		log: log,
+		doc: &api.OpenShiftClusterDocument{
+			OpenShiftCluster: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", subscription, resourceGroup),
+					},
+				},
+			},
+		},
+		resources: resources,
+	}
+
+	err := m.deleteResources(context.Background())
+	require.Error(t, err)
+	var cloudErr *api.CloudError
+	assert.NotErrorAs(t, err, &cloudErr, "expected raw error, not *api.CloudError: nil Original passes through deleteByIdCloudError unchanged")
+}
+
+func TestDeleteByIdCloudError(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        error
+		wantErr    string
+		wantStatus int
+	}{
+		{
+			name: "CannotDeleteLoadBalancerWithPrivateLinkService",
+			err: autorest.DetailedError{
+				Original: errors.New(`Code="CannotDeleteLoadBalancerWithPrivateLinkService"`),
+			},
+			wantErr:    `400: CannotDeleteLoadBalancerWithPrivateLinkService: features.ResourcesClient#DeleteByID: Code="CannotDeleteLoadBalancerWithPrivateLinkService"`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "AuthorizationFailed",
+			err: autorest.DetailedError{
+				Original: errors.New(`Code="AuthorizationFailed"`),
+			},
+			wantErr:    `403: Forbidden: features.ResourcesClient#DeleteByID: Code="AuthorizationFailed"`,
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name: "InUseSubnetCannotBeDeleted",
+			err: autorest.DetailedError{
+				Original: errors.New(`Code="InUseSubnetCannotBeDeleted"`),
+			},
+			wantErr:    `400: InUseSubnetCannotBeDeleted: features.ResourcesClient#DeleteByID: Code="InUseSubnetCannotBeDeleted"`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "ScopeLocked",
+			err: autorest.DetailedError{
+				Original: errors.New(`Code="ScopeLocked"`),
+			},
+			wantErr:    `409: ScopeLocked: features.ResourcesClient#DeleteByID: Code="ScopeLocked"`,
+			wantStatus: http.StatusConflict,
+		},
+		{
+			name: "unrecognized autorest error passes through",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Original:   errors.New("something else"),
+			},
+			wantErr: `#: : StatusCode=409 -- Original Error: something else`,
+		},
+		{
+			name:    "non-autorest error passes through",
+			err:     errors.New("generic error"),
+			wantErr: "generic error",
+		},
+		{
+			name:    "autorest DetailedError with nil Original passes through",
+			err:     autorest.DetailedError{StatusCode: http.StatusConflict},
+			wantErr: "#: : StatusCode=409",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := deleteByIdCloudError(tt.err)
+
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+
+			var cloudErr *api.CloudError
+			if tt.wantStatus != 0 {
+				require.ErrorAs(t, err, &cloudErr, "expected *api.CloudError, got %T", err)
+				assert.Equal(t, tt.wantStatus, cloudErr.StatusCode)
+			} else {
+				assert.NotErrorAs(t, err, &cloudErr, "expected non-CloudError, got %T", err)
+			}
 		})
 	}
 }

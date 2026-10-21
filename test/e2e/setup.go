@@ -33,30 +33,29 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	mcoclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	routeclient "github.com/openshift/client-go/route/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	"github.com/Azure/ARO-RP/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
+	utilarmredhatopenshift "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armredhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armresources"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	redhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	utilcluster "github.com/Azure/ARO-RP/pkg/util/cluster"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
@@ -86,24 +85,30 @@ const (
 var staticResources embed.FS
 
 var (
-	disallowedInFilenameRegex = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
-	DefaultEventuallyTimeout  = 5 * time.Minute
+	disallowedInFilenameRegex         = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
+	DefaultEventuallyTimeout          = 5 * time.Minute
+	PropagationDelayEventuallyTimeout = 25 * time.Second
 )
 
 type clientSet struct {
-	Operations        redhatopenshift20250725.OperationsClient
-	OpenshiftClusters redhatopenshift20250725.OpenShiftClustersClient
+	Operations                       utilarmredhatopenshift.OperationsClient
+	OpenshiftClusters                utilarmredhatopenshift.OpenShiftClustersClient
+	PlatformWorkloadIdentityRoleSets armredhatopenshift.PlatformWorkloadIdentityRoleSetsClient
 
-	VirtualMachines       compute.VirtualMachinesClient
-	Resources             features.ResourcesClient
-	DiskEncryptionSets    compute.DiskEncryptionSetsClient
-	Disks                 compute.DisksClient
-	Interfaces            armnetwork.InterfacesClient
-	LoadBalancers         armnetwork.LoadBalancersClient
-	NetworkSecurityGroups armnetwork.SecurityGroupsClient
-	Subnet                armnetwork.SubnetsClient
-	VirtualNetworks       armnetwork.VirtualNetworksClient
-	Storage               storage.AccountsClient
+	VirtualMachines        compute.VirtualMachinesClient
+	Resources              features.ResourcesClient
+	DiskEncryptionSets     compute.DiskEncryptionSetsClient
+	Disks                  compute.DisksClient
+	Interfaces             armnetwork.InterfacesClient
+	LoadBalancers          armnetwork.LoadBalancersClient
+	NetworkSecurityGroups  armnetwork.SecurityGroupsClient
+	Subnet                 armnetwork.SubnetsClient
+	VirtualNetworks        armnetwork.VirtualNetworksClient
+	Storage                storage.AccountsClient
+	UserAssignedIdentities armmsi.UserAssignedIdentitiesClient
+	RoleAssignments        authorization.RoleAssignmentsClient
+	RoleDefinitions        authorization.RoleDefinitionsClient
+	Tags                   armresources.TagsClient
 
 	Dynamic            dynamic.Client
 	RestConfig         *rest.Config
@@ -230,7 +235,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		panic(err)
 	}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://%s:%d/wd/hub", hubAddress, hubPort))
 		if wd != nil {
 			err = nil
@@ -314,9 +319,14 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	clusters := redhatopenshift20250725.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer)
+	clientOptions := _env.Environment().ArmClientOptions()
 
-	r, err := clusters.ListAdminCredentials(ctx, res.ResourceGroup, res.ResourceName)
+	clusters, err := utilarmredhatopenshift.NewOpenShiftClustersClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := clusters.ListAdminCredentials(ctx, res.ResourceGroup, res.ResourceName, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -490,14 +500,6 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		}
 	}
 
-	clientOptions := &arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud:           _env.Environment().Cloud,
-			Retry:           common.RetryOptions,
-			PerCallPolicies: []policy.Policy{azureclient.NewLoggingPolicy()},
-		},
-	}
-
 	interfacesClient, err := armnetwork.NewInterfacesClient(_env.SubscriptionID(), tokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
@@ -523,20 +525,45 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	return &clientSet{
-		Operations:        redhatopenshift20250725.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClusters: clusters,
+	msiClient, err := armmsi.NewUserAssignedIdentitiesClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
 
-		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Disks:                 compute.NewDisksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		DiskEncryptionSets:    compute.NewDiskEncryptionSetsClientWithAROEnvironment(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Interfaces:            interfacesClient,
-		LoadBalancers:         loadBalancersClient,
-		NetworkSecurityGroups: securityGroupsClient,
-		Subnet:                subnetsClient,
-		VirtualNetworks:       virtualNetworksClient,
-		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+	roleSetsClient, err := armredhatopenshift.NewPlatformWorkloadIdentityRoleSetsClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, fmt.Errorf("error creating platform workload identity role sets client: %w", err)
+	}
+
+	operationsClient, err := utilarmredhatopenshift.NewOperationsClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, fmt.Errorf("error creating operations client: %w", err)
+	}
+
+	tagsClient, err := armresources.NewTagsClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return &clientSet{
+		Operations:                       operationsClient,
+		OpenshiftClusters:                clusters,
+		PlatformWorkloadIdentityRoleSets: *roleSetsClient,
+
+		VirtualMachines:        compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Resources:              features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Disks:                  compute.NewDisksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		DiskEncryptionSets:     compute.NewDiskEncryptionSetsClientWithAROEnvironment(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Interfaces:             interfacesClient,
+		LoadBalancers:          loadBalancersClient,
+		NetworkSecurityGroups:  securityGroupsClient,
+		Subnet:                 subnetsClient,
+		VirtualNetworks:        virtualNetworksClient,
+		Storage:                storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		UserAssignedIdentities: *msiClient,
+		RoleAssignments:        authorization.NewRoleAssignmentsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		RoleDefinitions:        authorization.NewRoleDefinitionsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Tags:                   tagsClient,
 
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
@@ -587,10 +614,11 @@ func setupE2EInfrastructure(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	scopes := []string{_env.Environment().ResourceManagerScope}
-	authAdapter := azidext.NewTokenCredentialAdapter(tokenCred, scopes)
-	azOCClient := redhatopenshift20250725.NewOpenShiftClustersClient(
-		_env.Environment(), _env.SubscriptionID(), authAdapter)
+	clientOptions := _env.Environment().ArmClientOptions()
+	azOCClient, err := utilarmredhatopenshift.NewOpenShiftClustersClient(_env.SubscriptionID(), tokenCred, clientOptions)
+	if err != nil {
+		return err
+	}
 
 	// Only handle leftover clusters in local dev CI, not in release E2E
 	if conf.IsLocalDevelopmentMode() && conf.IsCI {
@@ -648,8 +676,8 @@ func cleanupE2EInfrastructure(ctx context.Context) error {
 	return nil
 }
 
-func deleteLeftoverClusterIfPresent(ctx context.Context, azOCClient redhatopenshift20250725.OpenShiftClustersClient, conf *utilcluster.ClusterConfig) error {
-	_, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+func deleteLeftoverClusterIfPresent(ctx context.Context, azOCClient utilarmredhatopenshift.OpenShiftClustersClient, conf *utilcluster.ClusterConfig) error {
+	_, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			log.Info("No leftover cluster found; proceeding")

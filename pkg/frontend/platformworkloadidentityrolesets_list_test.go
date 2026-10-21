@@ -9,7 +9,9 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/v20240812preview"
+	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
+	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -27,7 +29,7 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 		changeFeed     map[string]*api.PlatformWorkloadIdentityRoleSet
 		apiVersion     string
 		wantStatusCode int
-		wantResponse   v20240812preview.PlatformWorkloadIdentityRoleSetList
+		wantResponse   v20250725.PlatformWorkloadIdentityRoleSetList
 		wantError      string
 	}{
 		{
@@ -76,42 +78,46 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 					Type: api.PlatformWorkloadIdentityRoleSetsType,
 				},
 			},
-			apiVersion:     "2024-08-12-preview",
+			apiVersion:     "2025-07-25",
 			wantStatusCode: 200,
-			wantResponse: v20240812preview.PlatformWorkloadIdentityRoleSetList{
-				PlatformWorkloadIdentityRoleSets: []*v20240812preview.PlatformWorkloadIdentityRoleSet{
+			wantResponse: v20250725.PlatformWorkloadIdentityRoleSetList{
+				PlatformWorkloadIdentityRoleSets: []*v20250725.PlatformWorkloadIdentityRoleSet{
 					{
-						Properties: v20240812preview.PlatformWorkloadIdentityRoleSetProperties{
-							OpenShiftVersion: "4.14",
-							PlatformWorkloadIdentityRoles: []v20240812preview.PlatformWorkloadIdentityRole{
-								{
-									OperatorName:       "CloudControllerManager",
-									RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
-									RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+						PlatformWorkloadIdentityRoleSet: generated.PlatformWorkloadIdentityRoleSet{
+							Properties: &generated.PlatformWorkloadIdentityRoleSetProperties{
+								OpenShiftVersion: new("4.14"),
+								PlatformWorkloadIdentityRoles: []*generated.PlatformWorkloadIdentityRole{
+									{
+										OperatorName:       new("CloudControllerManager"),
+										RoleDefinitionName: new("Azure RedHat OpenShift Cloud Controller Manager Role"),
+										RoleDefinitionID:   new("/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4"),
+									},
 								},
 							},
+							Name: new("4.14"),
+							Type: new(api.PlatformWorkloadIdentityRoleSetsType),
 						},
-						Name: "4.14",
-						Type: api.PlatformWorkloadIdentityRoleSetsType,
 					},
 					{
-						Properties: v20240812preview.PlatformWorkloadIdentityRoleSetProperties{
-							OpenShiftVersion: "4.15",
-							PlatformWorkloadIdentityRoles: []v20240812preview.PlatformWorkloadIdentityRole{
-								{
-									OperatorName:       "CloudControllerManager",
-									RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
-									RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
-								},
-								{
-									OperatorName:       "ClusterIngressOperator",
-									RoleDefinitionName: "Azure RedHat OpenShift Cluster Ingress Operator Role",
-									RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c",
+						PlatformWorkloadIdentityRoleSet: generated.PlatformWorkloadIdentityRoleSet{
+							Properties: &generated.PlatformWorkloadIdentityRoleSetProperties{
+								OpenShiftVersion: new("4.15"),
+								PlatformWorkloadIdentityRoles: []*generated.PlatformWorkloadIdentityRole{
+									{
+										OperatorName:       new("CloudControllerManager"),
+										RoleDefinitionName: new("Azure RedHat OpenShift Cloud Controller Manager Role"),
+										RoleDefinitionID:   new("/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4"),
+									},
+									{
+										OperatorName:       new("ClusterIngressOperator"),
+										RoleDefinitionName: new("Azure RedHat OpenShift Cluster Ingress Operator Role"),
+										RoleDefinitionID:   new("/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c"),
+									},
 								},
 							},
+							Name: new("4.15"),
+							Type: new(api.PlatformWorkloadIdentityRoleSetsType),
 						},
-						Name: "4.15",
-						Type: api.PlatformWorkloadIdentityRoleSetsType,
 					},
 				},
 			},
@@ -124,7 +130,7 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 		},
 		{
 			name:           "GET request with old API version that doesn't support MIWI results in StatusBadRequest",
-			apiVersion:     "2022-09-04",
+			apiVersion:     v20220904.APIVersion,
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: InvalidResourceType: : The endpoint could not be found in the namespace 'microsoft.redhatopenshift' for api version '2022-09-04'.",
 		},
@@ -153,13 +159,13 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 
 			// sort the response as the version order might be changed
 			if b != nil && resp.StatusCode == http.StatusOK {
-				var r v20240812preview.PlatformWorkloadIdentityRoleSetList
+				var r v20250725.PlatformWorkloadIdentityRoleSetList
 				if err = json.Unmarshal(b, &r); err != nil {
 					t.Error(err)
 				}
 
 				sort.Slice(r.PlatformWorkloadIdentityRoleSets, func(i, j int) bool {
-					return version.CreateSemverFromMinorVersionString(r.PlatformWorkloadIdentityRoleSets[i].Properties.OpenShiftVersion).LessThan(*version.CreateSemverFromMinorVersionString(r.PlatformWorkloadIdentityRoleSets[j].Properties.OpenShiftVersion))
+					return version.CreateSemverFromMinorVersionString(*r.PlatformWorkloadIdentityRoleSets[i].Properties.OpenShiftVersion).LessThan(*version.CreateSemverFromMinorVersionString(*r.PlatformWorkloadIdentityRoleSets[j].Properties.OpenShiftVersion))
 				})
 
 				b, err = json.Marshal(r)

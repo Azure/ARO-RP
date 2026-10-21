@@ -30,25 +30,25 @@ func (c *MaintenanceManifestDocuments) Docs() []*MaintenanceManifestDocument {
 type MaintenanceManifestDocument struct {
 	MissingFields
 
-	ID          string                 `json:"id,omitempty"`
-	ResourceID  string                 `json:"_rid,omitempty"`
-	Timestamp   int                    `json:"_ts,omitempty"`
-	Self        string                 `json:"_self,omitempty"`
-	ETag        string                 `json:"_etag,omitempty" deep:"-"`
-	Attachments string                 `json:"_attachments,omitempty"`
-	TTL         int                    `json:"ttl,omitempty"`
-	LSN         int                    `json:"_lsn,omitempty"`
-	Metadata    map[string]interface{} `json:"_metadata,omitempty"`
+	ID          string         `json:"id,omitempty"`
+	ResourceID  string         `json:"_rid,omitempty"`
+	Timestamp   int            `json:"_ts,omitempty"`
+	Self        string         `json:"_self,omitempty"`
+	ETag        string         `json:"_etag,omitempty" deep:"-"`
+	Attachments string         `json:"_attachments,omitempty"`
+	TTL         int            `json:"ttl,omitempty"`
+	LSN         int            `json:"_lsn,omitempty"`
+	Metadata    map[string]any `json:"_metadata,omitempty"`
 
 	ClusterResourceID   string              `json:"clusterResourceID,omitempty"`
-	MaintenanceManifest MaintenanceManifest `json:"maintenanceManifest,omitempty"`
+	MaintenanceManifest MaintenanceManifest `json:"maintenanceManifest"`
 
 	LeaseOwner   string `json:"leaseOwner,omitempty" deep:"-"`
 	LeaseExpires int    `json:"leaseExpires,omitempty" deep:"-"`
 	Dequeues     int    `json:"dequeues,omitempty"`
 }
 
-func (c *MaintenanceManifestDocument) GetID() string {
+func (c *MaintenanceManifestDocument) GetKey() string {
 	return c.ID
 }
 
@@ -69,17 +69,17 @@ func (e *MaintenanceScheduleDocuments) String() string {
 type MaintenanceScheduleDocument struct {
 	MissingFields
 
-	ID          string                 `json:"id,omitempty"`
-	ResourceID  string                 `json:"_rid,omitempty"`
-	Timestamp   int                    `json:"_ts,omitempty"`
-	Self        string                 `json:"_self,omitempty"`
-	ETag        string                 `json:"_etag,omitempty" deep:"-"`
-	Attachments string                 `json:"_attachments,omitempty"`
-	TTL         int                    `json:"ttl,omitempty"`
-	LSN         int                    `json:"_lsn,omitempty"`
-	Metadata    map[string]interface{} `json:"_metadata,omitempty"`
+	ID          string         `json:"id,omitempty"`
+	ResourceID  string         `json:"_rid,omitempty"`
+	Timestamp   int            `json:"_ts,omitempty"`
+	Self        string         `json:"_self,omitempty"`
+	ETag        string         `json:"_etag,omitempty" deep:"-"`
+	Attachments string         `json:"_attachments,omitempty"`
+	TTL         int            `json:"ttl,omitempty"`
+	LSN         int            `json:"_lsn,omitempty"`
+	Metadata    map[string]any `json:"_metadata,omitempty"`
 
-	MaintenanceSchedule MaintenanceSchedule `json:"maintenanceSchedule,omitempty"`
+	MaintenanceSchedule MaintenanceSchedule `json:"maintenanceSchedule"`
 
 	LeaseOwner   string `json:"leaseOwner,omitempty" deep:"-"`
 	LeaseExpires int    `json:"leaseExpires,omitempty" deep:"-"`
@@ -90,14 +90,6 @@ func (e *MaintenanceScheduleDocument) String() string {
 	return encodeJSON(e)
 }
 
-func (c *MaintenanceScheduleDocument) GetID() string {
-	return c.ID
-}
-
 func (c *MaintenanceScheduleDocument) GetKey() string {
 	return c.ID
-}
-
-func (c *MaintenanceScheduleDocument) GetBucket() int {
-	return 0
 }

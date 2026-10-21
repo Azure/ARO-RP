@@ -13,7 +13,7 @@ import typing
 
 from base64 import b64decode
 
-import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2025_07_25.models as openshiftcluster
+import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.models as openshiftcluster
 
 from azure.cli.command_modules.role import GraphError
 from azure.cli.core.commands import LongRunningOperation
@@ -67,7 +67,7 @@ ARO_FEDERATED_CREDENTIAL_ROLE = "ef318e2a-8334-4a05-9e4a-295a196c6a6e"
 FP_SERVICE_PRINCIPAL_ROLE = "42f3c60f-e7b1-46d7-ba56-6de681664342"
 
 
-class RoleAssignmentScope(enum.Enum):
+class RoleAssignmentScope(enum.IntEnum):
     """Role Assignment Scope"""
     DISK_ENCRYPTION_SET = enum.auto()
     MASTER_SUBNET = enum.auto()
@@ -641,9 +641,7 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail: bool = False, oc=
     subnet_resources = {}
     subnets_with_no_nsg_attached = set()
 
-    preconfigured_nsg_enabled = False
-    if oc:
-        preconfigured_nsg_enabled = oc.network_profile.preconfigured_nsg == "Enabled"
+    preconfigured_nsg_enabled = oc and oc.network_profile.preconfigured_nsg == "Enabled"
 
     for sn in subnets:
         sid = parse_resource_id(sn)
@@ -671,15 +669,16 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail: bool = False, oc=
 
         nsg = subnet.get("networkSecurityGroup", None)
 
-        if nsg:
+        if nsg and preconfigured_nsg_enabled:
             subnet_resources["networkSecurityGroup"] = nsg["id"]
         elif preconfigured_nsg_enabled and not nsg:
             subnets_with_no_nsg_attached.add(sn)
 
-    nonattached_nsgs = len(subnets_with_no_nsg_attached) > 0 and \
-        len(subnets_with_no_nsg_attached) != len(subnets)
-
-    if preconfigured_nsg_enabled and nonattached_nsgs:
+    # when preconfiguredNSG is Enabled we either have all subnets NSG attached
+    # or none.
+    if preconfigured_nsg_enabled and \
+        len(subnets_with_no_nsg_attached) != 0 and \
+            len(subnets_with_no_nsg_attached) != len(subnets):
         raise ValidationError("(ValidationError) preconfiguredNSG feature is enabled but an NSG is "
                               "not attached for all required subnets. Please make sure all the following "
                               "subnets have a network security groups attached and retry. "
@@ -824,9 +823,20 @@ def aro_identity_get_required(*,
                               version,
                               master_subnet,
                               worker_subnet,
-                              vnet,
+                              vnet=None,
                               disk_encryption_set=None,
                               vnet_resource_group_name=None) -> None:  # pylint: disable=unused-argument
+    if vnet is None:
+        validate_subnets(master_subnet, worker_subnet)
+        master_parts = parse_resource_id(master_subnet)
+        vnet = resource_id(
+            subscription=master_parts['subscription'],
+            resource_group=master_parts['resource_group'],
+            namespace='Microsoft.Network',
+            type='virtualNetworks',
+            name=master_parts['name'],
+        )
+
     _validate_version(client, version, location)
     role_set = _get_pwi_role_set(client, version, location)
 
@@ -892,7 +902,7 @@ def aro_identity_create_required(*,
                                  version,
                                  master_subnet,
                                  worker_subnet,
-                                 vnet,
+                                 vnet=None,
                                  disk_encryption_set=None,
                                  vnet_resource_group_name=None) -> list[dict[str, typing.Any]]:  # pylint: disable=unused-argument
     """
@@ -903,6 +913,17 @@ def aro_identity_create_required(*,
     """
     # FIXME:
     # pylint: disable=too-many-locals
+    if vnet is None:
+        validate_subnets(master_subnet, worker_subnet)
+        master_parts = parse_resource_id(master_subnet)
+        vnet = resource_id(
+            subscription=master_parts['subscription'],
+            resource_group=master_parts['resource_group'],
+            namespace='Microsoft.Network',
+            type='virtualNetworks',
+            name=master_parts['name'],
+        )
+
     identities = []
     progress = cmd.cli_ctx.get_progress_controller()
 
@@ -955,6 +976,10 @@ def aro_identity_create_required(*,
         create_role_assignment(cmd.cli_ctx, firstparty_principal, des_defn, disk_encryption_set)
 
     progress.end()
+
+    logger.warning("\nManaged identities and role assignments were created. "
+                   "Please record each identity's 'id' or 'name' to use with the 'az aro create' command.")
+
     return identities
 
 
@@ -988,7 +1013,7 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids) -> None:
                     role_definition_id = resource_id(
                         subscription=get_subscription_id(cli_ctx),
                         namespace="Microsoft.Authorization",
-                        type="roleDefinition",
+                        type="roleDefinitions",
                         name=role,
                     )
                     create_role_assignment(cli_ctx, sp_id, role_definition_id, resource)
@@ -1008,21 +1033,25 @@ def _validate_version(client, version, location) -> None:
         raise InvalidArgumentValueError("--version invalid")
 
 
-def _determine_required_scopes_from_role_set(cmd, role) -> set[RoleAssignmentScope]:
+def _determine_required_scopes_from_role_set(cmd, role) -> list[RoleAssignmentScope]:
     auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
     definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
 
+    # We're using a set because sets guarantee uniqueness of elements. We don't
+    # want to accidentally double up on scopes.
     scopes: set[RoleAssignmentScope] = set()
     for permissions in definition.permissions:
         for action in permissions.actions:
             if action.startswith("Microsoft.Compute/diskEncryptionSets/"):
                 scopes.add(RoleAssignmentScope.DISK_ENCRYPTION_SET)
 
-            if action.startswith("Microsoft.Network/virtualNetworks/subnets/"):
+            if action.startswith("Microsoft.Network/virtualNetworks/subnets/") and RoleAssignmentScope.VNET not in scopes:  # pylint: disable=line-too-long
                 scopes.add(RoleAssignmentScope.MASTER_SUBNET)
                 scopes.add(RoleAssignmentScope.WORKER_SUBNET)
             elif action.startswith("Microsoft.Network/virtualNetworks/"):
                 scopes.add(RoleAssignmentScope.VNET)
+                scopes.discard(RoleAssignmentScope.MASTER_SUBNET)
+                scopes.discard(RoleAssignmentScope.WORKER_SUBNET)
 
             if action.startswith("Microsoft.Network/natGateways/"):
                 scopes.add(RoleAssignmentScope.NAT_GATEWAY)
@@ -1030,10 +1059,14 @@ def _determine_required_scopes_from_role_set(cmd, role) -> set[RoleAssignmentSco
             if action.startswith("Microsoft.Network/networkSecurityGroups/"):
                 scopes.add(RoleAssignmentScope.NSG)
 
-            if action.startswith("Microsoft.Network/routeTable/"):
+            if action.startswith("Microsoft.Network/routeTables/"):
                 scopes.add(RoleAssignmentScope.ROUTE_TABLE)
 
-    return scopes
+    # We're converting the set to a list to maintain a deterministic order.
+    # `azdev test` dislikes nondeterminism.
+    l = list(scopes)
+    l.sort()
+    return l
 
 
 def _determine_required_scopes_from_network_resources(cmd,
@@ -1073,10 +1106,19 @@ def create_identity_and_role_assignments(*,
         if not network_scopes[scope]:
             continue
 
+        role_definition_id = role.role_definition_id
+        if not role_definition_id.startswith("/"):
+            role_definition_id = resource_id(
+                subscription=get_subscription_id(cmd.cli_ctx),
+                namespace="Microsoft.Authorization",
+                type="roleDefinitions",
+                name=role_definition_id
+            )
+
         create_role_assignment(
             cmd.cli_ctx,
             identity["principalId"],
-            f"{resource_id(subscription=get_subscription_id(cmd.cli_ctx))}{role.role_definition_id}",
+            role_definition_id,
             network_scopes[scope]
         )
 

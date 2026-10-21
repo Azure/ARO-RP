@@ -29,6 +29,7 @@ import (
 	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	sdkpolicy "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -36,7 +37,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
-	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -44,13 +45,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	armpolicy "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armpolicy"
+	utilarmredhatopenshift "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armredhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	redhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -105,6 +106,8 @@ type Cluster struct {
 	vaultsClient             armkeyvault.VaultsClient
 	msiClient                armmsi.UserAssignedIdentitiesClient
 	diskEncryptionSetsClient compute.DiskEncryptionSetsClient
+	policyAssignmentsClient  armpolicy.AssignmentsClient
+	policyDefinitionsClient  armpolicy.DefinitionsClient
 }
 
 const (
@@ -268,13 +271,28 @@ func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
 		return nil, err
 	}
 
+	policyDefinitionsClient, err := armpolicy.NewDefinitionsClient(conf.SubscriptionID, spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	policyAssignmentsClient, err := armpolicy.NewAssignmentsClient(conf.SubscriptionID, spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	msiClient, err := armmsi.NewUserAssignedIdentitiesClient(conf.SubscriptionID, spTokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	clusterClient := &internalClient[mgmtredhatopenshift20250725.OpenShiftCluster, v20250725.OpenShiftCluster]{
-		externalClient: redhatopenshift20250725.NewOpenShiftClustersClient(&azEnvironment, conf.SubscriptionID, authorizer),
+	externalClient, err := utilarmredhatopenshift.NewOpenShiftClustersClient(conf.SubscriptionID, spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	clusterClient := &internalClient[armredhatopenshift.OpenShiftCluster, v20250725.OpenShiftCluster]{
+		externalClient: externalClient,
 		converter:      api.APIs[v20250725.APIVersion].OpenShiftClusterConverter,
 	}
 
@@ -297,6 +315,8 @@ func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
 		vaultsClient:             vaultClient,
 		msiClient:                *msiClient,
 		diskEncryptionSetsClient: diskEncryptionSetsClient,
+		policyDefinitionsClient:  policyDefinitionsClient,
+		policyAssignmentsClient:  policyAssignmentsClient,
 	}
 
 	if c.Config.IsCI && c.Config.IsLocalDevelopmentMode() {
@@ -410,7 +430,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 	for _, wi := range platformWorkloadIdentityRoles {
 		c.log.Infof("creating WI: %s", wi.OperatorName)
 		resp, err := c.msiClient.CreateOrUpdate(ctx, vnetResourceGroup, wi.OperatorName, armmsi.Identity{
-			Location: pointerutils.ToPtr(c.Config.Location),
+			Location: new(c.Config.Location),
 		}, nil)
 		if err != nil {
 			return err
@@ -491,7 +511,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 // createRoleAssignmentWithRetry creates a role assignment with automatic retry logic, handling transient or 409 errors.
 // Uses exponential backoff (1s, 2s, 4s, 8s) based on retryDelay. If retryDelay is 0, skips sleeps (for tests).
 func (c *Cluster) createRoleAssignmentWithRetry(ctx context.Context, scope string, roleDefinitionID string, principalID string) error {
-	for i := 0; i < roleAssignmentMaxRetries; i++ {
+	for i := range roleAssignmentMaxRetries {
 		_, err := c.roleassignments.Create(
 			ctx,
 			scope,
@@ -649,8 +669,16 @@ func (c *Cluster) Create(ctx context.Context) error {
 	if c.Config.IsCI {
 		c.log.Infof("creating resource group")
 		_, err = c.groups.CreateOrUpdate(ctx, c.Config.VnetResourceGroup, mgmtfeatures.ResourceGroup{
-			Location: pointerutils.ToPtr(c.Config.Location),
+			Location: new(c.Config.Location),
 		})
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.Config.IsLocalDevelopmentMode() {
+		c.log.Infof("ensuring policy for testing mutation")
+		err = c.ensureTestingPolicy(ctx)
 		if err != nil {
 			return err
 		}
@@ -661,7 +689,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
@@ -715,7 +743,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 				kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
 				result, err := c.vaultsClient.CheckNameAvailability(
 					ctx,
-					sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: pointerutils.ToPtr("Microsoft.KeyVault/vaults")},
+					sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: new("Microsoft.KeyVault/vaults")},
 					nil,
 				)
 				if err != nil {
@@ -749,10 +777,10 @@ func (c *Cluster) Create(ctx context.Context) error {
 			Value: []sdknetwork.Route{
 				{
 					Properties: &sdknetwork.RoutePropertiesFormat{
-						AddressPrefix: pointerutils.ToPtr("0.0.0.0/0"),
-						NextHopType:   pointerutils.ToPtr(sdknetwork.RouteNextHopTypeNone),
+						AddressPrefix: new("0.0.0.0/0"),
+						NextHopType:   new(sdknetwork.RouteNextHopTypeNone),
 					},
-					Name: pointerutils.ToPtr("blackhole"),
+					Name: new("blackhole"),
 				},
 			},
 		}
@@ -934,7 +962,6 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 
 	if c.Config.IsCI {
 		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
-		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
 		if err != nil {
 			if azureerrors.IsStatusNotFoundError(err) {
 				c.log.Infof("Cluster %s not found in resource group %s, assuming already deleted", clusterName, vnetResourceGroup)
@@ -943,6 +970,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 				errs = append(errs, fmt.Errorf("failed to get cluster: %w", err))
 			}
 		}
+
 		if oc != nil {
 			if oc.Properties.ServicePrincipalProfile != nil {
 				if err := c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID); err != nil {
@@ -967,6 +995,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete workload identities: %w", err))
 		}
 
+		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
 		if err := c.checkResourceGroupDeleted(ctx, clusterResourceGroup); err != nil {
 			c.log.Errorf("Failed to check resource group %s deleted: %v", clusterResourceGroup, err)
 			errs = append(errs, fmt.Errorf("failed to check resource group %s deleted: %w", clusterResourceGroup, err))
@@ -1544,9 +1573,9 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 	// Backoff waits: 0s + 30s + 60s = 90s total. Given perOperationTimeout (35m) and
 	// overallTimeout (45m), realistically only ~1 full retry is expected.
 	backoff := wait.Backoff{Steps: 3, Duration: 30 * time.Second, Factor: 2.0, Cap: 1 * time.Minute}
-	err := wait.ExponentialBackoffWithContext(timeoutCtx, backoff, func() (bool, error) {
+	err := wait.ExponentialBackoffWithContext(timeoutCtx, backoff, func(_ctx context.Context) (bool, error) {
 		opTimeoutCause := fmt.Errorf("DeleteAndWait timed out after %s for %s", perOperationTimeout, clusterName)
-		opCtx, opCancel := context.WithTimeoutCause(timeoutCtx, perOperationTimeout, opTimeoutCause)
+		opCtx, opCancel := context.WithTimeoutCause(_ctx, perOperationTimeout, opTimeoutCause)
 		defer opCancel()
 
 		err := c.openshiftclusters.DeleteAndWait(opCtx, resourceGroup, clusterName)
@@ -1554,8 +1583,8 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 			return true, nil
 		}
 
-		if timeoutCtx.Err() != nil {
-			return false, context.Cause(timeoutCtx)
+		if _ctx.Err() != nil {
+			return false, context.Cause(_ctx)
 		}
 
 		if opCtx.Err() != nil {
@@ -1572,7 +1601,7 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 		return false, err
 	})
 	if err != nil {
-		if err == wait.ErrWaitTimeout && lastErr != nil {
+		if wait.Interrupted(err) && lastErr != nil {
 			return fmt.Errorf("error deleting cluster %s: %w", clusterName, lastErr)
 		}
 		return fmt.Errorf("error deleting cluster %s: %w", clusterName, err)
@@ -1605,11 +1634,11 @@ func (c *Cluster) checkResourceGroupDeleted(ctx context.Context, resourceGroupNa
 		return false, nil
 	}, timeoutCtx.Done())
 	if err != nil {
-		if err == wait.ErrWaitTimeout && lastErr != nil {
-			return fmt.Errorf("timed out checking for resource group %s to be deleted, last error: %w", resourceGroupName, lastErr)
+		if wait.Interrupted(err) && lastErr != nil {
+			return fmt.Errorf("timed out checking for resource group %s to be deleted: %w, last error: %w", resourceGroupName, err, lastErr)
 		}
-		if err == wait.ErrWaitTimeout {
-			return fmt.Errorf("timed out checking for resource group %s to be deleted", resourceGroupName)
+		if wait.Interrupted(err) {
+			return fmt.Errorf("timed out checking for resource group %s to be deleted: %w", resourceGroupName, err)
 		}
 		return err
 	}
@@ -1684,17 +1713,17 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string)
 		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &c.ciParentVnet,
 		},
-		AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
-		AllowForwardedTraffic:     pointerutils.ToPtr(true),
-		UseRemoteGateways:         pointerutils.ToPtr(true),
+		AllowVirtualNetworkAccess: new(true),
+		AllowForwardedTraffic:     new(true),
+		UseRemoteGateways:         new(true),
 	}
 	rpProp := &sdknetwork.VirtualNetworkPeeringPropertiesFormat{
 		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &cluster,
 		},
-		AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
-		AllowForwardedTraffic:     pointerutils.ToPtr(true),
-		AllowGatewayTransit:       pointerutils.ToPtr(true),
+		AllowVirtualNetworkAccess: new(true),
+		AllowForwardedTraffic:     new(true),
+		AllowGatewayTransit:       new(true),
 	}
 
 	err = c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", r.ResourceGroup+"-peer", sdknetwork.VirtualNetworkPeering{Properties: clusterProp}, nil)
@@ -1708,4 +1737,85 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string)
 	}
 
 	return err
+}
+
+func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
+	c.log.Info("ensuring testing mutation policy")
+	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/17d1049b-9a84-46fb-8f53-869881c3d3ab"
+	policyName, assignmentName, scope := c.getPolicyConfig(TestingPolicyPrefix)
+	policyRule := map[string]any{
+		"if": map[string]any{
+			"allOf": []map[string]any{
+				{
+					"field":  "type",
+					"equals": "Microsoft.Storage/storageAccounts",
+				},
+				{
+					"value":  fmt.Sprintf("[resourceGroup().tags['%s']]", TestingPolicyTriggerTag),
+					"equals": TestingPolicyTriggerVal,
+				},
+			},
+		},
+		"then": map[string]any{
+			"effect": "modify",
+			"details": map[string]any{
+				"roleDefinitionIds": []string{roleDefID},
+				"operations": []map[string]any{
+					{
+						"operation": "addOrReplace",
+						"field":     "Microsoft.Storage/storageAccounts/publicNetworkAccess",
+						"value":     "Disabled",
+					},
+				},
+			},
+		},
+	}
+
+	policyDefinition, err := c.policyDefinitionsClient.CreateOrUpdate(ctx, policyName, sdkpolicy.Definition{
+		Properties: &sdkpolicy.DefinitionProperties{
+			DisplayName: new(policyName),
+			Mode:        new("Indexed"),
+			PolicyRule:  policyRule,
+			PolicyType:  new(sdkpolicy.PolicyTypeCustom),
+		},
+	}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create policy definition: %w", err)
+	}
+	c.log.Infof("policy definition %s created", policyName)
+
+	_, err = c.policyAssignmentsClient.Create(ctx, scope, assignmentName, sdkpolicy.Assignment{
+		Identity: &sdkpolicy.Identity{
+			Type: new(sdkpolicy.ResourceIdentityTypeSystemAssigned),
+		},
+		Properties: &sdkpolicy.AssignmentProperties{
+			DisplayName:        new(assignmentName),
+			PolicyDefinitionID: new(*policyDefinition.ID),
+		},
+		Location: new(c.Config.Location),
+	}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create policy assignment: %w", err)
+	}
+	c.log.Infof("policy assignment %s created", assignmentName)
+
+	return nil
+}
+
+const (
+	TestingPolicyPrefix     = "e2e-storage-public-access-validate"
+	TestingPolicyTriggerTag = "v4-e2e-V-test"
+	TestingPolicyTriggerVal = "trigger-policy"
+)
+
+func PolicyNames(prefix string) (policyName, assignmentName string) {
+	policyName = prefix
+	assignmentName = fmt.Sprintf("%s-assign", policyName)
+	return
+}
+
+func (c *Cluster) getPolicyConfig(prefix string) (policyName, assignmentName, scope string) {
+	policyName, assignmentName = PolicyNames(prefix)
+	scope = fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
+	return
 }

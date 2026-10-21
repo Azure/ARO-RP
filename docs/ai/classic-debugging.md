@@ -18,7 +18,6 @@
 
 ## Available Specialized Docs
 
-- `docs/ai/classic-log-search.md` - Kusto/Geneva log-search guidance. Load this only when the task is primarily about searching logs, tracing a request through logs, or investigating a failure from log evidence.
 - Add future specialized docs here with one-line trigger descriptions.
 
 ## Core ARO Classic Context
@@ -30,7 +29,5 @@
 ## Loading Rules
 
 - Always start with this file.
-- If the task is log-only or Kusto/Geneva-centric, then load `docs/ai/classic-log-search.md`.
-- If the task is not about logs, do not load the log-search doc unless logs become relevant.
 - When more specialized docs exist, load the smallest set that matches the current task.
 - Use specialized docs to minimize unnecessary context, but consult the wider repo and supporting external docs when the task requires them.

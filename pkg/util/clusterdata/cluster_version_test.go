@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -18,10 +16,11 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestClusterVersionEnricherTask(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	for _, tt := range []struct {
 		name    string
@@ -63,7 +62,6 @@ func TestClusterVersionEnricherTask(t *testing.T) {
 			oc := &api.OpenShiftCluster{}
 			clients := clients{config: tt.client}
 			e := clusterVersionEnricher{}
-			e.SetDefaults(oc)
 
 			err := e.Enrich(context.Background(), log, oc, clients.k8s, clients.config, clients.machine, clients.operator)
 

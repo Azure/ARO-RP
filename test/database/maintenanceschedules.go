@@ -19,7 +19,7 @@ func injectMaintenanceSchedules(c *cosmosdb.FakeMaintenanceScheduleDocumentClien
 	})
 
 	c.SetSorter(func(in []*api.MaintenanceScheduleDocument) {
-		slices.SortFunc(in, func(a, b *api.MaintenanceScheduleDocument) int { return CompareIDable(a, b) })
+		slices.SortFunc(in, func(a, b *api.MaintenanceScheduleDocument) int { return CompareKeyable(a, b) })
 	})
 }
 
@@ -43,7 +43,7 @@ func fakeMaintenanceSchedulesAllValid(client cosmosdb.MaintenanceScheduleDocumen
 		results = append(results, r)
 	}
 
-	slices.SortFunc(results, func(a, b *api.MaintenanceScheduleDocument) int { return CompareIDable(a, b) })
+	slices.SortFunc(results, func(a, b *api.MaintenanceScheduleDocument) int { return CompareKeyable(a, b) })
 
 	return cosmosdb.NewFakeMaintenanceScheduleDocumentIterator(results, startingIndex)
 }

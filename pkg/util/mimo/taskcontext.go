@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
@@ -33,6 +34,9 @@ type TaskContext interface {
 	GetOpenShiftClusterProperties() api.OpenShiftClusterProperties
 	GetOpenShiftClusterDocument() *api.OpenShiftClusterDocument
 
+	// Subscription
+	GetSubscriptionDocument() *api.SubscriptionDocument
+
 	// PatchOpenShiftClusterDocument works without a lease and only operates on
 	// the single document in this context
 	PatchOpenShiftClusterDocument(context.Context, database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error)
@@ -52,9 +56,12 @@ type TaskContext interface {
 	// Azure Compute clients
 	ResourceSKUsClient() (armcompute.ResourceSKUsClient, error)
 
+	// Azure Authorization clients
+	RoleAssignmentsClient() (armauthorization.RoleAssignmentsClient, error)
+
 	// Azure Container Registry clients
-	TokensClient() (armcontainerregistry.TokensClient, error)
-	RegistriesClient() (armcontainerregistry.RegistriesClient, error)
+	FirstPartyTokensClient() (armcontainerregistry.TokensClient, error)
+	FirstPartyRegistriesClient() (armcontainerregistry.RegistriesClient, error)
 }
 
 func GetTaskContext(c context.Context) (TaskContext, error) {

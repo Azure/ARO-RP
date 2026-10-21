@@ -6,6 +6,8 @@ package steps
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -15,8 +17,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -27,10 +29,14 @@ func failingAzureError(context.Context) error {
 	return errors.New("Status=403 Code=\"AuthorizationFailed\"")
 }
 
+func failingFederatedIdentityCredentialWrite(context.Context) error {
+	return errors.New("the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write' over the requested scope")
+}
+
 func failingODataError(context.Context) error {
 	mainError := odataerrors.NewMainError()
-	mainError.SetCode(pointerutils.ToPtr("Authorization_IdentityNotFound"))
-	mainError.SetMessage(pointerutils.ToPtr("The identity of the calling application could not be established."))
+	mainError.SetCode(new("Authorization_IdentityNotFound"))
+	mainError.SetMessage(new("The identity of the calling application could not be established."))
 	e := odataerrors.NewODataError()
 	e.SetErrorEscaped(mainError)
 	return e
@@ -43,7 +49,7 @@ func timingOutCondition(ctx context.Context) (bool, error) {
 }
 
 func internalTimeoutCondition(ctx context.Context) (bool, error) {
-	return false, wait.ErrWaitTimeout
+	return false, wait.ErrorInterrupted(fmt.Errorf("internal timeout"))
 }
 
 func currentTimeFunc() time.Time {
@@ -105,6 +111,25 @@ func TestStepRunner(t *testing.T) {
 				},
 			},
 			wantErr: "Status=403 Code=\"AuthorizationFailed\"",
+		},
+		{
+			name: "A forbidden federated identity credential write returns a cluster MSI permissions error",
+			steps: func(controller *gomock.Controller) []Step {
+				return []Step{
+					Action(failingFederatedIdentityCredentialWrite),
+				}
+			},
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.failingFederatedIdentityCredentialWrite]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("step [Action pkg/util/steps.failingFederatedIdentityCredentialWrite] encountered error: 400: InvalidClusterMSIPermissions: encountered error: the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write' over the requested scope"),
+					"level": gomega.Equal(logrus.ErrorLevel),
+				},
+			},
+			wantErr: "400: InvalidClusterMSIPermissions: encountered error: the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write' over the requested scope",
 		},
 		{
 			name: "An odata error will fail the run",
@@ -199,7 +224,7 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms] failed but has configured 'fail=false'. Continuing. Error: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms] failed but has configured 'fail=false'. Continuing. Error: context deadline exceeded"),
 					"level": gomega.Equal(logrus.WarnLevel),
 				},
 				{
@@ -232,11 +257,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition pkg/util/steps.timingOutCondition, timeout 50ms] encountered error: condition step failed: timingOutCondition: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.timingOutCondition, timeout 50ms] encountered error: condition step failed: timingOutCondition: context deadline exceeded"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "condition step failed: timingOutCondition: timed out waiting for the condition",
+			wantErr: "condition step failed: timingOutCondition: context deadline exceeded",
 		},
 		{
 			name: "A Condition that returns a timeout error causes a different failure from a timed out Condition",
@@ -262,11 +287,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: condition step failed: internalTimeoutCondition: condition encountered internal timeout: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: condition encountered internal timeout: internal timeout"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "condition step failed: internalTimeoutCondition: condition encountered internal timeout: timed out waiting for the condition",
+			wantErr: "condition encountered internal timeout: internal timeout",
 		},
 		{
 			name: "A Condition that does not return true in the timeout time causes a failure",
@@ -287,17 +312,16 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms] encountered error: condition step failed: alwaysFalseCondition: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms] encountered error: condition step failed: alwaysFalseCondition: context deadline exceeded"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "condition step failed: alwaysFalseCondition: timed out waiting for the condition",
+			wantErr: "condition step failed: alwaysFalseCondition: context deadline exceeded",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			h, log := testlog.New()
 			steps := tt.steps(controller)
@@ -309,6 +333,43 @@ func TestStepRunner(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+		})
+	}
+}
+
+func TestRunPreservesCloudError(t *testing.T) {
+	cloudErr := api.NewCloudError(
+		http.StatusBadRequest,
+		api.CloudErrorCodeInvalidLinkedVNet,
+		"properties.workerProfiles[0].subnetId",
+		"The provided subnet '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker' is invalid: must have network security group '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.",
+	)
+
+	for _, tt := range []struct {
+		name    string
+		stepErr error
+		wantMsg string
+	}{
+		{
+			name:    "bare CloudError is preserved",
+			stepErr: cloudErr,
+			wantMsg: cloudErr.Error(),
+		},
+		{
+			name:    "wrapped CloudError is preserved",
+			stepErr: fmt.Errorf("step failed: %w", cloudErr),
+			wantMsg: "step failed: " + cloudErr.Error(),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			_, log := testlog.New()
+
+			_, err := Run(ctx, log, time.Second, []Step{
+				Action(func(context.Context) error { return tt.stepErr }),
+			}, nil, "aro-managed-rg")
+
+			utilerror.AssertErrorMessage(t, err, tt.wantMsg)
 		})
 	}
 }
@@ -338,6 +399,83 @@ func TestStepMetricsNameFormatting(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			if got := tt.step.metricsName(); got != tt.want {
 				t.Errorf("incorrect step metrics name, want: %s, got: %s", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestRunWithWrappedError(t *testing.T) {
+	simpleError := errors.New("oh no")
+	failure := func(ctx context.Context) error { return simpleError }
+
+	tests := []struct {
+		name        string // description of this test case
+		steps       []Step
+		wantEntries []testlog.ExpectedLogEntry
+		wantError   error
+	}{
+		{
+			name: "Test no err",
+			steps: []Step{
+				Action(successfulFunc),
+				Action(successfulFunc),
+				Action(successfulFunc),
+			},
+
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+			},
+		},
+		{
+			name: "Test Error wrapped",
+			steps: []Step{
+				Action(successfulFunc),
+				Action(failure),
+			},
+			wantError: simpleError,
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.TestRunWithWrappedError.func1]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("step [Action pkg/util/steps.TestRunWithWrappedError.func1] encountered error: oh no"),
+					"level": gomega.Equal(logrus.ErrorLevel),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			h, log := testlog.New()
+			steps := tt.steps
+
+			_, err := RunWithWrappedError(ctx, log, steps)
+
+			if !errors.Is(err, tt.wantError) {
+				t.Errorf("got error '%v', but wanted error '%v'", err, tt.wantError)
+			}
+
+			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
+			if err != nil {
+				t.Error(err)
 			}
 		})
 	}

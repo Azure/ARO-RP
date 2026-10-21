@@ -8,22 +8,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestReconciler(t *testing.T) {
@@ -86,7 +84,7 @@ func TestReconciler(t *testing.T) {
 					Namespace: openshiftIngressControllerNamespace,
 				},
 				Spec: operatorv1.IngressControllerSpec{
-					Replicas: pointerutils.ToPtr(int32(3)),
+					Replicas: new(int32(3)),
 				},
 			},
 			expectedReplica: 3,
@@ -102,7 +100,7 @@ func TestReconciler(t *testing.T) {
 					Namespace: openshiftIngressControllerNamespace,
 				},
 				Spec: operatorv1.IngressControllerSpec{
-					Replicas: pointerutils.ToPtr(minimumReplicas),
+					Replicas: new(minimumReplicas),
 				},
 			},
 			expectedReplica: minimumReplicas,
@@ -118,7 +116,7 @@ func TestReconciler(t *testing.T) {
 					Namespace: openshiftIngressControllerNamespace,
 				},
 				Spec: operatorv1.IngressControllerSpec{
-					Replicas: pointerutils.ToPtr(int32(1)),
+					Replicas: new(int32(1)),
 				},
 			},
 			expectedReplica: minimumReplicas,
@@ -143,7 +141,7 @@ func TestReconciler(t *testing.T) {
 					Namespace: openshiftIngressControllerNamespace,
 				},
 				Spec: operatorv1.IngressControllerSpec{
-					Replicas: pointerutils.ToPtr(int32(0)),
+					Replicas: new(int32(0)),
 				},
 			},
 			expectedReplica: minimumReplicas,
@@ -163,18 +161,20 @@ func TestReconciler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			clusterMock := fakeCluster(tt.controllerEnabledFlag)
 			if len(tt.startConditions) > 0 {
 				clusterMock.Status.Conditions = append(clusterMock.Status.Conditions, tt.startConditions...)
 			}
 
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(clusterMock)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder(clusterMock)
 			if tt.ingressController != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.ingressController)
 			}
 			clientFake := clientBuilder.Build()
 
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			r := NewReconciler(log, clientFake)
 
 			request := ctrl.Request{}
 			ctx := context.Background()

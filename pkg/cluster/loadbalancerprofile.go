@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -13,7 +14,7 @@ import (
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
@@ -60,7 +61,7 @@ func (m *manager) reconcileOutboundRuleV4IPs(ctx context.Context, lb sdknetwork.
 		if err == nil {
 			return cleanupError
 		}
-		return fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\n%v\n%v", err, cleanupError)
+		return fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\n%w\n%w", err, cleanupError)
 	}
 
 	return err
@@ -93,7 +94,9 @@ func (m *manager) reconcileOutboundRuleV4IPsInner(ctx context.Context, lb sdknet
 	removeOutboundIPsFromLB(lb)
 	addOutboundIPsToLB(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, lb, desiredOutboundIPs)
 
-	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID, lb, nil)
+	err = arm.Retryable(ctx, func() error {
+		return m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID, lb, nil)
+	}, m.log, "updating load balancer "+infraID)
 	if err != nil {
 		return err
 	}
@@ -200,7 +203,7 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 
 	ch := make(chan deleteIPResult)
 	defer close(ch)
-	var cleanupErrors []string
+	var cleanupErrors []error
 
 	for _, id := range unusedManagedIPs {
 		ipName := stringutils.LastTokenByte(id, '/')
@@ -210,12 +213,12 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 	for range unusedManagedIPs {
 		result := <-ch
 		if result.err != nil {
-			cleanupErrors = append(cleanupErrors, fmt.Sprintf("deletion of unused managed ip %s failed with error: %v", result.name, result.err))
+			cleanupErrors = append(cleanupErrors, fmt.Errorf("deletion of unused managed ip %s failed with error: %w", result.name, result.err))
 		}
 	}
 
 	if cleanupErrors != nil {
-		return fmt.Errorf("failed to cleanup unused managed ips\n%s", strings.Join(cleanupErrors, "\n"))
+		return fmt.Errorf("failed to cleanup unused managed ips:\n%w", errors.Join(cleanupErrors...))
 	}
 
 	return nil
@@ -223,7 +226,9 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 
 func (m *manager) deleteIPAddress(ctx context.Context, resourceGroupName string, ipName string, ch chan<- deleteIPResult) {
 	m.log.Infof("deleting managed public IP Address: %s", ipName)
-	err := m.armPublicIPAddresses.DeleteAndWait(ctx, resourceGroupName, ipName, nil)
+	err := arm.RetryableDelete(ctx, func() error {
+		return m.armPublicIPAddresses.DeleteAndWait(ctx, resourceGroupName, ipName, nil)
+	}, m.log, "deleting managed public IP Address "+ipName)
 	ch <- deleteIPResult{
 		name: ipName,
 		err:  err,
@@ -246,7 +251,7 @@ func (m *manager) getUnusedManagedIPs(ctx context.Context) ([]string, error) {
 
 	outboundIPs := getOutboundIPsFromLB(lb.LoadBalancer)
 	outboundIPMap := make(map[string]api.ResourceReference, len(outboundIPs))
-	for i := 0; i < len(outboundIPs); i++ {
+	for i := range outboundIPs {
 		outboundIPMap[strings.ToLower(outboundIPs[i].ID)] = outboundIPs[i]
 	}
 	var unusedManagedIPs []string
@@ -324,23 +329,23 @@ func getDesiredOutboundIPs(managedOBIPCount int, ipAddresses map[string]sdknetwo
 func (m *manager) createPublicIPAddresses(ctx context.Context, ipAddresses map[string]sdknetwork.PublicIPAddress, numToCreate int) error {
 	ch := make(chan createIPResult)
 	defer close(ch)
-	var errResults []string
+	var errResults []error
 	// create additional IPs if needed
-	for i := 0; i < numToCreate; i++ {
+	for range numToCreate {
 		go m.createPublicIPAddress(ctx, ch)
 	}
 
-	for i := 0; i < numToCreate; i++ {
+	for range numToCreate {
 		result := <-ch
 		if result.err != nil {
-			errResults = append(errResults, fmt.Sprintf("creation of ip address %s failed with error: %s", *result.ip.Name, result.err.Error()))
+			errResults = append(errResults, fmt.Errorf("creation of ip address %s failed with error: %w", *result.ip.Name, result.err))
 		} else {
 			ipAddresses[*result.ip.Name] = result.ip
 		}
 	}
 
 	if len(errResults) > 0 {
-		return fmt.Errorf("failed to create required IPs\n%s", strings.Join(errResults, "\n"))
+		return fmt.Errorf("failed to create required IPs:\n%w", errors.Join(errResults...))
 	}
 	return nil
 }
@@ -378,7 +383,9 @@ func (m *manager) createPublicIPAddress(ctx context.Context, ch chan<- createIPR
 	m.log.Infof("creating public IP Address: %s", name)
 	publicIPAddress := newPublicIPAddress(name, resourceID, m.doc.OpenShiftCluster.Location)
 
-	err := m.armPublicIPAddresses.CreateOrUpdateAndWait(ctx, resourceGroupName, name, publicIPAddress, nil)
+	err := arm.Retryable(ctx, func() error {
+		return m.armPublicIPAddresses.CreateOrUpdateAndWait(ctx, resourceGroupName, name, publicIPAddress, nil)
+	}, m.log, "creating public IP Address "+name)
 	ch <- createIPResult{
 		ip:  publicIPAddress,
 		err: err,
@@ -427,11 +434,11 @@ func newPublicIPAddress(name, resourceID, location string) sdknetwork.PublicIPAd
 		ID:       &resourceID,
 		Location: &location,
 		Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-			PublicIPAllocationMethod: pointerutils.ToPtr(sdknetwork.IPAllocationMethodStatic),
-			PublicIPAddressVersion:   pointerutils.ToPtr(sdknetwork.IPVersionIPv4),
+			PublicIPAllocationMethod: new(sdknetwork.IPAllocationMethodStatic),
+			PublicIPAddressVersion:   new(sdknetwork.IPVersionIPv4),
 		},
 		SKU: &sdknetwork.PublicIPAddressSKU{
-			Name: pointerutils.ToPtr(sdknetwork.PublicIPAddressSKUNameStandard),
+			Name: new(sdknetwork.PublicIPAddressSKUNameStandard),
 		},
 	}
 }

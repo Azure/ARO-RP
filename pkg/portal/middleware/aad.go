@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 
 	"github.com/Azure/ARO-RP/pkg/env"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
@@ -229,7 +230,7 @@ func (a *aad) redirect(w http.ResponseWriter, r *http.Request) {
 
 	state := uuid.DefaultGenerator.Generate()
 
-	session.Values = map[interface{}]interface{}{
+	session.Values = map[any]any{
 		sessionKeyState: state,
 	}
 
@@ -376,6 +377,6 @@ func (a *aad) clientAssertion(req *http.Request) (*http.Response, error) {
 }
 
 func (a *aad) internalServerError(w http.ResponseWriter, err error) {
-	a.log.Warn(err)
+	a.log.Warn(utillog.Sanitize(err.Error()))
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }

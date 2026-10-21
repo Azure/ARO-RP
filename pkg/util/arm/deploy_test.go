@@ -5,9 +5,9 @@ package arm
 
 import (
 	"context"
+	"errors"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -18,6 +18,7 @@ import (
 
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 const deploymentName = "test"
@@ -28,7 +29,7 @@ func TestDeployARMTemplate(t *testing.T) {
 	resourceGroup := "fakeResourceGroup"
 
 	armTemplate := &Template{}
-	params := map[string]interface{}{}
+	params := map[string]any{}
 
 	deployment := mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
@@ -74,9 +75,9 @@ func TestDeployARMTemplate(t *testing.T) {
 					Return(activeErr)
 				dc.EXPECT().
 					Wait(ctx, resourceGroup, deploymentName).
-					Return(wait.ErrWaitTimeout)
+					Return(wait.ErrorInterrupted(errors.New("timeout occurred")))
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: "timeout occurred",
 		},
 		{
 			name: "DetailedError which should be returned to user",
@@ -105,12 +106,11 @@ func TestDeployARMTemplate(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			deploymentsClient := mock_features.NewMockDeploymentsClient(controller)
 			tt.mocks(deploymentsClient)
 
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 
 			err := DeployTemplate(ctx, log, deploymentsClient, resourceGroup, deploymentName, armTemplate, params)
 

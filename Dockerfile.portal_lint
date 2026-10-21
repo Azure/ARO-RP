@@ -1,7 +1,10 @@
 ARG REGISTRY
-FROM ${REGISTRY}/ubi9/nodejs-18
+ARG REPOSITORY=ubi9/nodejs-22
+ARG TAG=latest
+FROM ${REGISTRY}/${REPOSITORY}:${TAG}
 WORKDIR /data
 USER root
+ENV DO_NOT_TRACK=1
 
 COPY /portal/v2 /data/
 RUN npm install

@@ -20,18 +20,33 @@ linters:
     - usestdlibvars
     - whitespace
     - depguard
+    - exptostd
+    - forbidigo
   settings:
     depguard:
       rules:
         deprecatedutillibs:
           files:
-            # Allow autorest client generation to use autorest/to
-            - "!${config-path}/pkg/client/services/redhatopenshift/mgmt/*/redhatopenshift/*.go"
+            # Allow client generation to use autorest/to
+            - "!${config-path}/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift/*.go"
           deny:
             - pkg: "github.com/Azure/go-autorest/autorest/to"
-              desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
+              desc: use new()
             - pkg: "k8s.io/utils/ptr"
-              desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
+              desc: use new()
+        incorrectfakeclient:
+          files:
+            - "${config-path}/pkg/operator/**.go"
+          deny:
+            - pkg: "sigs.k8s.io/controller-runtime/pkg/client/fake"
+              desc: "use test/util/clienthelper's NewAROFakeClientBuilder for new clients to ensure that arov1alpha1.Cluster is registered as having a status subresource"
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: logrus\.NewEntry
+          msg: Do not create loggers. Use test/util/log.LogForTesting instead.
+        - pattern: gomock\.Controller\.Finish
+          msg: Not needed since Go 1.14
     importas:
       alias:
         - pkg: github.com/Azure/ARO-RP/pkg/api/util/uuid
@@ -70,19 +85,13 @@ linters:
           alias: openapi_v2
         - pkg: github.com/openshift/console-operator/pkg/api
           alias: consoleapi
-        - pkg: github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1
-          alias: machinev1beta1
-        - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned
-          alias: maoclient
-        - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake
-          alias: maofake
-        - pkg: github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1
+        - pkg: github.com/openshift/api/machineconfiguration/v1
           alias: mcv1
-        - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned
+        - pkg: github.com/openshift/client-go/machineconfiguration/clientset/versioned
           alias: mcoclient
-        - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake
+        - pkg: github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake
           alias: mcofake
-        - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1
+        - pkg: github.com/openshift/client-go/machineconfiguration/clientset/versioned/typed/machineconfiguration/v1
           alias: mcoclientv1
         - pkg: github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1
           alias: monitoringv1
@@ -136,8 +145,6 @@ linters:
           alias: apisubnet
         - pkg: ^github\.com/Azure/ARO-RP/pkg/api/(v[^/]*[0-9])$
           alias: $1
-        - pkg: ^github\.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/([0-9]+)-([0-9]+)-([0-9]+)-?(preview)?/redhatopenshift$
-          alias: mgmtredhatopenshift$1$2$3$4
         - pkg: ^github\.com/Azure/ARO-RP/pkg/(deploy|gateway|mirror|monitor|operator|portal)$
           alias: pkg$1
         - pkg: ^github\.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/([0-9]+)-([0-9]+)-([0-9]+)-?(preview)?/redhatopenshift$
@@ -172,6 +179,8 @@ linters:
         - github.com/onsi/gomega
   exclusions:
     generated: disable
+    paths:
+      - (^|/)v20250725/generated($|/)
     rules:
       - linters:
           - staticcheck
@@ -179,10 +188,16 @@ linters:
       - linters:
           - importas
           - staticcheck
+          - unconvert
         path: pkg/client/(.+)\.go
       - linters:
           - importas
         path: (.+/)?zz_generated_(.+)\.go
+      # bindata.go should not be modernized automatically
+      - linters:
+          - exptostd
+          - govet
+        path: bindata.go
       - linters:
           - importas
         path: pkg/operator/(clientset|mocks)/(.+)\.go
@@ -192,6 +207,19 @@ linters:
       - linters:
           - staticcheck
         path: (.+/)?bindata.go
+      # Deprecated k8s APIs that need porting to new ones piecemeal
+      - linters:
+          - staticcheck
+        text: "SA1019: wait.PollImmediateUntil is deprecated"
+      - linters:
+          - staticcheck
+        text: "SA1019: wait.Poll is deprecated"
+      - linters:
+          - staticcheck
+        text: "SA1019: wait.PollImmediate is deprecated"
+      - path-except: (.+)_test\.go
+        linters:
+          - forbidigo
 issues:
   max-same-issues: 0
 formatters:
@@ -220,3 +248,4 @@ formatters:
       - builtin$
       - examples$
       - pkg/client
+      - (^|/)v20250725/generated($|/)

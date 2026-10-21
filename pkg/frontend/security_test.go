@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
@@ -28,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -60,12 +58,11 @@ func TestSecurity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	keyvault := mock_azsecrets.NewMockClient(controller)
-	keyvault.EXPECT().GetSecret(gomock.Any(), env.RPServerSecretName, "", nil).AnyTimes().Return(azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Value: pointerutils.ToPtr(string(serverPki))}}, nil)
+	keyvault.EXPECT().GetSecret(gomock.Any(), env.RPServerSecretName, "", nil).AnyTimes().Return(azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Value: new(string(serverPki))}}, nil)
 	keyvault.EXPECT().GetSecret(gomock.Any(), gomock.Not(gomock.Eq(env.RPServerSecretName)), gomock.Any(), gomock.Any()).AnyTimes().Return(azsecrets.GetSecretResponse{}, fmt.Errorf("secret not found"))
 
 	_env := mock_env.NewMockInterface(controller)

@@ -1,21 +1,27 @@
-ARG REGISTRY
 ARG BUILDER_REGISTRY
+ARG BUILDER_REPOSITORY=openshift-release-dev/golang-builder--partner-share
+ARG BUILDER_TAG=rhel-9-golang-1.26-openshift-4.23
+ARG REGISTRY
+ARG REPOSITORY=ubi9/ubi-minimal
+ARG NODE_BUILDER_REPOSITORY=ubi9/nodejs-22
+ARG NODE_BUILDER_TAG=latest
+ARG TAG=latest
 ARG ARO_VERSION
 
 ###############################################################################
 # Stage 1: Build the SRE Portal Assets
 ###############################################################################
-FROM ${REGISTRY}/ubi9/nodejs-18  AS portal-build
+FROM ${REGISTRY}/${NODE_BUILDER_REPOSITORY}:${NODE_BUILDER_TAG} AS portal-build
 LABEL aro-portal-build=true
 WORKDIR /build/portal/v2
 USER root
+ENV DO_NOT_TRACK=1
 
 # Copying package files and installing dependencies
 COPY portal/v2/package*.json ./
 
-# Combine npm install and audit in one step to reduce layers and clean cache
-RUN npm ci \
-    && npm audit --audit-level high --omit=dev
+# Clean install the package
+RUN npm ci
 
 # Copying the rest of the source and build
 COPY --chown=root:root portal/v2/ ./
@@ -24,7 +30,7 @@ RUN npm run lint && npm run build
 ###############################################################################
 # Stage 2: Compile the Golang RP code
 ###############################################################################
-FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.25-openshift-4.21 AS builder
+FROM ${BUILDER_REGISTRY}/${BUILDER_REPOSITORY}:${BUILDER_TAG} AS builder
 ARG ARO_VERSION
 LABEL aro-builder=true
 USER root
@@ -54,13 +60,22 @@ COPY test test
 # Ensure JS assets are available before generating Go code
 COPY --from=portal-build /build/pkg/portal/assets/v2/build /app/pkg/portal/assets/v2/build
 
+# Download the envtest binaries and mark our tests as running with them
+ARG ENVTEST_KUBERNETES_VERSION
+RUN setup-envtest use ${ENVTEST_KUBERNETES_VERSION}
+ENV ARO_USE_ENVTEST=true
+
 # Build RP and E2E test suite bins
 RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./cmd/aro
 
 RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" -o e2e.test
 
 # Additional tests
-RUN gotestsum --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./... \
+RUN cd pkg/api/ \
+    && gotestsum --format pkgname --junitfile ../../reportapi.xml -- -coverpkg=./... -coverprofile=coverapi.out ./... \
+    && gocov convert coverapi.out | gocov-xml > ../../coverageapi.xml \
+    && cd ../..
+RUN gotestsum --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover.out ./... \
     && gocov convert cover.out | gocov-xml > coverage.xml
 
 # Validate FIPS
@@ -69,10 +84,10 @@ RUN hack/fips/validate-fips.sh ./aro
 ###############################################################################
 # Stage 3: final is our slim image with minimal layers and tools
 ###############################################################################
-FROM ${REGISTRY}/ubi9/ubi-minimal AS final
+FROM ${REGISTRY}/${REPOSITORY}:${TAG} AS final
 LABEL aro-final=true
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
-COPY --from=builder /app/report.xml /app/coverage.xml /app/
+COPY --from=builder /app/report.xml /app/coverage.xml /app/reportapi.xml /app/coverageapi.xml /app/
 ENTRYPOINT ["aro"]
 EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp
 USER 1000

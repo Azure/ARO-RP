@@ -5,24 +5,28 @@ set -o errexit \
     -o nounset
 
 main() {
+    # check we are FIPS enabled
+    fips_verify
+
     # transaction attempt retry time in seconds
     # shellcheck disable=SC2034
     local -ri retry_wait_time=30
     # shellcheck disable=SC2068
     local -ri pkg_retry_count=60
+    local -ri repo_retry_count=5
 
     create_required_dirs
     configure_sshd
     configure_rpm_repos retry_wait_time \
-                    "$pkg_retry_count"
+                    "$repo_retry_count"
 
     # shellcheck disable=SC2034
-    local -ar exclude_pkgs=(
-        "-x WALinuxAgent"
-        "-x WALinuxAgent-udev"
-    )
+    local -a exclude_pkgs=()
+    if rpm -q WALinuxAgent &>/dev/null; then
+        exclude_pkgs+=("-x" "WALinuxAgent")
+    fi
 
-    dnf_update_pkgs exclude_pkgs \
+    tdnf_update_pkgs exclude_pkgs \
                     retry_wait_time \
                     "$pkg_retry_count"
 
@@ -30,6 +34,8 @@ main() {
     local -ra install_pkgs=(
         azure-cli
         azure-mdsd
+        crun
+        netavark
         podman
         podman-docker
         openssl-perl
@@ -37,16 +43,11 @@ main() {
         python3
         # required for podman networking
         firewalld
-        # Required to enable fips
-        grubby
-        dracut-fips
     )
 
-    dnf_install_pkgs install_pkgs \
+    tdnf_install_pkgs install_pkgs \
                      retry_wait_time \
                      "$pkg_retry_count"
-
-    fips_configure
 
     # shellcheck disable=SC2119
     configure_logrotate
@@ -92,10 +93,60 @@ main() {
 	Systemd_Filter _COMM=aro
 	DB /var/lib/fluent/journaldb
 
+[INPUT]
+	Name systemd
+	Tag gateway-otel-collector
+	Systemd_Filter _SYSTEMD_UNIT=gateway-otel-collector.service
+	DB /var/lib/fluent/gateway-otel-journaldb
+
 [FILTER]
 	Name modify
 	Match journald
 	Add Environment \${ENVIRONMENT}
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Add Environment \${ENVIRONMENT}
+	Set COMPONENT gateway-otel-collector
+
+# Attached container output has a single journald priority, so normalize the
+# embedded Logrus and Zap levels before forwarding it.
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=(fatal|panic)\s)|(^[0-9TZ:.\-+]+\t(fatal|panic)\t)
+	Set PRIORITY 2
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=error\s)|(^[0-9TZ:.\-+]+\t(dpanic|error)\t)
+	Set PRIORITY 3
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=warning\s)|(^[0-9TZ:.\-+]+\twarn\t)
+	Set PRIORITY 4
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=info\s)|(^[0-9TZ:.\-+]+\tinfo\t)
+	Set PRIORITY 6
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=debug\s)|(^[0-9TZ:.\-+]+\tdebug\t)
+	Set PRIORITY 7
+
+[FILTER]
+	Name rewrite_tag
+	Match gateway-otel-collector
+	Rule \$COMPONENT ^gateway-otel-collector$ journald false
+	Emitter_Name re_emitted_gateway_otel
 
 [FILTER]
 	Name modify
@@ -132,7 +183,7 @@ MDSD_ROLE_PREFIX=\${MDSD_RUN_DIR}/default
 MDSD_LOG=\${MDSD_VAR}/log/\${TENANT_NAME}
 MDSD_SPOOL_DIRECTORY=\${MDSD_VAR}/spool/\${TENANT_NAME}
 
-MDSD_OPTIONS=\"-A -c /etc/opt/microsoft/azuremonitoragent/mdsd.xml -C -R -r \${MDSD_ROLE_PREFIX} -S \${MDSD_SPOOL_DIRECTORY}/eh -e \${MDSD_LOG}/\${TENANT_NAME}.err -w \${MDSD_LOG}/\${TENANT_NAME}.warn -o \${MDSD_LOG}/\${TENANT_NAME}.info -q \${MDSD_LOG}/\${TENANT_NAME}.qos\"
+MDSD_OPTIONS=\"-A -f 29235 -c /etc/opt/microsoft/azuremonitoragent/mdsd.xml -C -R -r \${MDSD_ROLE_PREFIX} -S \${MDSD_SPOOL_DIRECTORY}/eh -e \${MDSD_LOG}/\${TENANT_NAME}.err -w \${MDSD_LOG}/\${TENANT_NAME}.warn -o \${MDSD_LOG}/\${TENANT_NAME}.info -q \${MDSD_LOG}/\${TENANT_NAME}.qos\"
 
 MONITORING_TENANT=$LOCATION
 MONITORING_ROLE=cluster
@@ -149,6 +200,10 @@ MONITORING_GCS_AUTH_ID=mi_res_id#${GATEWAYUSERASSIGNEDIDENTITYRESOURCEID}
 MONITORING_ENVIRONMENT=$ENVIRONMENT
 
 ENABLE_GIG_BRIDGE_MODE=1"
+
+    local -i otel_mem_mib=$(( $(host_mem_mib) * 7 / 100 ))
+    local -i otel_limit_mib=$(( otel_mem_mib * 80 / 100 ))
+    local -i otel_spike_mib=$(( otel_limit_mib * 12 / 100 ))
 
     # shellcheck disable=SC2034
     local -r gateway_otel_collector_conf="extensions:
@@ -174,6 +229,68 @@ exporters:
     endpoint: host.containers.internal:2020
     tls:
       insecure: true
+    # Gateway Otel Collector runs alongside mission-critical workloads:
+    # allow only a very small retry budget, then fail fast.
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 1s
+      max_elapsed_time: 2s
+    sending_queue:
+      enabled: true
+      queue_size: 128
+      num_consumers: 2
+
+  azuredataexplorer/containers:
+    cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
+    managed_identity_id: \"${GATEWAYCLIENTID}\"
+    db_name: \"AROClusterLogs\"
+    logs_table_name: \"containerLogs\"
+    logs_table_json_mapping: \"ingestionMapping\"
+    ingestion_type: \"queued\"
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 1s
+      max_elapsed_time: 2s
+    sending_queue:
+      enabled: true
+      queue_size: 1024
+      num_consumers: 2
+
+  azuredataexplorer/journald:
+    cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
+    managed_identity_id: \"${GATEWAYCLIENTID}\"
+    db_name: \"AROClusterLogs\"
+    logs_table_name: \"journald\"
+    logs_table_json_mapping: \"ingestionMapping\"
+    ingestion_type: \"queued\"
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 1s
+      max_elapsed_time: 2s
+    sending_queue:
+      enabled: true
+      queue_size: 1024
+      num_consumers: 2
+
+  azuredataexplorer/audit:
+    cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
+    managed_identity_id: \"${GATEWAYCLIENTID}\"
+    db_name: \"AROClusterLogs\"
+    logs_table_name: \"audit\"
+    logs_table_json_mapping: \"ingestionMapping\"
+    ingestion_type: \"queued\"
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 1s
+      max_elapsed_time: 2s
+    sending_queue:
+      enabled: true
+      queue_size: 1024
+      num_consumers: 2
 
 processors:
   attributes/cluster:
@@ -199,21 +316,57 @@ processors:
 
   memory_limiter:
     check_interval: 1s
-    limit_mib: 512
+    limit_mib: ${otel_limit_mib}
+    spike_limit_mib: ${otel_spike_mib}
 
   batch:
-    timeout: 10s
-    send_batch_size: 1024
+    timeout: 30s
+    send_batch_size: 4096
+    send_batch_max_size: 8192
+
+connectors:
+  routing/kusto:
+    default_pipelines: []
+    table:
+      - context: log
+        condition: attributes[\"source_name\"] == \"containers\"
+        pipelines: [logs/kusto-containers]
+      - context: log
+        condition: attributes[\"source_name\"] == \"journald\"
+        pipelines: [logs/kusto-journald]
+      - context: log
+        condition: attributes[\"source_name\"] == \"audit\"
+        pipelines: [logs/kusto-audit]
 
 service:
   extensions:
     - health_check
     - gatewayauth
   pipelines:
-    logs:
+    logs/mdsd:
       receivers: [otlp]
       processors: [memory_limiter, attributes/cluster, batch]
-      exporters: [otlp/cluster-mdsd]"
+      exporters: [otlp/cluster-mdsd]
+
+    logs/kusto-router:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/cluster]
+      exporters: [routing/kusto]
+
+    logs/kusto-containers:
+      receivers: [routing/kusto]
+      processors: [batch]
+      exporters: [azuredataexplorer/containers]
+
+    logs/kusto-journald:
+      receivers: [routing/kusto]
+      processors: [batch]
+      exporters: [azuredataexplorer/journald]
+
+    logs/kusto-audit:
+      receivers: [routing/kusto]
+      processors: [batch]
+      exporters: [azuredataexplorer/audit]"
 
     # values are references to variables, they should not be dereferenced here
     # shellcheck disable=SC2034

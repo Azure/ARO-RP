@@ -20,7 +20,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -72,10 +71,10 @@ var _ = Describe("ARO cluster DNS", Label(regressiontest), func() {
 		}
 
 		By("getting each worker node's private IP address")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
+		clusterResourceGroup := stringutils.LastTokenByte(*oc.Properties.ClusterProfile.ResourceGroupID, '/')
 		for wn := range workerNodes {
 			resp, err := clients.Interfaces.Get(ctx, clusterResourceGroup, nicName(wn), nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -390,7 +389,7 @@ func toggleAcceleratedNetworking(ctx context.Context, interfaces armnetwork.Inte
 	if nic.Properties == nil {
 		return fmt.Errorf("NIC properties are nil")
 	}
-	nic.Properties.EnableAcceleratedNetworking = pointerutils.ToPtr(enabled)
+	nic.Properties.EnableAcceleratedNetworking = new(enabled)
 	err = clients.Interfaces.CreateOrUpdateAndWait(ctx, clusterResourceGroup, nicName(nodeName), nic, nil)
 	return err
 }

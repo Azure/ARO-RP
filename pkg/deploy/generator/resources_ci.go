@@ -8,7 +8,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func (g *generator) ciACR() *arm.Resource {
@@ -18,11 +17,11 @@ func (g *generator) ciACR() *arm.Resource {
 				Name: mgmtcontainerregistry.Premium,
 			},
 			RegistryProperties: &mgmtcontainerregistry.RegistryProperties{
-				DataEndpointEnabled: pointerutils.ToPtr(true),
+				DataEndpointEnabled: new(true),
 			},
-			Name:     pointerutils.ToPtr("[parameters('acrName')]"),
-			Type:     pointerutils.ToPtr("Microsoft.ContainerRegistry/registries"),
-			Location: pointerutils.ToPtr("[if(equals(parameters('acrLocationOverride'), ''), resourceGroup().location, parameters('acrLocationOverride'))]"),
+			Name:     new("[parameters('acrName')]"),
+			Type:     new("Microsoft.ContainerRegistry/registries"),
+			Location: new("[if(equals(parameters('acrLocationOverride'), ''), resourceGroup().location, parameters('acrLocationOverride'))]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.ContainerRegistry"),
 	}

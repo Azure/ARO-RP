@@ -17,21 +17,21 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
-	"github.com/Azure/ARO-RP/pkg/api/v20240812preview"
+	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 const (
 	// defaultAPIVersion is the default ARO API version used in tests.
-	defaultAPIVersion = "2024-08-12-preview"
+	defaultAPIVersion = v20250725.APIVersion
 	// mockGuid is a mock GUID used in tests.
 	mockGuid = "00000000-0000-0000-0000-000000000001"
 	// mockLocation is a mock Azure location used in tests.
@@ -87,184 +87,154 @@ var (
 		LastModifiedByType: api.CreatedByTypeApplication,
 		LastModifiedAt:     &mockCurrentTime,
 	}
-	mockSystemData = &v20240812preview.SystemData{
+	mockSystemData = &generated.SystemData{
 		CreatedAt:          &mockCurrentTime,
-		CreatedBy:          "ExampleUser",
-		CreatedByType:      v20240812preview.CreatedByTypeApplication,
+		CreatedBy:          new("ExampleUser"),
+		CreatedByType:      new(generated.CreatedByTypeApplication),
 		LastModifiedAt:     &mockCurrentTime,
-		LastModifiedBy:     "ExampleUser",
-		LastModifiedByType: v20240812preview.CreatedByTypeApplication,
+		LastModifiedBy:     new("ExampleUser"),
+		LastModifiedByType: new(generated.CreatedByTypeApplication),
 	}
 )
 
-func getPlatformWorkloadIdentityProfile() map[string]v20240812preview.PlatformWorkloadIdentity {
-	return map[string]v20240812preview.PlatformWorkloadIdentity{
-		"file-csi-driver":          {ResourceID: mockMiResourceId + "0"},
-		"cloud-controller-manager": {ResourceID: mockMiResourceId + "1"},
-		"ingress":                  {ResourceID: mockMiResourceId + "2"},
-		"image-registry":           {ResourceID: mockMiResourceId + "3"},
-		"machine-api":              {ResourceID: mockMiResourceId + "4"},
-		"cloud-network-config":     {ResourceID: mockMiResourceId + "5"},
-		"aro-operator":             {ResourceID: mockMiResourceId + "6"},
-		"disk-csi-driver":          {ResourceID: mockMiResourceId + "7"},
+func getPlatformWorkloadIdentityProfile() map[string]*generated.PlatformWorkloadIdentity {
+	return map[string]*generated.PlatformWorkloadIdentity{
+		"file-csi-driver":          {ResourceID: new(mockMiResourceId + "0")},
+		"cloud-controller-manager": {ResourceID: new(mockMiResourceId + "1")},
+		"ingress":                  {ResourceID: new(mockMiResourceId + "2")},
+		"image-registry":           {ResourceID: new(mockMiResourceId + "3")},
+		"machine-api":              {ResourceID: new(mockMiResourceId + "4")},
+		"cloud-network-config":     {ResourceID: new(mockMiResourceId + "5")},
+		"aro-operator":             {ResourceID: new(mockMiResourceId + "6")},
+		"disk-csi-driver":          {ResourceID: new(mockMiResourceId + "7")},
 	}
 }
 
-func getOpenShiftClusterRequest() *v20240812preview.OpenShiftCluster {
-	return &v20240812preview.OpenShiftCluster{
-		Location: mockLocation,
-		Name:     mockResourceName,
-		Properties: v20240812preview.OpenShiftClusterProperties{
-			ClusterProfile: v20240812preview.ClusterProfile{
-				Version:              defaultVersion,
-				Domain:               mockDomain,
-				ResourceGroupID:      mockResourceGroupID,
-				FipsValidatedModules: v20240812preview.FipsValidatedModulesDisabled,
-			},
-			NetworkProfile: v20240812preview.NetworkProfile{
-				PodCIDR:     mockPodCIDR,
-				ServiceCIDR: mockServiceCIDR,
-			},
-			APIServerProfile: v20240812preview.APIServerProfile{
-				Visibility: v20240812preview.VisibilityPrivate,
-			},
-			IngressProfiles: []v20240812preview.IngressProfile{
-				{
-					Name:       "default",
-					Visibility: v20240812preview.VisibilityPublic,
+func wrapGeneratedOpenShiftCluster(cluster *generated.OpenShiftCluster) *v20250725.OpenShiftCluster {
+	return &v20250725.OpenShiftCluster{OpenShiftCluster: *cluster}
+}
+
+func getOpenShiftClusterRequest() *v20250725.OpenShiftCluster {
+	return &v20250725.OpenShiftCluster{
+		OpenShiftCluster: generated.OpenShiftCluster{
+			Location: new(mockLocation),
+			Name:     new(mockResourceName),
+			Properties: &generated.OpenShiftClusterProperties{
+				ClusterProfile: &generated.ClusterProfile{
+					Version:              new(defaultVersion),
+					Domain:               new(mockDomain),
+					ResourceGroupID:      new(mockResourceGroupID),
+					FipsValidatedModules: new(generated.FipsValidatedModulesDisabled),
 				},
-			},
-			MasterProfile: v20240812preview.MasterProfile{
-				EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
-				VMSize:           v20240812preview.VMSize(mockVMSize),
-				SubnetID:         mockMasterSubnetID,
-			},
-			WorkerProfiles: []v20240812preview.WorkerProfile{
-				{
-					Name:             "worker",
-					EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
-					VMSize:           v20240812preview.VMSize(mockVMSize),
-					DiskSizeGB:       128,
-					Count:            3,
-					SubnetID:         mockWorkerSubnetID,
+				NetworkProfile: &generated.NetworkProfile{
+					PodCidr:     new(mockPodCIDR),
+					ServiceCidr: new(mockServiceCIDR),
 				},
-			},
-		},
-	}
-}
-
-func getServicePrincipalOpenShiftClusterRequest() *v20240812preview.OpenShiftCluster {
-	cluster := getOpenShiftClusterRequest()
-	cluster.Properties.ServicePrincipalProfile = &v20240812preview.ServicePrincipalProfile{
-		ClientID:     mockGuid,
-		ClientSecret: mockGuid,
-	}
-	return cluster
-}
-
-func getWorkloadIdentityOpenShiftClusterRequest() *v20240812preview.OpenShiftCluster {
-	cluster := getOpenShiftClusterRequest()
-	cluster.Identity = &v20240812preview.ManagedServiceIdentity{
-		Type: "UserAssigned",
-		UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
-			mockMiResourceId: {},
-		},
-	}
-	cluster.Properties.PlatformWorkloadIdentityProfile = &v20240812preview.PlatformWorkloadIdentityProfile{
-		PlatformWorkloadIdentities: getPlatformWorkloadIdentityProfile(),
-	}
-	return cluster
-}
-
-func getNewOpenShiftClusterResponse() *v20240812preview.OpenShiftCluster {
-	return &v20240812preview.OpenShiftCluster{
-		ID:         mockResourceID,
-		Name:       mockResourceName,
-		Type:       "Microsoft.RedHatOpenShift/openShiftClusters",
-		Location:   mockLocation,
-		SystemData: &v20240812preview.SystemData{},
-		Properties: v20240812preview.OpenShiftClusterProperties{
-			ProvisioningState: v20240812preview.ProvisioningStateCreating,
-			ClusterProfile: v20240812preview.ClusterProfile{
-				Version:              defaultVersion,
-				Domain:               mockDomain,
-				ResourceGroupID:      mockResourceGroupID,
-				FipsValidatedModules: v20240812preview.FipsValidatedModulesDisabled,
-			},
-			NetworkProfile: v20240812preview.NetworkProfile{
-				PodCIDR:      mockPodCIDR,
-				ServiceCIDR:  mockServiceCIDR,
-				OutboundType: v20240812preview.OutboundTypeLoadbalancer,
-				LoadBalancerProfile: &v20240812preview.LoadBalancerProfile{
-					ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
-						Count: 1,
+				ApiserverProfile: &generated.APIServerProfile{
+					Visibility: new(generated.VisibilityPrivate),
+				},
+				IngressProfiles: []*generated.IngressProfile{
+					{
+						Name:       new("default"),
+						Visibility: new(generated.VisibilityPublic),
 					},
 				},
-				PreconfiguredNSG: v20240812preview.PreconfiguredNSGDisabled,
-			},
-			MasterProfile: v20240812preview.MasterProfile{
-				EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
-				VMSize:           v20240812preview.VMSize(mockVMSize),
-				SubnetID:         mockMasterSubnetID,
-			},
-			WorkerProfiles: []v20240812preview.WorkerProfile{
-				{
-					Name:             "worker",
-					EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
-					VMSize:           v20240812preview.VMSize(mockVMSize),
-					DiskSizeGB:       128,
-					Count:            3,
-					SubnetID:         mockWorkerSubnetID,
+				MasterProfile: &generated.MasterProfile{
+					EncryptionAtHost: new(generated.EncryptionAtHostDisabled),
+					VMSize:           new(mockVMSize),
+					SubnetID:         new(mockMasterSubnetID),
 				},
-			},
-			APIServerProfile: v20240812preview.APIServerProfile{
-				Visibility: v20240812preview.VisibilityPrivate,
-			},
-			IngressProfiles: []v20240812preview.IngressProfile{
-				{
-					Name:       "default",
-					Visibility: v20240812preview.VisibilityPublic,
+				WorkerProfiles: []*generated.WorkerProfile{
+					{
+						Name:             new("worker"),
+						EncryptionAtHost: new(generated.EncryptionAtHostDisabled),
+						VMSize:           new(mockVMSize),
+						DiskSizeGB:       new(int32(128)),
+						Count:            new(int32(3)),
+						SubnetID:         new(mockWorkerSubnetID),
+					},
 				},
 			},
 		},
 	}
 }
 
-func getNewServicePrincipalOpenShiftClusterResponse() *v20240812preview.OpenShiftCluster {
-	cluster := getNewOpenShiftClusterResponse()
-	cluster.Properties.ServicePrincipalProfile = &v20240812preview.ServicePrincipalProfile{
-		ClientID: mockGuid,
+func getServicePrincipalOpenShiftClusterRequest() *v20250725.OpenShiftCluster {
+	cluster := getOpenShiftClusterRequest()
+	cluster.Properties.ServicePrincipalProfile = &generated.ServicePrincipalProfile{
+		ClientID:     new(mockGuid),
+		ClientSecret: new(mockGuid),
 	}
 	return cluster
 }
 
-func getNewWorkloadIdentityOpenShiftClusterResponse() *v20240812preview.OpenShiftCluster {
-	cluster := getNewOpenShiftClusterResponse()
-	cluster.Identity = &v20240812preview.ManagedServiceIdentity{
-		Type: "UserAssigned",
-		UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
+func getWorkloadIdentityOpenShiftClusterRequest() *v20250725.OpenShiftCluster {
+	cluster := getOpenShiftClusterRequest()
+	cluster.Identity = &generated.ManagedServiceIdentity{
+		Type: new(generated.ManagedServiceIdentityTypeUserAssigned),
+		UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 			mockMiResourceId: {},
 		},
-		TenantID: mockGuid,
 	}
-	cluster.Properties.PlatformWorkloadIdentityProfile = &v20240812preview.PlatformWorkloadIdentityProfile{
+	cluster.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
 		PlatformWorkloadIdentities: getPlatformWorkloadIdentityProfile(),
 	}
 	return cluster
 }
 
-func getExistingServicePrincipalOpenShiftClusterResponse() *v20240812preview.OpenShiftCluster {
-	return getNewServicePrincipalOpenShiftClusterResponse()
+func getNewOpenShiftClusterResponse() *v20250725.OpenShiftCluster {
+	cluster := getOpenShiftClusterRequest()
+	cluster.ID = new(mockResourceID)
+	cluster.Type = new("Microsoft.RedHatOpenShift/openShiftClusters")
+	cluster.SystemData = &generated.SystemData{}
+	cluster.Properties.ProvisioningState = new(generated.ProvisioningStateCreating)
+	cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
+	cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+		ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+			Count: new(int32(1)),
+		},
+	}
+	cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
+	return cluster
 }
 
-func getExistingWorkloadIdentityOpenShiftClusterResponse() *v20240812preview.OpenShiftCluster {
+func getNewServicePrincipalOpenShiftClusterResponse() *v20250725.OpenShiftCluster {
+	cluster := getNewOpenShiftClusterResponse()
+	cluster.Properties.ServicePrincipalProfile = &generated.ServicePrincipalProfile{
+		ClientID: new(mockGuid),
+	}
+	return cluster
+}
+
+func getNewWorkloadIdentityOpenShiftClusterResponse() *v20250725.OpenShiftCluster {
+	cluster := getNewOpenShiftClusterResponse()
+	cluster.Identity = &generated.ManagedServiceIdentity{
+		Type: new(generated.ManagedServiceIdentityTypeUserAssigned),
+		UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
+			mockMiResourceId: {},
+		},
+		TenantID: new(mockGuid),
+	}
+	cluster.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+		PlatformWorkloadIdentities: getPlatformWorkloadIdentityProfile(),
+	}
+	return cluster
+}
+
+func getExistingServicePrincipalOpenShiftClusterResponse() *v20250725.OpenShiftCluster {
+	cluster := getNewServicePrincipalOpenShiftClusterResponse()
+	cluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []*generated.EffectiveOutboundIP{}
+	return cluster
+}
+
+func getExistingWorkloadIdentityOpenShiftClusterResponse() *v20250725.OpenShiftCluster {
 	cluster := getNewWorkloadIdentityOpenShiftClusterResponse()
+	cluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []*generated.EffectiveOutboundIP{}
 	// Since it is an existing cluster, populate the values updated by the backend for Workload Identity clusters
-	cluster.Properties.ClusterProfile.OIDCIssuer = (*v20240812preview.OIDCIssuer)(pointerutils.ToPtr(mockGuid))
-	for roleName, identity := range cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-		identity.ObjectID = mockGuid
-		identity.ClientID = mockGuid
-		cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[roleName] = identity
+	cluster.Properties.ClusterProfile.OidcIssuer = new(mockGuid)
+	for _, identity := range cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		identity.ObjectID = new(mockGuid)
+		identity.ClientID = new(mockGuid)
 	}
 	return cluster
 }
@@ -415,8 +385,8 @@ func getExistingWorkloadIdentityOpenShiftClusterDocument(provisioningState, last
 	doc.ClientIDKey = ""
 	doc.ClusterResourceGroupIDKey = ""
 	// Populate the values updated by the backend for Workload Identity clusters
-	doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = (*api.OIDCIssuer)(pointerutils.ToPtr(mockGuid))
-	doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = (*api.SecureString)(pointerutils.ToPtr(mockGuid))
+	doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = (*api.OIDCIssuer)(new(mockGuid))
+	doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = (*api.SecureString)(new(mockGuid))
 	for roleName, identity := range doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 		identity.ObjectID = mockGuid
 		identity.ClientID = mockGuid
@@ -497,7 +467,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 
 	for _, tt := range []struct {
 		name                    string
-		request                 func() *v20240812preview.OpenShiftCluster
+		request                 func() *v20250725.OpenShiftCluster
 		fixture                 func(*testdatabase.Fixture)
 		quotaValidatorError     error
 		skuValidatorError       error
@@ -505,13 +475,13 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		wantSystemDataEnriched  bool
 		wantDocuments           func(*testdatabase.Checker)
 		wantStatusCode          int
-		wantResponse            *v20240812preview.OpenShiftCluster
+		wantResponse            *v20250725.OpenShiftCluster
 		wantAsync               bool
 		wantError               string
 	}{
 		{
 			name: "create a new OpenShift Service Principal cluster",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -528,7 +498,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift Workload Identity cluster",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				return getWorkloadIdentityOpenShiftClusterRequest()
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -545,10 +515,10 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift Workload Identity cluster - unexpected workload identity provided",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				cluster := getWorkloadIdentityOpenShiftClusterRequest()
 				delete(cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities, "aro-operator")
-				cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["unexpected-operator"] = v20240812preview.PlatformWorkloadIdentity{ResourceID: mockMiResourceId}
+				cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["unexpected-operator"] = &generated.PlatformWorkloadIdentity{ResourceID: new(mockMiResourceId)}
 				return cluster
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -560,7 +530,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift Workload Identity cluster - missing workload identity provided",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				cluster := getWorkloadIdentityOpenShiftClusterRequest()
 				delete(cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities, "aro-operator")
 				return cluster
@@ -574,9 +544,9 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift Workload Identity cluster - extra workload identity provided",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				cluster := getWorkloadIdentityOpenShiftClusterRequest()
-				cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-operator"] = v20240812preview.PlatformWorkloadIdentity{ResourceID: mockMiResourceId}
+				cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-operator"] = &generated.PlatformWorkloadIdentity{ResourceID: new(mockMiResourceId)}
 				return cluster
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -588,7 +558,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift cluster - vm not supported",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -600,7 +570,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift cluster - quota fails",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -612,7 +582,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift cluster - sku unavailable",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -624,7 +594,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift cluster - sku restricted",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -636,7 +606,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift cluster - Microsoft.Authorization provider not registered",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -648,7 +618,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift cluster - Microsoft.Compute provider not registered",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -660,7 +630,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift cluster - Microsoft.Network provider not registered",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -672,10 +642,10 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift Service Principal cluster - fail as provided cluster resource group already contains a cluster",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				cluster := getServicePrincipalOpenShiftClusterRequest()
-				cluster.Properties.ServicePrincipalProfile.ClientID = "11111111-1111-1111-1111-111111111111"
-				cluster.Name = "otherresourcename" // Different name to avoid conflict with the fixture
+				cluster.Properties.ServicePrincipalProfile.ClientID = new("11111111-1111-1111-1111-111111111111")
+				cluster.Name = new("otherresourcename") // Different name to avoid conflict with the fixture
 				return cluster
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -689,9 +659,9 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift Service Principal cluster - fail as provided clientID is not unique",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				cluster := getServicePrincipalOpenShiftClusterRequest()
-				cluster.Name = "otherresourcename" // Different name to avoid conflict with the fixture
+				cluster.Name = new("otherresourcename") // Different name to avoid conflict with the fixture
 				return cluster
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -705,15 +675,15 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		},
 		{
 			name: "create a new OpenShift Workload Identity cluster - fail as provided clientID is not unique",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				cluster := getWorkloadIdentityOpenShiftClusterRequest()
-				cluster.Identity = &v20240812preview.ManagedServiceIdentity{
-					Type: "UserAssigned",
-					UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
+				cluster.Identity = &generated.ManagedServiceIdentity{
+					Type: new(generated.ManagedServiceIdentityTypeUserAssigned),
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						mockMiResourceId: {},
 					},
 				}
-				cluster.Name = "otherresourcename" // Different name to avoid conflict with the fixture
+				cluster.Name = new("otherresourcename") // Different name to avoid conflict with the fixture
 				return cluster
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -735,7 +705,6 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 			defer ti.done()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockQuotaValidator := mock_frontend.NewMockQuotaValidator(controller)
 			mockQuotaValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
@@ -794,7 +763,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 			}
 
 			resp, b, err := ti.request(http.MethodPut,
-				"https://server"+testdatabase.GetResourcePath(mockGuid, oc.Name)+"?api-version=2024-08-12-preview",
+				"https://server"+testdatabase.GetResourcePath(mockGuid, *oc.Name)+"?api-version="+defaultAPIVersion,
 				requestHeaders,
 				oc,
 			)
@@ -840,7 +809,7 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 	ctx := context.Background()
 	for _, tt := range []struct {
 		name                    string
-		request                 func() *v20240812preview.OpenShiftCluster
+		request                 func() *v20250725.OpenShiftCluster
 		fixture                 func(*testdatabase.Fixture)
 		quotaValidatorError     error
 		skuValidatorError       error
@@ -848,26 +817,26 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 		wantSystemDataEnriched  bool
 		wantDocuments           func(*testdatabase.Checker)
 		wantStatusCode          int
-		wantResponse            func() *v20240812preview.OpenShiftCluster
+		wantResponse            func() *v20250725.OpenShiftCluster
 		wantAsync               bool
 		wantError               string
 	}{
 		{
 			name: "update a cluster from succeeded",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				cluster := getServicePrincipalOpenShiftClusterRequest()
 				// OutboundType is set to the current value
-				cluster.Properties.NetworkProfile.OutboundType = v20240812preview.OutboundTypeLoadbalancer
+				cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
 				// PreconfiguredNSG is set to the current value
-				cluster.Properties.NetworkProfile.PreconfiguredNSG = v20240812preview.PreconfiguredNSGDisabled
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
 				// Update the LoadBalancerProfile to have 2 ManagedOutboundIPs
-				cluster.Properties.NetworkProfile.LoadBalancerProfile = &v20240812preview.LoadBalancerProfile{
-					ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
-						Count: 2,
+				cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: new(int32(2)),
 					},
 				}
 				// Update the Tags to ensure they are changed
-				cluster.Tags = map[string]string{"tag": "tag"}
+				cluster.Tags = map[string]*string{"tag": new("tag")}
 				return cluster
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -894,34 +863,35 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 				doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []api.EffectiveOutboundIP{}
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingServicePrincipalOpenShiftClusterResponse()
 				// SystemData won't be changed by the update operation, so we set it to the mockSystemDataAPI.
 				response.SystemData = mockSystemData
 				// Tags and ManagedOutboundIPs count are updated.
-				response.Tags = map[string]string{"tag": "tag"}
-				response.Properties.NetworkProfile.LoadBalancerProfile = &v20240812preview.LoadBalancerProfile{
-					ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
-						Count: 2,
+				response.Tags = map[string]*string{"tag": new("tag")}
+				response.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: new(int32(2)),
 					},
+					EffectiveOutboundIPs: []*generated.EffectiveOutboundIP{},
 				}
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
 		{
 			name: "update a cluster from a failed during update",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				cluster := getServicePrincipalOpenShiftClusterRequest()
 				// OutboundType is set to the current value
-				cluster.Properties.NetworkProfile.OutboundType = v20240812preview.OutboundTypeLoadbalancer
+				cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
 				// PreconfiguredNSG is set to the current value
-				cluster.Properties.NetworkProfile.PreconfiguredNSG = v20240812preview.PreconfiguredNSGDisabled
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
 				// LoadBalancerProfile to have 1 ManagedOutboundIPs, i.e. current value
-				cluster.Properties.NetworkProfile.LoadBalancerProfile = &v20240812preview.LoadBalancerProfile{
-					ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
-						Count: 1,
+				cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: new(int32(1)),
 					},
 				}
 				return cluster
@@ -940,16 +910,16 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 				doc.OpenShiftCluster.Properties.LastProvisioningState = api.ProvisioningStateFailed
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingServicePrincipalOpenShiftClusterResponse()
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
 		{
 			name: "update a cluster from failed during creation",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -957,14 +927,14 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 				f.AddOpenShiftClusterDocuments(getExistingServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateFailed, "", api.ProvisioningStateCreating))
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				return nil
 			},
 			wantError: "400: RequestNotAllowed: : Request is not allowed on cluster whose creation failed. Delete the cluster.",
 		},
 		{
 			name: "update a cluster from failed during deletion",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -972,20 +942,20 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 				f.AddOpenShiftClusterDocuments(getExistingServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateFailed, "", api.ProvisioningStateDeleting))
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				return nil
 			},
 			wantError: "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
 		},
 		{
 			name: "update a cluster from failed with empty failedProvisioningState",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				cluster := getServicePrincipalOpenShiftClusterRequest()
-				cluster.Properties.NetworkProfile.OutboundType = v20240812preview.OutboundTypeLoadbalancer
-				cluster.Properties.NetworkProfile.PreconfiguredNSG = v20240812preview.PreconfiguredNSGDisabled
-				cluster.Properties.NetworkProfile.LoadBalancerProfile = &v20240812preview.LoadBalancerProfile{
-					ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
-						Count: 1,
+				cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
+				cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: new(int32(1)),
 					},
 				}
 				return cluster
@@ -1004,24 +974,24 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 				doc.OpenShiftCluster.Properties.LastProvisioningState = api.ProvisioningStateFailed
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingServicePrincipalOpenShiftClusterResponse()
-				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
 		{
 			name: "update a Workload Identity cluster from succeeded",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				cluster := getWorkloadIdentityOpenShiftClusterRequest()
 				// OutboundType is set to the current value
-				cluster.Properties.NetworkProfile.OutboundType = v20240812preview.OutboundTypeLoadbalancer
+				cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
 				// PreconfiguredNSG is set to the current value
-				cluster.Properties.NetworkProfile.PreconfiguredNSG = v20240812preview.PreconfiguredNSGDisabled
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
 				// LoadBalancerProfile is set to the current value
-				cluster.Properties.NetworkProfile.LoadBalancerProfile = &v20240812preview.LoadBalancerProfile{
-					ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
-						Count: 1,
+				cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: new(int32(1)),
 					},
 				}
 				return cluster
@@ -1039,31 +1009,31 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 				doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []api.EffectiveOutboundIP{}
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingWorkloadIdentityOpenShiftClusterResponse()
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
 		{
 			name: "update a Workload Identity cluster from succeeded - set UpgradeableTo with new identity",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				cluster := getWorkloadIdentityOpenShiftClusterRequest()
 				// OutboundType is set to the current value
-				cluster.Properties.NetworkProfile.OutboundType = v20240812preview.OutboundTypeLoadbalancer
+				cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
 				// PreconfiguredNSG is set to the current value
-				cluster.Properties.NetworkProfile.PreconfiguredNSG = v20240812preview.PreconfiguredNSGDisabled
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
 				// LoadBalancerProfile is set to the current value
-				cluster.Properties.NetworkProfile.LoadBalancerProfile = &v20240812preview.LoadBalancerProfile{
-					ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
-						Count: 1,
+				cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: new(int32(1)),
 					},
 				}
 				// Set UpgradeableTo with new identity
-				cluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
-				cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = v20240812preview.PlatformWorkloadIdentity{
-					ResourceID: mockMiResourceId,
+				cluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = new(getMIWIUpgradeableToVersion().String())
+				cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = &generated.PlatformWorkloadIdentity{
+					ResourceID: new(mockMiResourceId),
 				}
 				return cluster
 			},
@@ -1079,51 +1049,51 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 				doc := getExistingWorkloadIdentityOpenShiftClusterDocument(api.ProvisioningStateUpdating, api.ProvisioningStateSucceeded, "")
 				doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []api.EffectiveOutboundIP{}
 				// Set UpgradeableTo with new identity
-				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(api.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
+				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = new(api.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
 				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = api.PlatformWorkloadIdentity{
 					ResourceID: mockMiResourceId,
 				}
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingWorkloadIdentityOpenShiftClusterResponse()
 				// Set UpgradeableTo with new identity
-				response.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
-				response.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = v20240812preview.PlatformWorkloadIdentity{
-					ResourceID: mockMiResourceId,
+				response.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = new(getMIWIUpgradeableToVersion().String())
+				response.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = &generated.PlatformWorkloadIdentity{
+					ResourceID: new(mockMiResourceId),
 				}
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
 		{
 			name: "Fail - update a Workload Identity cluster from succeeded - pass existing issuerURL in the body",
-			request: func() *v20240812preview.OpenShiftCluster {
+			request: func() *v20250725.OpenShiftCluster {
 				cluster := getWorkloadIdentityOpenShiftClusterRequest()
 				// OutboundType is set to the current value
-				cluster.Properties.NetworkProfile.OutboundType = v20240812preview.OutboundTypeLoadbalancer
+				cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
 				// PreconfiguredNSG is set to the current value
-				cluster.Properties.NetworkProfile.PreconfiguredNSG = v20240812preview.PreconfiguredNSGDisabled
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
 				// LoadBalancerProfile is set to the current value
-				cluster.Properties.NetworkProfile.LoadBalancerProfile = &v20240812preview.LoadBalancerProfile{
-					ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
-						Count: 1,
+				cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: new(int32(1)),
 					},
 				}
 				// Set UpgradeableTo with new identity
-				cluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
-				cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = v20240812preview.PlatformWorkloadIdentity{
-					ResourceID: mockMiResourceId,
+				cluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = new(getMIWIUpgradeableToVersion().String())
+				cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = &generated.PlatformWorkloadIdentity{
+					ResourceID: new(mockMiResourceId),
 				}
-				cluster.Properties.ClusterProfile.OIDCIssuer = (*v20240812preview.OIDCIssuer)(pointerutils.ToPtr(mockGuid))
+				cluster.Properties.ClusterProfile.OidcIssuer = new(mockGuid)
 				return cluster
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(mockSubscriptionDocument)
 				f.AddOpenShiftClusterDocuments(getExistingWorkloadIdentityOpenShiftClusterDocument(api.ProvisioningStateSucceeded, "", ""))
 			},
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				return nil
 			},
 			wantStatusCode: http.StatusBadRequest,
@@ -1139,7 +1109,6 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			defer ti.done()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockQuotaValidator := mock_frontend.NewMockQuotaValidator(controller)
 			mockQuotaValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
@@ -1199,7 +1168,7 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			}
 
 			resp, b, err := ti.request(http.MethodPut,
-				"https://server"+testdatabase.GetResourcePath(mockGuid, oc.Name)+"?api-version=2024-08-12-preview",
+				"https://server"+testdatabase.GetResourcePath(mockGuid, *oc.Name)+"?api-version="+defaultAPIVersion,
 				requestHeaders,
 				oc,
 			)
@@ -1245,7 +1214,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 	ctx := context.Background()
 	for _, tt := range []struct {
 		name                    string
-		request                 func() *v20240812preview.OpenShiftCluster
+		request                 func() *v20250725.OpenShiftCluster
 		fixture                 func(*testdatabase.Fixture)
 		headers                 map[string]string
 		quotaValidatorError     error
@@ -1254,27 +1223,27 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 		wantSystemDataEnriched  bool
 		wantDocuments           func(*testdatabase.Checker)
 		wantStatusCode          int
-		wantResponse            func() *v20240812preview.OpenShiftCluster
+		wantResponse            func() *v20250725.OpenShiftCluster
 		wantAsync               bool
 		wantError               string
 	}{
 		{
 			name: "patch a cluster from succeeded",
-			request: func() *v20240812preview.OpenShiftCluster {
-				return &v20240812preview.OpenShiftCluster{
+			request: func() *v20250725.OpenShiftCluster {
+				return wrapGeneratedOpenShiftCluster(&generated.OpenShiftCluster{
 					// Update the LoadBalancerProfile to have 2 ManagedOutboundIPs
-					Properties: v20240812preview.OpenShiftClusterProperties{
-						NetworkProfile: v20240812preview.NetworkProfile{
-							LoadBalancerProfile: &v20240812preview.LoadBalancerProfile{
-								ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
-									Count: 2,
+					Properties: &generated.OpenShiftClusterProperties{
+						NetworkProfile: &generated.NetworkProfile{
+							LoadBalancerProfile: &generated.LoadBalancerProfile{
+								ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+									Count: new(int32(2)),
 								},
 							},
 						},
 					},
 					// Update the Tags to ensure they are changed
-					Tags: map[string]string{"tag": "tag"},
-				}
+					Tags: map[string]*string{"tag": new("tag")},
+				})
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(mockSubscriptionDocument)
@@ -1301,38 +1270,39 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingServicePrincipalOpenShiftClusterResponse()
 				// SystemData won't be changed by the update operation, so we set it to the mockSystemDataAPI.
 				response.SystemData = mockSystemData
 				// Tags and ManagedOutboundIPs count are updated.
-				response.Tags = map[string]string{"tag": "tag"}
-				response.Properties.NetworkProfile.LoadBalancerProfile = &v20240812preview.LoadBalancerProfile{
-					ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
-						Count: 2,
+				response.Tags = map[string]*string{"tag": new("tag")}
+				response.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: new(int32(2)),
 					},
+					EffectiveOutboundIPs: []*generated.EffectiveOutboundIP{},
 				}
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
 		{
 			name: "patch a workload identity cluster from succeeded - set UpgradeableTo with new identity",
-			request: func() *v20240812preview.OpenShiftCluster {
-				cluster := &v20240812preview.OpenShiftCluster{
-					Properties: v20240812preview.OpenShiftClusterProperties{
-						PlatformWorkloadIdentityProfile: &v20240812preview.PlatformWorkloadIdentityProfile{
-							PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
+			request: func() *v20250725.OpenShiftCluster {
+				cluster := &generated.OpenShiftCluster{
+					Properties: &generated.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &generated.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 								"extra-new-operator": {
-									ResourceID: mockMiResourceId,
+									ResourceID: new(mockMiResourceId),
 								},
 							},
-							UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
+							UpgradeableTo: new(getMIWIUpgradeableToVersion().String()),
 						},
 					},
 				}
-				return cluster
+				return wrapGeneratedOpenShiftCluster(cluster)
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(mockSubscriptionDocument)
@@ -1344,7 +1314,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 				doc := getExistingWorkloadIdentityOpenShiftClusterDocument(api.ProvisioningStateUpdating, api.ProvisioningStateSucceeded, "")
 				doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []api.EffectiveOutboundIP{}
 				// Set UpgradeableTo with new identity
-				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(api.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
+				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = new(api.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
 				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = api.PlatformWorkloadIdentity{
 					ResourceID: mockMiResourceId,
 				}
@@ -1352,33 +1322,33 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingWorkloadIdentityOpenShiftClusterResponse()
 				// Set UpgradeableTo with new identity
-				response.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
-				response.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = v20240812preview.PlatformWorkloadIdentity{
-					ResourceID: mockMiResourceId,
+				response.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = new(getMIWIUpgradeableToVersion().String())
+				response.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = &generated.PlatformWorkloadIdentity{
+					ResourceID: new(mockMiResourceId),
 				}
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
 		{
 			name: "patch a workload identity cluster from succeeded - can replace platform workload identities and existing clientIDs+objectIDs are removed",
-			request: func() *v20240812preview.OpenShiftCluster {
-				cluster := &v20240812preview.OpenShiftCluster{
-					Properties: v20240812preview.OpenShiftClusterProperties{
-						PlatformWorkloadIdentityProfile: &v20240812preview.PlatformWorkloadIdentityProfile{
-							PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
+			request: func() *v20250725.OpenShiftCluster {
+				cluster := &generated.OpenShiftCluster{
+					Properties: &generated.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &generated.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 								"aro-operator": {
-									ResourceID: mockMiResourceId,
+									ResourceID: new(mockMiResourceId),
 								},
 							},
 						},
 					},
 				}
-				return cluster
+				return wrapGeneratedOpenShiftCluster(cluster)
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(mockSubscriptionDocument)
@@ -1396,33 +1366,33 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingWorkloadIdentityOpenShiftClusterResponse()
-				response.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["aro-operator"] = v20240812preview.PlatformWorkloadIdentity{
-					ResourceID: mockMiResourceId,
+				response.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["aro-operator"] = &generated.PlatformWorkloadIdentity{
+					ResourceID: new(mockMiResourceId),
 				}
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
 		{
 			name: "Fail - patch a workload identity cluster from succeeded - pass same issuerURL in the body",
-			request: func() *v20240812preview.OpenShiftCluster {
-				cluster := &v20240812preview.OpenShiftCluster{
-					Properties: v20240812preview.OpenShiftClusterProperties{
-						ClusterProfile: v20240812preview.ClusterProfile{
-							OIDCIssuer: (*v20240812preview.OIDCIssuer)(pointerutils.ToPtr(mockGuid)),
+			request: func() *v20250725.OpenShiftCluster {
+				cluster := &generated.OpenShiftCluster{
+					Properties: &generated.OpenShiftClusterProperties{
+						ClusterProfile: &generated.ClusterProfile{
+							OidcIssuer: new(mockGuid),
 						},
 					},
 				}
-				return cluster
+				return wrapGeneratedOpenShiftCluster(cluster)
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(mockSubscriptionDocument)
 				f.AddOpenShiftClusterDocuments(getExistingWorkloadIdentityOpenShiftClusterDocument(api.ProvisioningStateSucceeded, "", ""))
 			},
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				return nil
 			},
 			wantStatusCode: http.StatusBadRequest,
@@ -1430,27 +1400,27 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 		},
 		{
 			name: "patch a workload identity cluster from succeeded - unexpected identity provided",
-			request: func() *v20240812preview.OpenShiftCluster {
-				cluster := &v20240812preview.OpenShiftCluster{
-					Properties: v20240812preview.OpenShiftClusterProperties{
-						PlatformWorkloadIdentityProfile: &v20240812preview.PlatformWorkloadIdentityProfile{
-							PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
+			request: func() *v20250725.OpenShiftCluster {
+				cluster := &generated.OpenShiftCluster{
+					Properties: &generated.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &generated.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 								"unexpected-operator": {
-									ResourceID: mockMiResourceId,
+									ResourceID: new(mockMiResourceId),
 								},
 							},
-							UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
+							UpgradeableTo: new(getMIWIUpgradeableToVersion().String()),
 						},
 					},
 				}
-				return cluster
+				return wrapGeneratedOpenShiftCluster(cluster)
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(mockSubscriptionDocument)
 				f.AddOpenShiftClusterDocuments(getExistingWorkloadIdentityOpenShiftClusterDocument(api.ProvisioningStateSucceeded, "", ""))
 			},
 			wantSystemDataEnriched: true,
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				return nil
 			},
 			wantStatusCode: http.StatusBadRequest,
@@ -1458,27 +1428,27 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 		},
 		{
 			name: "patch a workload identity cluster from succeeded - unexpected identity provided",
-			request: func() *v20240812preview.OpenShiftCluster {
-				cluster := &v20240812preview.OpenShiftCluster{
-					Properties: v20240812preview.OpenShiftClusterProperties{
-						PlatformWorkloadIdentityProfile: &v20240812preview.PlatformWorkloadIdentityProfile{
-							PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
+			request: func() *v20250725.OpenShiftCluster {
+				cluster := &generated.OpenShiftCluster{
+					Properties: &generated.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &generated.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 								"unexpected-operator": {
-									ResourceID: mockMiResourceId,
+									ResourceID: new(mockMiResourceId),
 								},
 							},
-							UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
+							UpgradeableTo: new(getMIWIUpgradeableToVersion().String()),
 						},
 					},
 				}
-				return cluster
+				return wrapGeneratedOpenShiftCluster(cluster)
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(mockSubscriptionDocument)
 				f.AddOpenShiftClusterDocuments(getExistingWorkloadIdentityOpenShiftClusterDocument(api.ProvisioningStateSucceeded, "", ""))
 			},
 			wantSystemDataEnriched: true,
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				return nil
 			},
 			wantStatusCode: http.StatusBadRequest,
@@ -1486,19 +1456,19 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 		},
 		{
 			name: "replace cluster identity",
-			request: func() *v20240812preview.OpenShiftCluster {
-				cluster := &v20240812preview.OpenShiftCluster{
-					Identity: &v20240812preview.ManagedServiceIdentity{
-						Type: v20240812preview.ManagedServiceIdentityUserAssigned,
-						UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
+			request: func() *v20250725.OpenShiftCluster {
+				cluster := &generated.OpenShiftCluster{
+					Identity: &generated.ManagedServiceIdentity{
+						Type: new(generated.ManagedServiceIdentityTypeUserAssigned),
+						UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 							mockMiResourceId2: {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
+								ClientID:    new(mockGuid),
+								PrincipalID: new(mockGuid),
 							},
 						},
 					},
 				}
-				return cluster
+				return wrapGeneratedOpenShiftCluster(cluster)
 			},
 			headers: map[string]string{
 				middleware.MsiIdentityURLHeader: mockIdentityURL,
@@ -1529,28 +1499,28 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 				}
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingWorkloadIdentityOpenShiftClusterResponse()
 				// Expect the Identity to be updated to new value
-				response.Identity = &v20240812preview.ManagedServiceIdentity{
-					TenantID: "qwer",
-					Type:     v20240812preview.ManagedServiceIdentityUserAssigned,
-					UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
+				response.Identity = &generated.ManagedServiceIdentity{
+					TenantID: new("qwer"),
+					Type:     new(generated.ManagedServiceIdentityTypeUserAssigned),
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						mockMiResourceId2: {
-							ClientID:    mockGuid,
-							PrincipalID: mockGuid,
+							ClientID:    new(mockGuid),
+							PrincipalID: new(mockGuid),
 						},
 					},
 				}
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
 		{
 			name: "update a cluster from a failed during update",
-			request: func() *v20240812preview.OpenShiftCluster {
-				return &v20240812preview.OpenShiftCluster{}
+			request: func() *v20250725.OpenShiftCluster {
+				return &v20250725.OpenShiftCluster{}
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(mockSubscriptionDocument)
@@ -1566,47 +1536,47 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 				doc.OpenShiftCluster.Properties.LastProvisioningState = api.ProvisioningStateFailed
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingServicePrincipalOpenShiftClusterResponse()
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
 		{
 			name: "update a cluster from failed during creation",
-			request: func() *v20240812preview.OpenShiftCluster {
-				return &v20240812preview.OpenShiftCluster{}
+			request: func() *v20250725.OpenShiftCluster {
+				return &v20250725.OpenShiftCluster{}
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(mockSubscriptionDocument)
 				f.AddOpenShiftClusterDocuments(getExistingServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateFailed, "", api.ProvisioningStateCreating))
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				return nil
 			},
 			wantError: "400: RequestNotAllowed: : Request is not allowed on cluster whose creation failed. Delete the cluster.",
 		},
 		{
 			name: "update a cluster from failed during deletion",
-			request: func() *v20240812preview.OpenShiftCluster {
-				return &v20240812preview.OpenShiftCluster{}
+			request: func() *v20250725.OpenShiftCluster {
+				return &v20250725.OpenShiftCluster{}
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(mockSubscriptionDocument)
 				f.AddOpenShiftClusterDocuments(getExistingServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateFailed, "", api.ProvisioningStateDeleting))
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				return nil
 			},
 			wantError: "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
 		},
 		{
 			name: "update a cluster from failed with empty failedProvisioningState",
-			request: func() *v20240812preview.OpenShiftCluster {
-				return &v20240812preview.OpenShiftCluster{}
+			request: func() *v20250725.OpenShiftCluster {
+				return &v20250725.OpenShiftCluster{}
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(mockSubscriptionDocument)
@@ -1622,9 +1592,9 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 				doc.OpenShiftCluster.Properties.LastProvisioningState = api.ProvisioningStateFailed
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			wantResponse: func() *v20240812preview.OpenShiftCluster {
+			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingServicePrincipalOpenShiftClusterResponse()
-				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
@@ -1638,8 +1608,6 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 			defer ti.done()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			mockQuotaValidator := mock_frontend.NewMockQuotaValidator(controller)
 			mockQuotaValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
 
@@ -1689,18 +1657,19 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 				"Content-Type": []string{"application/json"},
 			}
 			for k, v := range tt.headers {
-				requestHeaders[k] = []string{v}
+				requestHeaders.Set(k, v)
 			}
-
-			var internal api.OpenShiftCluster
-			f.apis[defaultAPIVersion].OpenShiftClusterConverter.ToInternal(oc, &internal)
-			if internal.UsesWorkloadIdentity() {
-				requestHeaders.Add(middleware.MsiIdentityURLHeader, middleware.MockIdentityURL)
-				requestHeaders.Add(middleware.MsiTenantHeader, mockGuid)
+			if oc.Identity != nil || (oc.Properties != nil && oc.Properties.PlatformWorkloadIdentityProfile != nil) {
+				if requestHeaders.Get(middleware.MsiIdentityURLHeader) == "" {
+					requestHeaders.Set(middleware.MsiIdentityURLHeader, middleware.MockIdentityURL)
+				}
+				if requestHeaders.Get(middleware.MsiTenantHeader) == "" {
+					requestHeaders.Set(middleware.MsiTenantHeader, mockGuid)
+				}
 			}
 
 			resp, b, err := ti.request(http.MethodPatch,
-				"https://server"+testdatabase.GetResourcePath(mockGuid, "resourceName")+"?api-version=2024-08-12-preview",
+				"https://server"+testdatabase.GetResourcePath(mockGuid, "resourceName")+"?api-version="+defaultAPIVersion,
 				requestHeaders,
 				oc,
 			)

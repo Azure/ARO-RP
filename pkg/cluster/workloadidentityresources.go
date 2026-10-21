@@ -102,10 +102,6 @@ func (m *manager) generatePlatformWorkloadIdentitySecretsAndNamespaces(isCreate 
 		}
 
 		secrets = append(secrets, &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.Identifier(),
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: roles[0].SecretLocation.Namespace,
 				Name:      roles[0].SecretLocation.Name,
@@ -121,10 +117,6 @@ func (m *manager) generatePlatformWorkloadIdentitySecretsAndNamespaces(isCreate 
 		})
 
 		namespaces = append(namespaces, &corev1.Namespace{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.Identifier(),
-				Kind:       "Namespace",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: roles[0].SecretLocation.Namespace,
 			},
@@ -138,10 +130,6 @@ func (m *manager) generateCloudCredentialOperatorSecret() (*corev1.Secret, error
 	tenantId := m.subscriptionDoc.Subscription.Properties.TenantID
 
 	return &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.Identifier(),
-			Kind:       "Secret",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ccoSecretNamespace,
 			Name:      ccoSecretName,
@@ -160,10 +148,6 @@ func (m *manager) generateAuthenticationConfig() (*configv1.Authentication, erro
 	}
 
 	return &configv1.Authentication{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: configv1.SchemeGroupVersion.Identifier(),
-			Kind:       "Authentication",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: authenticationConfigName,
 		},
@@ -200,8 +184,9 @@ func (m *manager) ensurePlatformWorkloadIdentityRBAC(ctx context.Context) error 
 	resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
 	resourceGroup := stringutils.LastTokenByte(resourceGroupID, '/')
 
-	var toDelete []mgmtauthorization.RoleAssignment
+	toDelete := map[string]mgmtauthorization.RoleAssignment{}
 	var toAdd []*arm.Resource
+	currentClusterIdentities := map[string]struct{}{strings.ToLower(m.fpServicePrincipalID): {}}
 
 	m.log.Infof("retrieving existing role assignments")
 	allExistingRoleAssignments, err := m.roleAssignments.ListForResourceGroup(ctx, resourceGroup, "atScope()")
@@ -222,30 +207,43 @@ func (m *manager) ensurePlatformWorkloadIdentityRBAC(ctx context.Context) error 
 	platformWorkloadIdentityRoles := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 
 	for roleName, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		identityObjectId := strings.ToLower(identity.ObjectID)
+		currentClusterIdentities[identityObjectId] = struct{}{}
 		roles, ok := platformWorkloadIdentityRoles[roleName]
 		if !ok {
 			return fmt.Errorf("role not found for identity %s", roleName)
 		}
 
 		for _, role := range roles {
-			if existingRoleAssignment, ok := roleAssignmentsForManagedResourceGroupByPrincipalID[strings.ToLower(identity.ObjectID)]; ok {
+			if existingRoleAssignment, ok := roleAssignmentsForManagedResourceGroupByPrincipalID[identityObjectId]; ok {
 				roleDefinitionId := fmt.Sprintf("/subscriptions/%s%s", m.subscriptionDoc.ID, role.RoleDefinitionID)
 				if _, ok := existingRoleAssignment[strings.ToLower(roleDefinitionId)]; ok {
-					delete(roleAssignmentsForManagedResourceGroupByPrincipalID[strings.ToLower(identity.ObjectID)], strings.ToLower(roleDefinitionId))
+					delete(roleAssignmentsForManagedResourceGroupByPrincipalID[identityObjectId], strings.ToLower(roleDefinitionId))
 					continue
 				}
 			}
 			toAdd = append(toAdd, m.workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(role.RoleDefinitionID, '/'), identity.ObjectID))
 		}
 
-		for _, existingRoleAssignment := range roleAssignmentsForManagedResourceGroupByPrincipalID[strings.ToLower(identity.ObjectID)] {
-			toDelete = append(toDelete, existingRoleAssignment)
+		for _, existingRoleAssignment := range roleAssignmentsForManagedResourceGroupByPrincipalID[identityObjectId] {
+			toDelete[*existingRoleAssignment.Name] = existingRoleAssignment
 		}
 	}
 
-	for _, assignment := range toDelete {
-		m.log.Infof("deleting role assignment %s", *assignment.Name)
-		_, err := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+	for _, roleAssignment := range allExistingRoleAssignments {
+		if strings.EqualFold(*roleAssignment.Scope, resourceGroupID) {
+			if _, ok := currentClusterIdentities[strings.ToLower(*roleAssignment.PrincipalID)]; !ok {
+				toDelete[*roleAssignment.Name] = roleAssignment
+			}
+		}
+	}
+
+	for name, assignment := range toDelete {
+		m.log.Infof("deleting role assignment %s", name)
+		err := arm.RetryableDelete(ctx, func() error {
+			_, e := m.roleAssignments.Delete(ctx, *assignment.Scope, name)
+			return e
+		}, m.log, "deleting role assignment "+name)
 		if err != nil {
 			return err
 		}
@@ -258,7 +256,9 @@ func (m *manager) ensurePlatformWorkloadIdentityRBAC(ctx context.Context) error 
 			ContentVersion: "1.0.0.0",
 			Resources:      toAdd,
 		}
-		err = arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "platformworkloadidentityrbac", t, nil)
+		err = arm.Retryable(ctx, func() error {
+			return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "platformworkloadidentityrbac", t, nil)
+		}, m.log, "deploying platform workload identity RBAC")
 		if err != nil {
 			return err
 		}

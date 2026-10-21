@@ -30,19 +30,18 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	cpcController "github.com/Azure/ARO-RP/pkg/operator/controllers/cloudproviderconfig"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	imageController "github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	subnetController "github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/util/ready"
 	utilversion "github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -56,7 +55,7 @@ var _ = Describe("ARO Operator", Label(smoke, install), func() {
 		Eventually(func(g Gomega, ctx context.Context) {
 			for _, pod := range pods.Items {
 				// Check the latest 10 minutes of logs.
-				body, err := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).GetLogs(pod.Name, &corev1.PodLogOptions{SinceSeconds: pointerutils.ToPtr(int64(600))}).DoRaw(ctx)
+				body, err := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).GetLogs(pod.Name, &corev1.PodLogOptions{SinceSeconds: new(int64(600))}).DoRaw(ctx)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(string(body)).NotTo(ContainSubstring("level=error"))
 			}
@@ -124,27 +123,42 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 })
 
 var _ = Describe("ARO Operator - Geneva Logging", func() {
-	It("must be repaired if DaemonSet deleted", func(ctx context.Context) {
+	It("must repair OTel exporter DaemonSets if deleted", func(ctx context.Context) {
 		if _env.IsLocalDevelopmentMode() {
 			Skip("skipping tests in development environment")
 		}
-		mdsdIsReady := func(g Gomega, ctx context.Context) {
-			done, err := ready.CheckDaemonSetIsReady(ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging"), "mdsd")()
 
-			g.Expect(err).NotTo(HaveOccurred())
-			g.Expect(done).To(BeTrue())
+		for _, daemonSetName := range []string{genevalogging.MasterDaemonsetName, genevalogging.WorkerDaemonsetName} {
+			By(fmt.Sprintf("checking that %s DaemonSet exists before the test", daemonSetName))
+			original := GetK8sObjectWithRetry(
+				ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Get, daemonSetName, metav1.GetOptions{},
+			)
+			originalUID := original.UID
+
+			By(fmt.Sprintf("deleting %s DaemonSet", daemonSetName))
+			DeleteK8sObjectWithRetry(
+				ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Delete, daemonSetName, metav1.DeleteOptions{},
+			)
+
+			By(fmt.Sprintf("waiting for %s DaemonSet to be recreated", daemonSetName))
+			Eventually(func(g Gomega, ctx context.Context) {
+				ds, err := clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Get(ctx, daemonSetName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(ds.UID).NotTo(Equal(originalUID))
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+			By(fmt.Sprintf("waiting for %s DaemonSet to be repaired and ready", daemonSetName))
+			Eventually(func(g Gomega, ctx context.Context) {
+				ds, err := clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Get(ctx, daemonSetName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+
+				g.Expect(ds.Status.DesiredNumberScheduled).To(BeNumerically(">", 0))
+				g.Expect(ds.Status.DesiredNumberScheduled).To(Equal(ds.Status.NumberAvailable))
+				g.Expect(ds.Status.DesiredNumberScheduled).To(Equal(ds.Status.UpdatedNumberScheduled))
+				g.Expect(ds.Status.CurrentNumberScheduled).To(Equal(ds.Status.NumberReady))
+				g.Expect(ds.Generation).To(Equal(ds.Status.ObservedGeneration))
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		}
-
-		By("checking that mdsd DaemonSet is ready before the test")
-		Eventually(mdsdIsReady).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-
-		By("deleting mdsd DaemonSet")
-		DeleteK8sObjectWithRetry(
-			ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Delete, "mdsd", metav1.DeleteOptions{},
-		)
-
-		By("checking that mdsd DaemonSet is ready")
-		Eventually(mdsdIsReady).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 })
 
@@ -256,7 +270,7 @@ var _ = Describe("ARO Operator - Conditions", func() {
 			g.Expect(cov1Helpers.IsStatusConditionTrue(co.Status.Conditions, configv1.OperatorAvailable)).To(BeTrue())
 			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorProgressing)).To(BeTrue())
 			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorDegraded)).To(BeTrue())
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).WithTimeout(timeout).Should(Succeed())
+		}).WithContext(ctx).WithTimeout(timeout).Should(Succeed())
 	})
 })
 
@@ -280,19 +294,19 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 
 	gatherNetworkInfo := func(ctx context.Context) {
 		By("gathering vnet name, resource group, location, and adds master/worker subnets to list to reconcile")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 		location = *oc.Location
 
-		vnet, masterSubnet, err := apisubnet.Split((*oc.MasterProfile.SubnetID))
+		vnet, masterSubnet, err := apisubnet.Split((*oc.Properties.MasterProfile.SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
-		_, workerSubnet, err := apisubnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
+		_, workerSubnet, err := apisubnet.Split((*oc.Properties.WorkerProfiles[0].SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
 		subnetsToReconcile = map[string]*string{
-			masterSubnet: pointerutils.ToPtr(""),
-			workerSubnet: pointerutils.ToPtr(""),
+			masterSubnet: new(""),
+			workerSubnet: new(""),
 		}
 
 		r, err := azure.ParseResourceID(vnet)
@@ -332,8 +346,8 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		By("creating an empty test NSG")
 		testNSG = armnetwork.SecurityGroup{
 			Location:   &location,
-			Name:       pointerutils.ToPtr(nsg),
-			Type:       pointerutils.ToPtr("Microsoft.Network/networkSecurityGroups"),
+			Name:       new(nsg),
+			Type:       new("Microsoft.Network/networkSecurityGroups"),
 			Properties: &armnetwork.SecurityGroupPropertiesFormat{},
 		}
 		err := clients.NetworkSecurityGroups.CreateOrUpdateAndWait(ctx, resourceGroup, nsg, testNSG, nil)
@@ -406,7 +420,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 				Labels:      newMachineSet.ObjectMeta.Labels,
 			}
 			newMachineSet.Name = emptyMachineSet
-			newMachineSet.Spec.Replicas = pointerutils.ToPtr(int32(0))
+			newMachineSet.Spec.Replicas = new(int32(0))
 
 			_, err = clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Create(ctx, newMachineSet, metav1.CreateOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
@@ -789,9 +803,64 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 
 	// --- 4.17+ VAP tests ---
 
+	Context("Mandatory OpenShift major-version VAP (v4.17+)", func() {
+		const (
+			policyName  = "aro-cluster-version-major-upgrade-deny"
+			bindingName = "aro-cluster-version-major-upgrade-deny-binding"
+		)
+
+		BeforeEach(func(ctx context.Context) {
+			if !clusterIsAtLeast417(ctx) {
+				Skip("Cluster is pre-4.17 and does not support VAP")
+			}
+		})
+
+		It("must deny an OpenShift 4 to OpenShift 5 upgrade", func(ctx context.Context) {
+			vapObj := &unstructured.Unstructured{}
+			vapObj.SetAPIVersion("admissionregistration.k8s.io/v1")
+			vapObj.SetKind("ValidatingAdmissionPolicy")
+			vapClient, err := clients.Dynamic.GetClient(vapObj)
+			Expect(err).NotTo(HaveOccurred())
+
+			bindingObj := &unstructured.Unstructured{}
+			bindingObj.SetAPIVersion("admissionregistration.k8s.io/v1")
+			bindingObj.SetKind("ValidatingAdmissionPolicyBinding")
+			bindingClient, err := clients.Dynamic.GetClient(bindingObj)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("waiting for the mandatory policy and binding")
+			Eventually(func(g Gomega, ctx context.Context) {
+				_, err := vapClient.Get(ctx, policyName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+
+				_, err = bindingClient.Get(ctx, bindingName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			By("attempting a dry-run update to OpenShift 5")
+			Eventually(func(g Gomega, ctx context.Context) {
+				cv, err := clients.ConfigClient.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(cv.Status.Desired.Version).To(HavePrefix("4."))
+
+				cv.Spec.DesiredUpdate = &configv1.Update{Version: "5.0.0"}
+				_, err = clients.ConfigClient.ConfigV1().ClusterVersions().Update(ctx, cv, metav1.UpdateOptions{
+					DryRun: []string{metav1.DryRunAll},
+				})
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err.Error()).To(ContainSubstring(policyName))
+				g.Expect(err.Error()).To(ContainSubstring("Upgrading from OpenShift 4 to OpenShift 5 is not allowed"))
+			}).WithContext(ctx).WithTimeout(1 * time.Minute).WithPolling(5 * time.Second).Should(Succeed())
+		})
+	})
+
 	Context("ValidatingAdmissionPolicy (v4.17+)", func() {
 		var vapClient func(ctx context.Context, name string, options metav1.GetOptions) (*unstructured.Unstructured, error)
+		var vapCreate func(ctx context.Context, obj *unstructured.Unstructured, options metav1.CreateOptions) (*unstructured.Unstructured, error)
+		var vapDelete func(ctx context.Context, name string, options metav1.DeleteOptions) error
 		var vapBindingClient func(ctx context.Context, name string, options metav1.GetOptions) (*unstructured.Unstructured, error)
+		var vapBindingCreate func(ctx context.Context, obj *unstructured.Unstructured, options metav1.CreateOptions) (*unstructured.Unstructured, error)
+		var vapBindingDelete func(ctx context.Context, name string, options metav1.DeleteOptions) error
 
 		BeforeEach(func(ctx context.Context) {
 			if !isGuardrailsEnabled(ctx) {
@@ -807,6 +876,8 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 			vc, err := clients.Dynamic.GetClient(vapObj)
 			Expect(err).NotTo(HaveOccurred())
 			vapClient = vc.Get
+			vapCreate = vc.Create
+			vapDelete = vc.Delete
 
 			bindingObj := &unstructured.Unstructured{}
 			bindingObj.SetAPIVersion("admissionregistration.k8s.io/v1")
@@ -814,10 +885,13 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 			bc, err := clients.Dynamic.GetClient(bindingObj)
 			Expect(err).NotTo(HaveOccurred())
 			vapBindingClient = bc.Get
+			vapBindingCreate = bc.Create
+			vapBindingDelete = bc.Delete
 		})
 
 		It("should have all expected VAP policies created", func(ctx context.Context) {
 			expectedPolicies := []string{
+				"aro-cluster-version-major-upgrade-deny",
 				"aro-machines-deny",
 				"aro-machine-config-deny",
 				"aro-privileged-namespace-deny",
@@ -835,6 +909,7 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 
 		It("should have all expected VAP bindings created", func(ctx context.Context) {
 			expectedBindings := []string{
+				"aro-cluster-version-major-upgrade-deny-binding",
 				"aro-machines-deny-binding",
 				"aro-machine-config-deny-binding",
 				"aro-privileged-namespace-deny-binding",
@@ -847,6 +922,57 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 					g.Expect(err).NotTo(HaveOccurred())
 					g.Expect(obj.GetName()).To(Equal(name))
 				}).WithContext(ctx).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+			}
+		})
+
+		It("should immediately recreate deleted mandatory VAP resources", func(ctx context.Context) {
+			resources := []struct {
+				name   string
+				get    func(context.Context, string, metav1.GetOptions) (*unstructured.Unstructured, error)
+				create func(context.Context, *unstructured.Unstructured, metav1.CreateOptions) (*unstructured.Unstructured, error)
+				delete func(context.Context, string, metav1.DeleteOptions) error
+			}{
+				{
+					name:   "aro-cluster-version-major-upgrade-deny",
+					get:    vapClient,
+					create: vapCreate,
+					delete: vapDelete,
+				},
+				{
+					name:   "aro-cluster-version-major-upgrade-deny-binding",
+					get:    vapBindingClient,
+					create: vapBindingCreate,
+					delete: vapBindingDelete,
+				},
+			}
+
+			for _, resource := range resources {
+				original, err := resource.get(ctx, resource.name, metav1.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				DeferCleanup(func(ctx context.Context) {
+					_, err := resource.get(ctx, resource.name, metav1.GetOptions{})
+					if !kerrors.IsNotFound(err) {
+						Expect(err).NotTo(HaveOccurred())
+						return
+					}
+
+					for _, field := range []string{"creationTimestamp", "generation", "managedFields", "resourceVersion", "uid"} {
+						unstructured.RemoveNestedField(original.Object, "metadata", field)
+					}
+					_, err = resource.create(ctx, original, metav1.CreateOptions{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				By(fmt.Sprintf("deleting mandatory VAP resource %s", resource.name))
+				Expect(resource.delete(ctx, resource.name, metav1.DeleteOptions{})).To(Succeed())
+
+				By(fmt.Sprintf("waiting for mandatory VAP resource %s to be recreated", resource.name))
+				Eventually(func(g Gomega, ctx context.Context) {
+					obj, err := resource.get(ctx, resource.name, metav1.GetOptions{})
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(obj.GetName()).To(Equal(resource.name))
+				}).WithContext(ctx).WithTimeout(1 * time.Minute).WithPolling(1 * time.Second).Should(Succeed())
 			}
 		})
 

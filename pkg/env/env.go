@@ -100,6 +100,7 @@ type Interface interface {
 	ClusterKeyvault() azsecrets.Client
 	ClusterMsiKeyVaultName() string
 	Domain() string
+	RPParentDomainName() string
 	FeatureIsSet(Feature) bool
 	// TODO: Delete FPAuthorizer once the replace from track1 to track2 is done.
 	FPAuthorizer(string, []string, ...string) (autorest.Authorizer, error)

@@ -12,7 +12,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 )
 
 func (mon *Monitor) getMachineConfigPoolNodeCounts(ctx context.Context) (int64, error) {

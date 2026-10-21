@@ -10,7 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -34,7 +33,8 @@ type th struct {
 
 	_ch clienthelper.Interface
 
-	az *azClients
+	azClusterTenant *azClusterTenantClients
+	azRPTenant      *azRPTenantClients
 }
 
 // force interface checking
@@ -83,14 +83,7 @@ func (t *th) ClientHelper() (clienthelper.Interface, error) {
 		return nil, err
 	}
 
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := client.New(restConfig, client.Options{
-		Mapper: mapper,
-	})
+	client, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return nil, err
 	}
@@ -124,12 +117,22 @@ func (t *th) PatchOpenShiftClusterDocument(ctx context.Context, f database.OpenS
 	if err != nil {
 		return nil, err
 	}
-	return db.Patch(ctx, t.oc.Key, f)
+	updatedDoc, err := db.Patch(ctx, t.oc.Key, f)
+	if err != nil {
+		return nil, err
+	}
+
+	t.oc = updatedDoc
+	return updatedDoc, nil
 }
 
 // GetOpenShiftClusterDocument implements mimo.TaskContext.
 func (t *th) GetOpenShiftClusterDocument() *api.OpenShiftClusterDocument {
 	return t.oc
+}
+
+func (t *th) GetSubscriptionDocument() *api.SubscriptionDocument {
+	return t.sub
 }
 
 // getResultMessage is used by the Actuator to retrieve the finished result

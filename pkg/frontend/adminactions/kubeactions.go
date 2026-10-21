@@ -38,7 +38,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilrecover "github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
@@ -82,7 +81,12 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 		return nil, err
 	}
 
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
+	httpClient, err := restclient.HTTPClientFor(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +127,7 @@ const (
 
 // sends a WebSocket ping control frame
 var pingCodec = websocket.Codec{
-	Marshal: func(v interface{}) ([]byte, byte, error) {
+	Marshal: func(v any) ([]byte, byte, error) {
 		return nil, websocket.PingFrame, nil
 	},
 }
@@ -400,7 +404,7 @@ func (k *kubeActions) KubeFollowPodLogs(ctx context.Context, namespace, podName,
 	opts := &corev1.PodLogOptions{
 		Container:  containerName,
 		Follow:     true,
-		LimitBytes: pointerutils.ToPtr(podLogFollowLimit),
+		LimitBytes: new(podLogFollowLimit),
 	}
 	stream, err := k.kubecli.CoreV1().Pods(namespace).GetLogs(podName, opts).Stream(ctx)
 	if err != nil {
@@ -501,7 +505,7 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 
 	resourceDeleteOptions := metav1.DeleteOptions{}
 	if force {
-		resourceDeleteOptions.GracePeriodSeconds = pointerutils.ToPtr(int64(0))
+		resourceDeleteOptions.GracePeriodSeconds = new(int64(0))
 	}
 
 	if propagationPolicy != nil {

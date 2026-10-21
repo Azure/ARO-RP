@@ -9,28 +9,33 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/apimachinery/pkg/types"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestCheckIngressIP(t *testing.T) {
@@ -109,6 +114,38 @@ func TestCheckIngressIP(t *testing.T) {
 				}
 			},
 			want: "1.1.1.1",
+		},
+		{
+			name: "Single IngressProfile with empty IP, Error",
+			oc: func() *api.OpenShiftClusterProperties {
+				return &api.OpenShiftClusterProperties{
+					IngressProfiles: []api.IngressProfile{
+						{
+							Name: "default",
+							IP:   "",
+						},
+					},
+				}
+			},
+			wantErrMsg: "ingress IP is empty",
+		},
+		{
+			name: "Multiple IngressProfiles, default has empty IP, Error",
+			oc: func() *api.OpenShiftClusterProperties {
+				return &api.OpenShiftClusterProperties{
+					IngressProfiles: []api.IngressProfile{
+						{
+							Name: "custom-ingress",
+							IP:   "1.1.1.1",
+						},
+						{
+							Name: "default",
+							IP:   "",
+						},
+					},
+				}
+			},
+			wantErrMsg: "ingress IP is empty",
 		},
 		{
 			name: "No Ingresses in IngressProfiles, Error",
@@ -288,9 +325,10 @@ func TestCreateDeploymentData(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().IsLocalDevelopmentMode().Return(tt.expected.IsLocalDevelopment).AnyTimes()
@@ -316,7 +354,7 @@ func TestCreateDeploymentData(t *testing.T) {
 			o := operator{
 				oc:     oc,
 				env:    env,
-				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), ctrlfake.NewClientBuilder().WithObjects(cv).Build()),
+				client: clienthelper.NewWithClient(log, testclienthelper.NewAROFakeClientBuilder(cv).Build()),
 			}
 
 			deploymentData, err := o.createDeploymentData(ctx)
@@ -364,7 +402,6 @@ func TestOperatorVersion(t *testing.T) {
 			oc := tt.oc()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().ACRDomain().AnyTimes().Return("intsvcdomain")
@@ -386,10 +423,14 @@ func TestOperatorVersion(t *testing.T) {
 				},
 			}
 
+			_, log := testlog.LogForTesting(t)
+			builder := testclienthelper.NewAROFakeClientBuilder(cv)
+			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
+
 			o := &operator{
 				oc:     &api.OpenShiftCluster{Properties: *oc},
 				env:    _env,
-				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), ctrlfake.NewClientBuilder().WithObjects(cv).Build()),
+				client: ch,
 			}
 
 			staticResources, err := o.createObjects(ctx)
@@ -421,6 +462,94 @@ func TestOperatorVersion(t *testing.T) {
 				if image != tt.wantPullspec {
 					t.Errorf("Got %q, not %q for the image", image, tt.wantPullspec)
 				}
+			}
+		})
+	}
+}
+
+func TestOperatorResourceRequests(t *testing.T) {
+	controller := gomock.NewController(t)
+
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().ACRDomain().AnyTimes().Return("intsvcdomain")
+	_env.EXPECT().AROOperatorImage().AnyTimes().Return("defaultaroimagefromenv")
+	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
+
+	cv := &configv1.ClusterVersion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "version",
+		},
+		Status: configv1.ClusterVersionStatus{
+			History: []configv1.UpdateHistory{
+				{
+					State:   configv1.CompletedUpdate,
+					Version: "4.10.0",
+				},
+			},
+		},
+	}
+
+	_, log := testlog.LogForTesting(t)
+	builder := testclienthelper.NewAROFakeClientBuilder(cv)
+	ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
+
+	o := &operator{
+		oc:     &api.OpenShiftCluster{Properties: api.OpenShiftClusterProperties{}},
+		env:    _env,
+		client: ch,
+	}
+
+	staticResources, err := o.createObjects(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployments := map[string]*appsv1.Deployment{}
+	for _, i := range staticResources {
+		if d, ok := i.(*appsv1.Deployment); ok {
+			deployments[d.Name] = d
+		}
+	}
+
+	for _, tt := range []struct {
+		name       string
+		wantCPU    resource.Quantity
+		wantMemory resource.Quantity
+	}{
+		{
+			name:       "aro-operator-master",
+			wantCPU:    resource.MustParse("10m"),
+			wantMemory: resource.MustParse("250Mi"),
+		},
+		{
+			name:       "aro-operator-worker",
+			wantCPU:    resource.MustParse("10m"),
+			wantMemory: resource.MustParse("100Mi"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			d, ok := deployments[tt.name]
+			if !ok {
+				t.Fatalf("deployment %q not found", tt.name)
+			}
+
+			if len(d.Spec.Template.Spec.Containers) != 1 {
+				t.Fatalf("found %d containers, expected 1", len(d.Spec.Template.Spec.Containers))
+			}
+
+			reqs := d.Spec.Template.Spec.Containers[0].Resources
+			if reqs.Requests == nil {
+				t.Fatal("resource requests not set")
+			}
+
+			if !reqs.Requests.Cpu().Equal(tt.wantCPU) {
+				t.Errorf("CPU request: got %s, want %s", reqs.Requests.Cpu(), tt.wantCPU.String())
+			}
+			if !reqs.Requests.Memory().Equal(tt.wantMemory) {
+				t.Errorf("memory request: got %s, want %s", reqs.Requests.Memory(), tt.wantMemory.String())
+			}
+			if len(reqs.Limits) != 0 {
+				t.Errorf("resource limits should not be set, got %v", reqs.Limits)
 			}
 		})
 	}
@@ -464,13 +593,15 @@ func TestCheckOperatorDeploymentVersion(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			clientset := fake.NewSimpleClientset()
-			_, err := clientset.AppsV1().Deployments("openshift-azure-operator").Create(ctx, tt.deployment, metav1.CreateOptions{})
-			if err != nil {
-				t.Fatalf("error creating deployment: %v", err)
-			}
+			_, log := testlog.LogForTesting(t)
+			builder := testclienthelper.NewAROFakeClientBuilder(tt.deployment)
+			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 
-			got, err := checkOperatorDeploymentVersion(ctx, clientset.AppsV1().Deployments("openshift-azure-operator"), tt.deployment.Name, tt.desiredVersion)
+			got, err := checkOperatorDeploymentVersion(
+				ctx, ch,
+				types.NamespacedName{Namespace: "openshift-azure-operator", Name: tt.deployment.Name},
+				tt.desiredVersion,
+			)
 			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
 
 			if tt.want != got {
@@ -532,13 +663,11 @@ func TestCheckPodImageVersion(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			clientset := fake.NewSimpleClientset()
-			_, err := clientset.CoreV1().Pods("openshift-azure-operator").Create(ctx, tt.pod, metav1.CreateOptions{})
-			if err != nil {
-				t.Fatalf("error creating pod: %v", err)
-			}
+			_, log := testlog.New()
+			builder := testclienthelper.NewAROFakeClientBuilder(tt.pod)
+			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 
-			got, err := checkPodImageVersion(ctx, clientset.CoreV1().Pods("openshift-azure-operator"), tt.pod.Name, tt.desiredVersion)
+			got, err := checkPodImageVersion(ctx, ch, tt.pod.Name, tt.desiredVersion)
 			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
 
 			if tt.want != got {
@@ -636,8 +765,9 @@ func TestEnsureUpgradeAnnotation(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+			_, log := testlog.New()
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 
@@ -655,16 +785,22 @@ func TestEnsureUpgradeAnnotation(t *testing.T) {
 					Annotations: tt.annotation,
 				},
 			}
+			builder := testclienthelper.NewAROFakeClientBuilder(cloudcredentialobject)
+			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 
 			o := operator{
-				oc:          oc,
-				env:         env,
-				operatorcli: operatorfake.NewSimpleClientset(cloudcredentialobject),
+				oc:     oc,
+				env:    env,
+				client: ch,
 			}
 
 			err := o.EnsureUpgradeAnnotation(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			result, _ := o.operatorcli.OperatorV1().CloudCredentials().List(ctx, metav1.ListOptions{})
+			result := &operatorv1.CloudCredentialList{}
+			err = ch.List(ctx, result)
+			if err != nil {
+				t.Error(err)
+			}
 			for _, v := range result.Items {
 				actualAnnotations := v.Annotations
 				if !reflect.DeepEqual(actualAnnotations, tt.wantAnnotation) {
@@ -832,6 +968,315 @@ func TestTemplateManifestsAzureTokenCredentials(t *testing.T) {
 
 			if !found {
 				t.Error("AZURE_TOKEN_CREDENTIALS env var not found in master deployment")
+			}
+		})
+	}
+}
+
+func TestCredentialsRequest(t *testing.T) {
+	ctx := t.Context()
+	r := require.New(t)
+	_, log := testlog.LogForTesting(t)
+
+	controller := gomock.NewController(t)
+
+	env := mock_env.NewMockInterface(controller)
+
+	oc := &api.OpenShiftCluster{}
+
+	builder := testclienthelper.NewAROFakeClientBuilder()
+	ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
+
+	o := operator{
+		oc:     oc,
+		env:    env,
+		client: ch,
+	}
+
+	err := o.CreateOrUpdateCredentialsRequest(ctx)
+	r.NoError(err)
+	result := &cloudcredentialv1.CredentialsRequestList{}
+	err = ch.List(ctx, result, client.InNamespace("openshift-cloud-credential-operator"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Our desired CredentialRequest is made
+	r.Len(result.Items, 1)
+	r.Equal([]string{"aro-operator-master"}, result.Items[0].Spec.ServiceAccountNames)
+}
+
+func TestClusterObject(t *testing.T) {
+	const (
+		masterSubnetID   = "/subscriptions/sub-id/resourceGroups/rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"
+		clusterID        = "test-cluster-id"
+		clusterRGID      = "test-cluster-rg-id"
+		location         = "eastus"
+		subscriptionID   = "sub-id"
+		resourceGroup    = "rp-rg"
+		acrDomain        = "arosvc.azurecr.io"
+		envType          = "production"
+		rpParentDomain   = "aro.azure.com"
+		gatewayRG        = "gw-rg"
+		storageAcct      = "testregistry"
+		gatewayIP        = "10.0.0.1"
+		ingressIP        = "1.2.3.4"
+		apiIntIP         = "10.0.0.2"
+		infraID          = "test-infra"
+		storageSuffix    = "testsuffix"
+		gatewayEnvDomain = "gateway.eastus.aro.azure.com"
+		envDomain        = "test.aroenv.com"
+	)
+
+	vnetID := "/subscriptions/sub-id/resourceGroups/rg/providers/Microsoft.Network/virtualNetworks/vnet"
+	rpPESubnet := "/subscriptions/" + subscriptionID + "/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"
+	rpSubnet := "/subscriptions/" + subscriptionID + "/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"
+	gwSubnet := "/subscriptions/" + subscriptionID + "/resourceGroups/" + gatewayRG + "/providers/Microsoft.Network/virtualNetworks/gateway-vnet/subnets/gateway-subnet"
+
+	internetCheckerURLs := []string{
+		"https://" + acrDomain + "/",
+		azureclient.PublicCloud.ActiveDirectoryEndpoint,
+		azureclient.PublicCloud.ResourceManagerEndpoint,
+		azureclient.PublicCloud.GenevaMonitoringEndpoint,
+	}
+
+	baseEnvSetup := func(env *mock_env.MockInterface) {
+		env.EXPECT().ACRDomain().Return(acrDomain).AnyTimes()
+		env.EXPECT().Environment().Return(&azureclient.PublicCloud).AnyTimes()
+		env.EXPECT().Location().Return(location).AnyTimes()
+		env.EXPECT().SubscriptionID().Return(subscriptionID).AnyTimes()
+		env.EXPECT().ResourceGroup().Return(resourceGroup).AnyTimes()
+		env.EXPECT().EnvironmentType().Return(envType)
+	}
+
+	newOC := func() *api.OpenShiftCluster {
+		return &api.OpenShiftCluster{
+			ID: clusterID,
+			Properties: api.OpenShiftClusterProperties{
+				MasterProfile:  api.MasterProfile{SubnetID: masterSubnetID},
+				ClusterProfile: api.ClusterProfile{Domain: "example.com", ResourceGroupID: clusterRGID},
+				IngressProfiles: []api.IngressProfile{
+					{Name: "default", IP: ingressIP},
+				},
+				APIServerProfile:                api.APIServerProfile{IntIP: apiIntIP},
+				InfraID:                         infraID,
+				StorageSuffix:                   storageSuffix,
+				ImageRegistryStorageAccountName: storageAcct,
+			},
+		}
+	}
+
+	type expectedOpts struct {
+		domain                 string
+		serviceSubnets         []string
+		gatewayDomains         []string
+		gatewayTelemetryDomain string
+		gatewayPrivateEPIP     string
+		operatorFlags          arov1alpha1.OperatorFlags
+	}
+	buildExpected := func(opts expectedOpts) *arov1alpha1.Cluster {
+		return &arov1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+			Spec: arov1alpha1.ClusterSpec{
+				ResourceID:               clusterID,
+				ClusterResourceGroupID:   clusterRGID,
+				Domain:                   opts.domain,
+				ACRDomain:                acrDomain,
+				AZEnvironment:            azureclient.PublicCloud.Name,
+				Location:                 location,
+				InfraID:                  infraID,
+				StorageSuffix:            storageSuffix,
+				VnetID:                   vnetID,
+				ServiceSubnets:           opts.serviceSubnets,
+				InternetChecker:          arov1alpha1.InternetCheckerSpec{URLs: internetCheckerURLs},
+				APIIntIP:                 apiIntIP,
+				IngressIP:                ingressIP,
+				GatewayPrivateEndpointIP: opts.gatewayPrivateEPIP,
+				GatewayDomains:           opts.gatewayDomains,
+				GatewayTelemetryDomain:   opts.gatewayTelemetryDomain,
+				OperatorFlags:            opts.operatorFlags,
+			},
+		}
+	}
+
+	baseFlags := arov1alpha1.OperatorFlags{"aro.environment": envType}
+
+	for _, tt := range []struct {
+		name        string
+		oc          *api.OpenShiftCluster
+		mockSetup   func(*mock_env.MockInterface)
+		wantCluster *arov1alpha1.Cluster
+		wantErrMsg  string
+	}{
+		// ── Error cases ───────────────────────────────────────────────────────────
+		{
+			name: "invalid subnetID returns error",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{SubnetID: "not-a-valid-subnet-id"},
+				},
+			},
+			mockSetup:  func(_ *mock_env.MockInterface) {},
+			wantErrMsg: `subnet ID "not-a-valid-subnet-id" has incorrect length`,
+		},
+		{
+			name: "no IngressProfiles returns error",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile:  api.MasterProfile{SubnetID: masterSubnetID},
+					ClusterProfile: api.ClusterProfile{Domain: "example.com"},
+				},
+			},
+			mockSetup:  func(_ *mock_env.MockInterface) {},
+			wantErrMsg: "no Ingress Profiles found",
+		},
+
+		// ── Gateway / GatewayPrivateEndpointIP combinations ──────────────────────
+		{
+			name:      "(theoretically shouldn't happen after rollout of OTEL logging stack) gateway disabled, no GatewayPrivateEndpointIP: neither GatewayDomains nor GatewayTelemetryDomain populated",
+			oc:        newOC(),
+			mockSetup: baseEnvSetup,
+			wantCluster: buildExpected(expectedOpts{
+				domain:         "example.com",
+				serviceSubnets: []string{rpPESubnet, rpSubnet},
+				gatewayDomains: []string{},
+				operatorFlags:  baseFlags,
+			}),
+		},
+		{
+			name: "(theoretically shouldn't happen) gateway enabled, no GatewayPrivateEndpointIP: GatewayDomains and service subnet added, no GatewayTelemetryDomain",
+			oc: func() *api.OpenShiftCluster {
+				oc := newOC()
+				oc.Properties.FeatureProfile.GatewayEnabled = true
+				return oc
+			}(),
+			mockSetup: func(env *mock_env.MockInterface) {
+				baseEnvSetup(env)
+				env.EXPECT().GatewayResourceGroup().Return(gatewayRG)
+				env.EXPECT().GatewayDomains().Return([]string{gatewayEnvDomain})
+			},
+			wantCluster: buildExpected(expectedOpts{
+				domain:         "example.com",
+				serviceSubnets: []string{rpPESubnet, rpSubnet, gwSubnet},
+				gatewayDomains: []string{gatewayEnvDomain, storageAcct + ".blob." + azureclient.PublicCloud.StorageEndpointSuffix},
+				operatorFlags:  baseFlags,
+			}),
+		},
+		{
+			name: "gateway disabled, GatewayPrivateEndpointIP set: GatewayTelemetryDomain populated, GatewayDomains empty",
+			oc: func() *api.OpenShiftCluster {
+				oc := newOC()
+				oc.Properties.NetworkProfile.GatewayPrivateEndpointIP = gatewayIP
+				return oc
+			}(),
+			mockSetup: func(env *mock_env.MockInterface) {
+				baseEnvSetup(env)
+				env.EXPECT().RPParentDomainName().Return(rpParentDomain)
+			},
+			wantCluster: buildExpected(expectedOpts{
+				domain:                 "example.com",
+				serviceSubnets:         []string{rpPESubnet, rpSubnet},
+				gatewayDomains:         []string{},
+				gatewayTelemetryDomain: "telemetry." + location + "." + rpParentDomain,
+				gatewayPrivateEPIP:     gatewayIP,
+				operatorFlags:          baseFlags,
+			}),
+		},
+		{
+			name: "gateway enabled and GatewayPrivateEndpointIP set: GatewayDomains and GatewayTelemetryDomain both populated",
+			oc: func() *api.OpenShiftCluster {
+				oc := newOC()
+				oc.Properties.FeatureProfile.GatewayEnabled = true
+				oc.Properties.NetworkProfile.GatewayPrivateEndpointIP = gatewayIP
+				return oc
+			}(),
+			mockSetup: func(env *mock_env.MockInterface) {
+				baseEnvSetup(env)
+				env.EXPECT().RPParentDomainName().Return(rpParentDomain)
+				env.EXPECT().GatewayResourceGroup().Return(gatewayRG)
+				env.EXPECT().GatewayDomains().Return([]string{gatewayEnvDomain})
+			},
+			wantCluster: buildExpected(expectedOpts{
+				domain:                 "example.com",
+				serviceSubnets:         []string{rpPESubnet, rpSubnet, gwSubnet},
+				gatewayDomains:         []string{gatewayEnvDomain, storageAcct + ".blob." + azureclient.PublicCloud.StorageEndpointSuffix},
+				gatewayTelemetryDomain: "telemetry." + location + "." + rpParentDomain,
+				gatewayPrivateEPIP:     gatewayIP,
+				operatorFlags:          baseFlags,
+			}),
+		},
+
+		// ── Domain expansion ──────────────────────────────────────────────────────
+		{
+			name: "domain without a dot is expanded using env.Domain()",
+			oc: func() *api.OpenShiftCluster {
+				oc := newOC()
+				oc.Properties.ClusterProfile.Domain = "shortdomain"
+				return oc
+			}(),
+			mockSetup: func(env *mock_env.MockInterface) {
+				baseEnvSetup(env)
+				env.EXPECT().Domain().Return(envDomain)
+			},
+			wantCluster: buildExpected(expectedOpts{
+				domain:         "shortdomain." + envDomain,
+				serviceSubnets: []string{rpPESubnet, rpSubnet},
+				gatewayDomains: []string{},
+				operatorFlags:  baseFlags,
+			}),
+		},
+
+		// ── OperatorFlags handling ────────────────────────────────────────────────
+		{
+			name: "pre-existing aro.environment in OperatorFlags is not overwritten, EnvironmentType() is not called",
+			oc: func() *api.OpenShiftCluster {
+				oc := newOC()
+				oc.Properties.OperatorFlags = api.OperatorFlags{"aro.environment": "original-value"}
+				return oc
+			}(),
+			// EnvironmentType() must NOT be called when aro.environment already exists.
+			mockSetup: func(env *mock_env.MockInterface) {
+				env.EXPECT().ACRDomain().Return(acrDomain).AnyTimes()
+				env.EXPECT().Environment().Return(&azureclient.PublicCloud).AnyTimes()
+				env.EXPECT().Location().Return(location).AnyTimes()
+				env.EXPECT().SubscriptionID().Return(subscriptionID).AnyTimes()
+				env.EXPECT().ResourceGroup().Return(resourceGroup).AnyTimes()
+			},
+			wantCluster: buildExpected(expectedOpts{
+				domain:         "example.com",
+				serviceSubnets: []string{rpPESubnet, rpSubnet},
+				gatewayDomains: []string{},
+				operatorFlags:  arov1alpha1.OperatorFlags{"aro.environment": "original-value"},
+			}),
+		},
+		{
+			name: "OperatorFlags with other keys but no aro.environment: aro.environment added, other keys preserved",
+			oc: func() *api.OpenShiftCluster {
+				oc := newOC()
+				oc.Properties.OperatorFlags = api.OperatorFlags{"some.flag": "some-value"}
+				return oc
+			}(),
+			mockSetup: baseEnvSetup,
+			wantCluster: buildExpected(expectedOpts{
+				domain:         "example.com",
+				serviceSubnets: []string{rpPESubnet, rpSubnet},
+				gatewayDomains: []string{},
+				operatorFlags:  arov1alpha1.OperatorFlags{"some.flag": "some-value", "aro.environment": envType},
+			}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			env := mock_env.NewMockInterface(controller)
+			tt.mockSetup(env)
+
+			o := &operator{oc: tt.oc, env: env}
+
+			cluster, err := o.clusterObject()
+			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
+
+			if diff := cmp.Diff(tt.wantCluster, cluster); diff != "" {
+				t.Errorf("clusterObject() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}

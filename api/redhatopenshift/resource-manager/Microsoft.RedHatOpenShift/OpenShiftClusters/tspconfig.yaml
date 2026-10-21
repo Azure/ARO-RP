@@ -3,6 +3,7 @@ parameters:
     default: "sdk/redhatopenshift"
 emit:
   - "@azure-tools/typespec-autorest"
+  - "@azure-tools/typespec-python"
 options:
   "@azure-tools/typespec-autorest":
     omit-unreachable-types: true
@@ -12,11 +13,9 @@ options:
     arm-types-dir: "{project-root}/../../../../common-types/resource-management"
     # examples-dir: "{project-root}/examples"
   "@azure-tools/typespec-python":
-    service-dir: "sdk/redhatopenshift"
-    emitter-output-dir: "{output-dir}/{service-dir}/azure-mgmt-redhatopenshift"
+    emitter-output-dir: "{project-root}/../../../../../python/client"
     namespace: "azure.mgmt.redhatopenshift"
-    generate-test: true
-    generate-sample: true
+    generate-packaging-files: false
     flavor: "azure"
   "@azure-tools/typespec-java":
     emitter-output-dir: "{output-dir}/{service-dir}/azure-resourcemanager-redhatopenshift"
@@ -36,13 +35,9 @@ options:
       name: "@azure/arm-redhatopenshift"
   "@azure-tools/typespec-go":
     service-dir: "sdk/resourcemanager/redhatopenshift"
-    emitter-output-dir: "{output-dir}/{service-dir}/armredhatopenshift"
+    emitter-output-dir: "{project-root}/../../../../../pkg/client/{service-dir}/armredhatopenshift"
     module: "github.com/Azure/azure-sdk-for-go/{service-dir}/armredhatopenshift"
-    fix-const-stuttering: false
     flavor: "azure"
-    generate-samples: true
-    generate-fakes: true
-    head-as-boolean: true
     inject-spans: true
 linter:
   extends:

@@ -6,10 +6,13 @@ package frontend
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log"
+	"maps"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -18,6 +21,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chiMiddlewares "github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
+	cryptossh "golang.org/x/crypto/ssh"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -58,6 +62,7 @@ type frontendDBs interface {
 	database.DatabaseGroupWithMaintenanceManifests
 	database.DatabaseGroupWithMaintenanceSchedules
 	database.DatabaseGroupWithBilling
+	database.DatabaseGroupWithPortal
 }
 
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
@@ -108,6 +113,14 @@ type frontend struct {
 
 	clusterEnricher clusterdata.BestEffortEnricher
 
+	// portalServingCert pins the portal binary's serving cert as the CA
+	// bundle in admin-issued kubeconfigs. nil => kubeconfig endpoints 503.
+	portalServingCert *x509.Certificate
+
+	// portalSSHHostPubKey pins the portal binary's SSH host key in the
+	// KnownHosts line returned by the admin SSH endpoint. nil => 503.
+	portalSSHHostPubKey cryptossh.PublicKey
+
 	l net.Listener
 	s *http.Server
 
@@ -119,7 +132,6 @@ type frontend struct {
 	// these helps us to test and mock easier
 	now                          func() time.Time
 	systemDataClusterDocEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
-	validateResizeQuota          func(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location string, currentVMSizes []string, desiredVMSize string) error
 
 	streamResponder StreamResponder
 }
@@ -202,20 +214,17 @@ func NewFrontend(ctx context.Context,
 
 		now:                          time.Now,
 		systemDataClusterDocEnricher: enrichClusterSystemData,
-		validateResizeQuota:          defaultValidateResizeQuota,
 
 		streamResponder: defaultResponder{},
 	}
 
-	// Load Holmes config: API base from Key Vault in prod (env vars in dev),
-	// and the MSI credential for acquiring Entra ID tokens at request time.
-	msiTokenCredential, holmesErr := _env.NewMSITokenCredential()
-	if holmesErr == nil {
-		if _env.IsLocalDevelopmentMode() {
-			f.holmesConfig, holmesErr = holmes.NewHolmesConfigFromEnv(_env.ACRDomain(), msiTokenCredential)
-		} else {
-			f.holmesConfig, holmesErr = holmes.NewHolmesConfig(ctx, _env.ACRDomain(), _env.ServiceKeyvault(), msiTokenCredential)
-		}
+	// Load Holmes config: API base from Key Vault in prod, env vars in dev.
+	// Investigation pods acquire their own Entra ID tokens via workload identity.
+	var holmesErr error
+	if _env.IsLocalDevelopmentMode() {
+		f.holmesConfig, holmesErr = holmes.NewHolmesConfigFromEnv(_env.ACRDomain())
+	} else {
+		f.holmesConfig, holmesErr = holmes.NewHolmesConfig(ctx, _env.ACRDomain(), _env.ServiceKeyvault())
 	}
 	if holmesErr != nil {
 		baseLog.WithError(holmesErr).Warning("Holmes config not available; investigations will be disabled")
@@ -259,8 +268,65 @@ func NewFrontend(ctx context.Context,
 
 	f.l = tls.NewListener(l, config)
 
+	// Admin kubeconfig endpoints need the portal cert as the CA bundle.
+	// On failure those endpoints return 503; RP still starts. Timeout so a
+	// stalled KV call (net/DNS/IMDS) can't block startup.
+	certCtx, certCancel := context.WithTimeout(ctx, 30*time.Second)
+	cert, certErr := loadPortalServingCert(certCtx, _env)
+	certCancel()
+	if certErr != nil {
+		baseLog.WithError(certErr).Warning("portal serving cert not available; admin kubeconfig endpoints will return 503")
+	} else {
+		f.portalServingCert = cert
+	}
+
+	// Admin SSH endpoint pins the portal binary's SSH host key. Same 503
+	// fallback pattern as the kubeconfig cert above.
+	sshCtx, sshCancel := context.WithTimeout(ctx, 30*time.Second)
+	sshPub, sshErr := loadPortalSSHHostPubKey(sshCtx, _env)
+	sshCancel()
+	if sshErr != nil {
+		baseLog.WithError(sshErr).Warning("portal ssh host key not available; admin ssh endpoint will return 503")
+	} else {
+		f.portalSSHHostPubKey = sshPub
+	}
+
 	f.ready.Store(true)
 	return f, nil
+}
+
+func loadPortalServingCert(ctx context.Context, _env env.Interface) (*x509.Certificate, error) {
+	msiCredential, err := _env.NewMSITokenCredential()
+	if err != nil {
+		return nil, err
+	}
+
+	keyVaultPrefix := os.Getenv(encryption.KeyVaultPrefix)
+	if keyVaultPrefix == "" {
+		return nil, fmt.Errorf("%s env var not set", encryption.KeyVaultPrefix)
+	}
+
+	portalKeyvaultURI := azsecrets.URI(_env, env.PortalKeyvaultSuffix, keyVaultPrefix)
+	secretsClient, err := azsecrets.NewClient(portalKeyvaultURI, msiCredential, _env.Environment().AzureClientOptions())
+	if err != nil {
+		return nil, fmt.Errorf("cannot create portal keyvault secrets client: %w", err)
+	}
+
+	portalCert, err := secretsClient.GetSecret(ctx, env.PortalServerSecretName, "", nil)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get portal server certificate secret: %w", err)
+	}
+
+	_, portalCerts, err := azsecrets.ParseSecretAsCertificate(portalCert)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(portalCerts) == 0 {
+		return nil, fmt.Errorf("portal server certificate secret contained no certificates")
+	}
+
+	return portalCerts[0], nil
 }
 
 func (f *frontend) chiUnauthenticatedRoutes(router chi.Router) {
@@ -414,7 +480,6 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdcertificaterenew", f.postAdminOpenShiftClusterEtcdCertificateRenew)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
-				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Put("/mdsdcertificaterenew", f.putAdminMaintManifestMdsdCertificateRenew)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/exec", f.postAdminOpenShiftClusterExec)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/runjob", f.postAdminOpenShiftClusterRunJob)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdkeycount", f.postAdminOpenShiftClusterEtcdKeyCount)
@@ -433,6 +498,16 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.Get("/selectors", f.getAdminOpenShiftClusterSelectors)
 
 				r.Post("/investigate", f.postAdminOpenShiftClusterInvestigate)
+
+				// Kubeconfig tokens consumed by the portal binary's
+				// /kubeconfig/proxy/* subtree. /newelevated is JIT-gated
+				// in its ACIS manifest.
+				r.Post("/kubeconfig/new", f.postAdminOpenShiftClusterKubeconfigNew)
+				r.Post("/kubeconfig/newelevated", f.postAdminOpenShiftClusterKubeconfigNewElevated)
+
+				// SSH token consumed by the portal binary's SSH reverse
+				// proxy. JIT-gated in its ACIS manifest.
+				r.Post("/ssh/newelevated", f.postAdminOpenShiftClusterSSHNewElevated)
 			})
 		})
 
@@ -567,20 +642,18 @@ func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b 
 }
 
 func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
-	for k, v := range header {
-		w.Header()[k] = v
-	}
+	maps.Copy(w.Header(), header)
 
 	if err != nil {
 		switch err := err.(type) {
 		case *api.CloudError:
-			log.Info(err)
+			log.Info(utillog.Sanitize(err.Error()))
 			api.WriteCloudError(w, err)
 			return
 		case statusCodeError:
 			w.WriteHeader(int(err))
 		default:
-			log.Error(err)
+			log.Error(utillog.Sanitize(err.Error()))
 			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 			return
 		}

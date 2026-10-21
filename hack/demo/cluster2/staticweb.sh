@@ -21,7 +21,7 @@ oc project staticweb
 oc create deployment nginx --image=nginxinc/nginx-unprivileged:latest -r 2 --port 8080
 pod=$(oc get pod -l app=nginx -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | head -1)
 oc wait --for=condition=Ready pod/$pod
-oc set volume deploy/nginx --add --name=staticweb --type=pvc --claim-size=1M --mount-path=/usr/share/nginx/html/
+oc set volume deploy/nginx --add --name=staticweb --type=pvc --claim-size=1M --claim-class=azurefile-csi --claim-mode=ReadWriteMany --mount-path=/usr/share/nginx/html/
 pod=$(oc get pod --sort-by .metadata.creationTimestamp -l app=nginx -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | tail -1)
 oc wait --for=condition=Ready pod/$pod
 echo "welcome to cluster2" > index.html

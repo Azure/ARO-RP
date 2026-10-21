@@ -17,7 +17,6 @@ import (
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -61,24 +60,24 @@ func getValidPreviewFeatureInstance() *aropreviewv1alpha1.PreviewFeature {
 func getValidFlowLogFeature() *armnetwork.FlowLog {
 	return &armnetwork.FlowLog{
 		Properties: &armnetwork.FlowLogPropertiesFormat{
-			TargetResourceID: pointerutils.ToPtr(""),
-			Enabled:          pointerutils.ToPtr(true),
-			StorageID:        pointerutils.ToPtr(""),
+			TargetResourceID: new(""),
+			Enabled:          new(true),
+			StorageID:        new(""),
 			RetentionPolicy: &armnetwork.RetentionPolicyParameters{
-				Days: pointerutils.ToPtr(int32(0)),
+				Days: new(int32(0)),
 			},
 			Format: &armnetwork.FlowLogFormatParameters{
-				Type:    pointerutils.ToPtr(armnetwork.FlowLogFormatTypeJSON),
-				Version: pointerutils.ToPtr(int32(0)),
+				Type:    new(armnetwork.FlowLogFormatTypeJSON),
+				Version: new(int32(0)),
 			},
 			FlowAnalyticsConfiguration: &armnetwork.TrafficAnalyticsProperties{
 				NetworkWatcherFlowAnalyticsConfiguration: &armnetwork.TrafficAnalyticsConfigurationProperties{
-					TrafficAnalyticsInterval: pointerutils.ToPtr(int32(0)),
-					WorkspaceID:              pointerutils.ToPtr(""),
+					TrafficAnalyticsInterval: new(int32(0)),
+					WorkspaceID:              new(""),
 				},
 			},
 		},
-		Location: pointerutils.ToPtr(location),
+		Location: new(location),
 	}
 }
 
@@ -238,7 +237,6 @@ func TestReconcileManager(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			subnets := mock_armnetwork.NewMockSubnetsClient(controller)
 			kubeSubnets := mock_subnet.NewMockKubeManager(controller)

@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	gocmp "github.com/google/go-cmp/cmp"
-	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -24,8 +23,8 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	errorHandling "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 const (
@@ -36,7 +35,7 @@ const (
 )
 
 func TestWorkerProfilesEnricherTask(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	clusterID := fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/group/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster",
@@ -141,7 +140,6 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 			e := machineClientEnricher{}
 
 			// When
-			e.SetDefaults(tc.givenOc)
 			err := e.Enrich(context.Background(), log, tc.givenOc, clients.k8s, clients.config, clients.machine, clients.operator)
 
 			// Then
@@ -164,7 +162,7 @@ func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machin
 
 		// Specify the desired state for the MachineSet
 		Spec: machinev1beta1.MachineSetSpec{
-			Replicas: pointerutils.ToPtr(int32(1)),
+			Replicas: new(int32(1)),
 			Template: machinev1beta1.MachineTemplateSpec{
 				// Specify the desired configuration for the machine using ProviderSpec
 				Spec: machinev1beta1.MachineSpec{
@@ -182,7 +180,7 @@ func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machin
 func validProvSpec() machinev1beta1.ProviderSpec {
 	return machinev1beta1.ProviderSpec{
 		Value: &kruntime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{
+			Raw: fmt.Appendf(nil, `{
 	"apiVersion": "machine.openshift.io/v1beta1",
 	"kind": "AzureMachineProviderSpec",
 	"tags": {
@@ -199,7 +197,7 @@ func validProvSpec() machinev1beta1.ProviderSpec {
 	"zone": "1"
 }`,
 				mockVnetRG, mockVnetName, mockSubnetName,
-			)),
+			),
 		},
 	}
 }
@@ -207,7 +205,7 @@ func validProvSpec() machinev1beta1.ProviderSpec {
 func invalidProvSpecZoneAsInt() machinev1beta1.ProviderSpec {
 	return machinev1beta1.ProviderSpec{
 		Value: &kruntime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{
+			Raw: fmt.Appendf(nil, `{
 	"apiVersion": "machine.openshift.io/v1beta1",
 	"kind": "AzureMachineProviderSpec",
 	"tags": {
@@ -224,7 +222,7 @@ func invalidProvSpecZoneAsInt() machinev1beta1.ProviderSpec {
 	"zone": 1
 }`,
 				mockVnetRG, mockVnetName, mockSubnetName,
-			)),
+			),
 		},
 	}
 }
@@ -232,7 +230,7 @@ func invalidProvSpecZoneAsInt() machinev1beta1.ProviderSpec {
 func invalidProvSpecTagsAsInt() machinev1beta1.ProviderSpec {
 	return machinev1beta1.ProviderSpec{
 		Value: &kruntime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{
+			Raw: fmt.Appendf(nil, `{
 	"apiVersion": "machine.openshift.io/v1beta1",
 	"kind": "AzureMachineProviderSpec",
 	"tags": {
@@ -249,7 +247,7 @@ func invalidProvSpecTagsAsInt() machinev1beta1.ProviderSpec {
 	"zone": "1"
 }`,
 				mockVnetRG, mockVnetName, mockSubnetName,
-			)),
+			),
 		},
 	}
 }

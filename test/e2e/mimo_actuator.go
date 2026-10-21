@@ -22,6 +22,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
+var (
+	mimoTestFlag1 = "aro.e2e.testflag." + uuid.DefaultGenerator.Generate()
+	mimoTestFlag2 = "aro.e2e.testflag." + uuid.DefaultGenerator.Generate()
+)
+
 var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 	BeforeEach(func() {
 		skipIfNotInDevelopmentEnv()
@@ -43,18 +48,26 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 			Eventually(func(g Gomega, ctx context.Context) {
 				oc = adminGetCluster(g, ctx, clusterResourceID)
 				g.Expect(oc.Properties.ProvisioningState).To(Equal(admin.ProvisioningStateSucceeded))
+
+				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+
+				// Neither flag should be set
+				_, ok := co.Spec.OperatorFlags[mimoTestFlag1]
+				g.Expect(ok).To(BeFalse())
+				_, ok = co.Spec.OperatorFlags[mimoTestFlag2]
+				g.Expect(ok).To(BeFalse())
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		})
 	})
 
 	It("Should be able to schedule and run a maintenance set via the admin API", func(ctx context.Context) {
 		oc := &admin.OpenShiftCluster{}
-		testflag := "aro.e2e.testflag." + uuid.DefaultGenerator.Generate()
 
 		By("set a bogus flag on the cluster")
 		resp, err := adminRequest(ctx,
 			http.MethodPatch, clusterResourceID, nil, true,
-			json.RawMessage("{\"properties\": {\"maintenanceTask\": \"SyncClusterObject\", \"operatorFlags\": {\""+testflag+"\": \"true\"}}}"), oc)
+			json.RawMessage("{\"properties\": {\"maintenanceTask\": \"SyncClusterObject\", \"operatorFlags\": {\""+mimoTestFlag1+"\": \"true\"}}}"), oc)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -65,12 +78,14 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("check the flag is set in the cluster")
-		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
 
-		flag, ok := co.Spec.OperatorFlags[testflag]
-		Expect(ok).To(BeTrue())
-		Expect(flag).To(Equal("true"))
+			flag, ok := co.Spec.OperatorFlags[mimoTestFlag1]
+			g.Expect(ok).To(BeTrue())
+			g.Expect(flag).To(Equal("true"))
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("change the flag in-cluster to a wrong value")
 		// get the flag we want to check for
@@ -80,7 +95,7 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 				return err
 			}
 
-			co.Spec.OperatorFlags[testflag] = operator.FlagFalse
+			co.Spec.OperatorFlags[mimoTestFlag1] = operator.FlagFalse
 			_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, co, metav1.UpdateOptions{})
 			return err
 		})
@@ -111,11 +126,145 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("checking the flag has been set back in the cluster")
-		co, err = clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			flag, ok := co.Spec.OperatorFlags[mimoTestFlag1]
+			g.Expect(ok).To(BeTrue())
+			g.Expect(flag).To(Equal("true"), "MIMO manifest has not run")
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	})
+
+	It("Syncing the Cluster doc via MIMO should work", func(ctx context.Context) {
+		oc := &admin.OpenShiftCluster{}
+
+		By("set a bogus flag on the cluster")
+		resp, err := adminRequest(ctx,
+			http.MethodPatch, clusterResourceID, nil, true,
+			json.RawMessage("{\"properties\": {\"maintenanceTask\": \"SyncClusterObject\", \"operatorFlags\": {\""+mimoTestFlag2+"\": \"true\"}}}"), oc)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+		By("waiting for the update to complete")
+		Eventually(func(g Gomega, ctx context.Context) {
+			oc = adminGetCluster(g, ctx, clusterResourceID)
+			g.Expect(oc.Properties.ProvisioningState).To(Equal(admin.ProvisioningStateSucceeded))
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		By("check the flag is set in the cluster")
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			flag, ok := co.Spec.OperatorFlags[mimoTestFlag2]
+			g.Expect(ok).To(BeTrue())
+			g.Expect(flag).To(Equal("true"))
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		By("change the flag in-cluster to a wrong value")
+		// get the flag we want to check for
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			co.Spec.OperatorFlags[mimoTestFlag2] = operator.FlagFalse
+			_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, co, metav1.UpdateOptions{})
+			return err
+		})
 		Expect(err).NotTo(HaveOccurred())
 
-		flag, ok = co.Spec.OperatorFlags[testflag]
-		Expect(ok).To(BeTrue())
-		Expect(flag).To(Equal("true"), "MIMO manifest has not run")
+		By("creating the cluster object sync manifest via the API")
+		out := &admin.MaintenanceManifest{}
+		resp, err = adminRequest(ctx,
+			http.MethodPut, "/admin"+clusterResourceID+"/maintenancemanifests",
+			url.Values{}, true, &admin.MaintenanceManifest{
+				MaintenanceTaskID: admin.MIMOTaskID(mimo.OPERATOR_SYNC_CLUSTER_OBJECT_ID),
+			}, &out, logOnError(log)...)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+		manifestID := out.ID
+
+		By("waiting for the manifest run to complete")
+		Eventually(func(g Gomega, ctx context.Context) {
+			fetchedManifest := &admin.MaintenanceManifest{}
+			resp, err = adminRequest(ctx,
+				http.MethodGet, "/admin"+clusterResourceID+"/maintenancemanifests/"+manifestID,
+				url.Values{}, true, nil, &fetchedManifest)
+
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			g.Expect(fetchedManifest.State).To(Equal(admin.MaintenanceManifestStateCompleted))
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		By("checking the flag has been set back in the cluster")
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			flag, ok := co.Spec.OperatorFlags[mimoTestFlag2]
+			g.Expect(ok).To(BeTrue())
+			g.Expect(flag).To(Equal("true"), "MIMO manifest has not run")
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	})
+
+	It("Should set Geneva logging OTel profiles via MIMO maintenance manifests", func(ctx context.Context) {
+		for _, tt := range []struct {
+			name    string
+			taskID  admin.MIMOTaskID
+			profile string
+		}{
+			{
+				name:    "max logs",
+				taskID:  admin.MIMOTaskID(mimo.OPERATOR_FLAG_SET_GENEVA_OTEL_PROFILE_MAX_LOGS),
+				profile: operator.GenevaLoggingOTelProfileMaxLogs,
+			},
+			{
+				name:    "reduced logs",
+				taskID:  admin.MIMOTaskID(mimo.OPERATOR_FLAG_SET_GENEVA_OTEL_PROFILE_REDUCED_LOGS),
+				profile: operator.GenevaLoggingOTelProfileReducedLogs,
+			},
+			{
+				name:    "minimal logs",
+				taskID:  admin.MIMOTaskID(mimo.OPERATOR_FLAG_SET_GENEVA_OTEL_PROFILE_MINIMAL_LOGS),
+				profile: operator.GenevaLoggingOTelProfileMinimalLogs,
+			},
+		} {
+			By("creating a profile task maintenance manifest for " + tt.name)
+			out := &admin.MaintenanceManifest{}
+			resp, err := adminRequest(ctx,
+				http.MethodPut, "/admin"+clusterResourceID+"/maintenancemanifests",
+				url.Values{}, true, &admin.MaintenanceManifest{
+					MaintenanceTaskID: tt.taskID,
+				}, &out, logOnError(log)...)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+			manifestID := out.ID
+			By("waiting for the maintenance manifest to complete for " + tt.name)
+			Eventually(func(g Gomega, ctx context.Context) {
+				fetchedManifest := &admin.MaintenanceManifest{}
+				resp, err = adminRequest(ctx,
+					http.MethodGet, "/admin"+clusterResourceID+"/maintenancemanifests/"+manifestID,
+					url.Values{}, true, nil, &fetchedManifest)
+
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				g.Expect(fetchedManifest.State).To(Equal(admin.MaintenanceManifestStateCompleted))
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+			By("checking expected operator flags for " + tt.name)
+			Eventually(func(g Gomega) {
+				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(co.Spec.OperatorFlags[operator.GenevaLoggingEnabled]).To(Equal(operator.FlagTrue))
+				g.Expect(co.Spec.OperatorFlags[operator.GenevaLoggingOTelProfile]).To(Equal(tt.profile))
+				g.Expect(co.Spec.OperatorFlags[operator.GenevaLoggingOTelMasterProfile]).To(Equal(tt.profile))
+				g.Expect(co.Spec.OperatorFlags[operator.GenevaLoggingOTelWorkerProfile]).To(Equal(tt.profile))
+			}).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+		}
 	})
 })

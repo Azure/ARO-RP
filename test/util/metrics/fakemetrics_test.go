@@ -90,7 +90,7 @@ func TestAssertChecks(t *testing.T) {
 			},
 		},
 		{
-			desc: "looking for a non-existant gauge fails",
+			desc: "looking for a non-existent gauge fails",
 			emit: func(m *fakeMetricsEmitter) {
 				m.EmitGauge("testmetric", 22, nil)
 			},
@@ -133,7 +133,7 @@ func TestAssertChecks(t *testing.T) {
 			},
 		},
 		{
-			desc: "looking for a non-existant float fails",
+			desc: "looking for a non-existent float fails",
 			emit: func(m *fakeMetricsEmitter) {
 				m.EmitFloat("testmetric", 22.11, nil)
 			},
@@ -190,6 +190,68 @@ func TestAssertChecks(t *testing.T) {
 			m.AssertFloats(tt.expectedFloats...)
 			m.AssertGauges(tt.expectedGauges...)
 			m.onCleanup()
+			require.Equal(t, tt.testShouldFail, it.Failed())
+			var output []string
+			if b.String() != "" {
+				output = strings.Split(strings.TrimSpace(b.String()), "\n")
+			}
+			require.ElementsMatch(t, tt.testOutput, output)
+		})
+	}
+}
+
+func TestAssertSingleGauge(t *testing.T) {
+	testCases := []struct {
+		desc           string
+		emit           func(m *fakeMetricsEmitter)
+		expectedGauge  MetricsAssertion[int64]
+		testShouldFail bool
+		testOutput     []string
+	}{
+		{
+			desc: "looking for a matching gauge works",
+			emit: func(m *fakeMetricsEmitter) {
+				m.EmitGauge("testmetric", 22, nil)
+			},
+			expectedGauge:  MetricsAssertion[int64]{MetricName: "testmetric", Dimensions: map[string]string{}, Value: 22},
+			testShouldFail: false,
+			testOutput:     []string{},
+		},
+		{
+			desc: "looking for a non-existent gauge fails",
+			emit: func(m *fakeMetricsEmitter) {
+				m.EmitGauge("testmetric", 22, nil)
+			},
+			expectedGauge:  MetricsAssertion[int64]{MetricName: "othermetric", Dimensions: map[string]string{}, Value: 22},
+			testShouldFail: true,
+			testOutput: []string{
+				"gauge metric 'othermetric' with dims 'map[]' was not emitted",
+			},
+		},
+		{
+			desc: "looking for a gauge with the wrong value fails",
+			emit: func(m *fakeMetricsEmitter) {
+				m.EmitGauge("testmetric", 22, nil)
+			},
+			expectedGauge:  MetricsAssertion[int64]{MetricName: "testmetric", Dimensions: nil, Value: 23},
+			testShouldFail: true,
+			testOutput: []string{
+				"gauge metric 'testmetric' with dims 'map[]' had incorrect emitted value 22, wanted 23",
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.desc, func(t *testing.T) {
+			b := &bytes.Buffer{}
+			it := &testing.T{}
+			m := NewFakeMetricsEmitter(it)
+			m.testOutput = b
+			require.False(t, it.Failed())
+
+			// add some metrics, if we have any
+			tt.emit(m)
+
+			m.AssertSingleGauge(tt.expectedGauge)
 			require.Equal(t, tt.testShouldFail, it.Failed())
 			var output []string
 			if b.String() != "" {

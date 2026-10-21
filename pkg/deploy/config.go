@@ -14,8 +14,6 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"sigs.k8s.io/yaml"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 // NOTICE: when modifying the config definition here, don't forget to update
@@ -62,6 +60,7 @@ type Configuration struct {
 	ExtraCosmosDBIPs                  []string               `json:"extraCosmosDBIPs,omitempty"`
 	FluentbitImage                    *string                `json:"fluentbitImage,omitempty" value:"required"`
 	GatewayOtelCollectorImage         *string                `json:"gatewayOtelCollectorImage,omitempty" value:"required"`
+	GatewayOtelKustoIngestionEndpoint *string                `json:"gatewayOtelKustoIngestionEndpoint,omitempty"`
 	FPClientID                        *string                `json:"fpClientId,omitempty" value:"required"`
 	FPTenantID                        *string                `json:"fpTenantId,omitempty" value:"required"`
 	FPServerCertCommonName            *string                `json:"fpServerCertCommonName,omitempty"`
@@ -122,9 +121,11 @@ type Configuration struct {
 
 // Note: if this configuration block is provided, all throughputs must be present and valid
 type CosmosDBConfiguration struct {
-	StandardProvisionedThroughput int `json:"standardProvisionedThroughput,omitempty"`
-	PortalProvisionedThroughput   int `json:"portalProvisionedThroughput,omitempty"`
-	GatewayProvisionedThroughput  int `json:"gatewayProvisionedThroughput,omitempty"`
+	StandardProvisionedThroughput      int `json:"standardProvisionedThroughput,omitempty"`
+	PortalProvisionedThroughput        int `json:"portalProvisionedThroughput,omitempty"`
+	GatewayProvisionedThroughput       int `json:"gatewayProvisionedThroughput,omitempty"`
+	MimoManifestsProvisionedThroughput int `json:"mimoManifestsProvisionedThroughput,omitempty"`
+	MimoSchedulesProvisionedThroughput int `json:"mimoSchedulesProvisionedThroughput,omitempty"`
 }
 
 // GetConfig return RP configuration from the file
@@ -192,7 +193,7 @@ func (conf *RPConfig) validate() error {
 			return err
 		}
 		publicKeyBytes := ssh.MarshalAuthorizedKey(publicRsaKey)
-		conf.Configuration.SSHPublicKey = pointerutils.ToPtr(string(publicKeyBytes))
+		conf.Configuration.SSHPublicKey = new(string(publicKeyBytes))
 	}
 
 	for i := 0; i < v.NumField(); i++ {

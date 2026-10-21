@@ -9,8 +9,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +20,7 @@ import (
 	"k8s.io/client-go/rest/fake"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 type mockGVRResolver struct{}
@@ -35,7 +33,9 @@ func (gvr mockGVRResolver) Resolve(groupKind, optionalVersion string) (*schema.G
 	return &schema.GroupVersionResource{Group: "metal3.io", Version: "v1alpha1", Resource: "configmap"}, nil
 }
 
-func TestEsureDeleted(t *testing.T) {
+func TestEnsureDeleted(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctx := context.Background()
 
 	mockGVRResolver := mockGVRResolver{}
@@ -67,7 +67,7 @@ func TestEsureDeleted(t *testing.T) {
 	dh := &dynamicHelper{
 		GVRResolver: mockGVRResolver,
 		restcli:     mockRestCLI,
-		log:         logrus.NewEntry(logrus.StandardLogger()),
+		log:         log,
 	}
 
 	err := dh.EnsureDeleted(ctx, "configmap", "test-ns-1", "test-name-1")
@@ -195,7 +195,7 @@ func TestMergeGK(t *testing.T) {
 			},
 			new: &appsv1.Deployment{
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointerutils.ToPtr(int32(1)),
+					Replicas: new(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -219,11 +219,11 @@ func TestMergeGK(t *testing.T) {
 			},
 			want: &appsv1.Deployment{
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointerutils.ToPtr(int32(1)),
+					Replicas: new(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -260,8 +260,8 @@ func TestMergeGK(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    pointerutils.ToPtr(int32(10)),
-					ProgressDeadlineSeconds: pointerutils.ToPtr(int32(600)),
+					RevisionHistoryLimit:    new(int32(10)),
+					ProgressDeadlineSeconds: new(int32(600)),
 				},
 			},
 			wantChanged: true,

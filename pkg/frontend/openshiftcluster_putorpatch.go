@@ -19,7 +19,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
-	"github.com/Azure/ARO-RP/pkg/api/v20240812preview"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -168,7 +168,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		f.clusterEnricher.Enrich(timeoutCtx, log, doc.OpenShiftCluster)
 	}
 
-	var ext interface{}
+	var ext any
 	switch putOrPatchClusterParameters.method {
 	// In case of PUT we will take customer request payload and store into database
 	// Our base structure for unmarshal is skeleton document with values we
@@ -219,7 +219,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		// their dictonary keys will not collide (since the identities have
 		// different names) and the dictionary will end up with two entries
 		if doc.OpenShiftCluster.UsesWorkloadIdentity() {
-			tempPatchParameters := &v20240812preview.OpenShiftCluster{}
+			tempPatchParameters := &v20250725.OpenShiftCluster{}
 			err := json.Unmarshal(putOrPatchClusterParameters.body, tempPatchParameters)
 			if err != nil {
 				return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", fmt.Sprintf("The request content was invalid and could not be deserialized: %q.", err))
@@ -444,7 +444,7 @@ func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID st
 	return nil
 }
 
-func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.SubscriptionDocument, cluster *api.OpenShiftCluster, staticValidator api.OpenShiftClusterStaticValidator, ext interface{}, path string) error {
+func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.SubscriptionDocument, cluster *api.OpenShiftCluster, staticValidator api.OpenShiftClusterStaticValidator, ext any, path string) error {
 	err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, path)
 	if err != nil {
 		return err

@@ -8,29 +8,22 @@ import (
 	"reflect"
 	"testing"
 
-	"go.uber.org/mock/gomock"
-
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 func TestSystemreservedEnsure(t *testing.T) {
 	kubeletConfig := func(resourceVersion string) *mcv1.KubeletConfig {
 		return &mcv1.KubeletConfig{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KubeletConfig",
-				APIVersion: "machineconfiguration.openshift.io/v1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "aro-limits",
 				Labels: map[string]string{
@@ -112,10 +105,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			clientBuilder := ctrlfake.NewClientBuilder()
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder()
 			if tt.mcp != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.mcp)
 			}
@@ -149,6 +139,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if !reflect.DeepEqual(kc, tt.wantKubeletConfig) {
 				t.Error(cmp.Diff(kc, tt.wantKubeletConfig))
 			}
@@ -213,10 +204,7 @@ func TestSystemreservedRemove(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			clientBuilder := ctrlfake.NewClientBuilder()
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder()
 			if tt.mcp != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.mcp)
 			}

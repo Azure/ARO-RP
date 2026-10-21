@@ -230,10 +230,19 @@ func TestEtcdCertificateExpiry(t *testing.T) {
 			m := mock_metrics.NewMockEmitter(controller)
 
 			_, log := testlog.New()
-			ocpclientset := clienthelper.NewWithClient(log, fake.
+
+			fakeClient := fake.
 				NewClientBuilder().
-				WithObjects(tt.objects...).
-				Build())
+				WithObjects(tt.objects...)
+
+			// create an index on the client for secret.Type, which is used in
+			// the List filter
+			fakeClient.WithIndex(&corev1.Secret{}, "type", func(o client.Object) []string {
+				s, _ := o.(*corev1.Secret)
+				return []string{string(s.Type)}
+			})
+
+			ocpclientset := clienthelper.NewWithClient(log, fakeClient.Build())
 
 			mon := &Monitor{
 				log:          log,
@@ -276,12 +285,8 @@ func generateTestSecrets(certsInfo []certInfo, tweakTemplateFn func(*x509.Certif
 		if err != nil {
 			return nil, nil, err
 		}
-		certKey := "tls.crt"
-		if sec.secretName == "cluster" {
-			certKey = "gcscert.pem"
-		}
 		data := map[string][]byte{
-			certKey: pem.EncodeToMemory(&pem.Block{
+			"tls.crt": pem.EncodeToMemory(&pem.Block{
 				Type:  "CERTIFICATE",
 				Bytes: cert[0].Raw,
 			}),

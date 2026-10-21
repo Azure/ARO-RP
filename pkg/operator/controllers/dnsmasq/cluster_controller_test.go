@@ -8,17 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -26,6 +23,7 @@ import (
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestClusterReconciler(t *testing.T) {
@@ -90,6 +88,11 @@ func TestClusterReconciler(t *testing.T) {
 						},
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled:      operator.FlagTrue,
 							operator.ForceReconciliation: operator.FlagTrue,
@@ -112,6 +115,11 @@ func TestClusterReconciler(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled:      operator.FlagTrue,
 							operator.ForceReconciliation: operator.FlagTrue,
@@ -174,6 +182,11 @@ func TestClusterReconciler(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -215,6 +228,11 @@ func TestClusterReconciler(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -258,6 +276,11 @@ func TestClusterReconciler(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -288,6 +311,58 @@ func TestClusterReconciler(t *testing.T) {
 								Version: "4.18.30",
 							},
 						},
+					},
+				},
+			},
+			wantCreated: map[string]int{},
+			wantUpdated: map[string]int{
+				"MachineConfig//99-master-aro-dns": 1,
+			},
+			request:        ctrl.Request{},
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
+		},
+		{
+			// ARO-26990: Progressing=True during an ARO MCO rollout must NOT allow
+			// updating existing MachineConfigs (history[0] is still Completed).
+			name: "ARO-26990: MCO rollout (Progressing=True, history[0]=Completed): does not update existing MachineConfig",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
+				},
+				&mcv1.MachineConfig{
+					ObjectMeta: metav1.ObjectMeta{Name: "99-master-aro-dns"},
+					Spec:       mcv1.MachineConfigSpec{},
+				},
+				&configv1.ClusterVersion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "version",
+					},
+					Status: configv1.ClusterVersionStatus{
+						History: []configv1.UpdateHistory{
+							{
+								State:   configv1.CompletedUpdate,
+								Version: "4.18.30",
+							},
+						},
 						Conditions: []configv1.ClusterOperatorStatusCondition{
 							{
 								Type:   configv1.OperatorProgressing,
@@ -297,10 +372,8 @@ func TestClusterReconciler(t *testing.T) {
 					},
 				},
 			},
-			wantCreated: map[string]int{},
-			wantUpdated: map[string]int{
-				"MachineConfig//99-master-aro-dns": 1,
-			},
+			wantCreated:    map[string]int{},
+			wantUpdated:    map[string]int{},
 			request:        ctrl.Request{},
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
@@ -314,6 +387,11 @@ func TestClusterReconciler(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -340,12 +418,6 @@ func TestClusterReconciler(t *testing.T) {
 								Version: "4.18.30",
 							},
 						},
-						Conditions: []configv1.ClusterOperatorStatusCondition{
-							{
-								Type:   configv1.OperatorProgressing,
-								Status: configv1.ConditionTrue,
-							},
-						},
 					},
 				},
 			},
@@ -357,6 +429,237 @@ func TestClusterReconciler(t *testing.T) {
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
 		},
+		{
+			name: "empty APIIntIP returns error",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.ForceReconciliation: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			wantCreated: map[string]int{},
+			wantUpdated: map[string]int{},
+			request:     ctrl.Request{},
+			wantErrMsg:  `invalid apiIntIP: ParseAddr(""): unable to parse IP`,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable, defaultProgressing, {
+					Type:               "DnsmasqClusterControllerDegraded",
+					Status:             "True",
+					Message:            `invalid apiIntIP: ParseAddr(""): unable to parse IP`,
+					LastTransitionTime: transitionTime,
+				},
+			},
+		},
+		{
+			name: "empty IngressIP returns error",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.ForceReconciliation: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			wantCreated: map[string]int{},
+			wantUpdated: map[string]int{},
+			request:     ctrl.Request{},
+			wantErrMsg:  `invalid ingressIP: ParseAddr(""): unable to parse IP`,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable, defaultProgressing, {
+					Type:               "DnsmasqClusterControllerDegraded",
+					Status:             "True",
+					Message:            `invalid ingressIP: ParseAddr(""): unable to parse IP`,
+					LastTransitionTime: transitionTime,
+				},
+			},
+		},
+		{
+			name: "empty GatewayPrivateEndpointIP with gateway domains returns error",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						Domain:         "cluster.location.aroapp.io",
+						APIIntIP:       "10.0.0.1",
+						IngressIP:      "10.0.0.2",
+						GatewayDomains: []string{"example.com"},
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.ForceReconciliation: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			wantCreated: map[string]int{},
+			wantUpdated: map[string]int{},
+			request:     ctrl.Request{},
+			wantErrMsg:  `invalid gatewayPrivateEndpointIP: ParseAddr(""): unable to parse IP`,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable, defaultProgressing, {
+					Type:               "DnsmasqClusterControllerDegraded",
+					Status:             "True",
+					Message:            `invalid gatewayPrivateEndpointIP: ParseAddr(""): unable to parse IP`,
+					LastTransitionTime: transitionTime,
+				},
+			},
+		},
+		{
+			name: "invalid APIIntIP returns error",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "not-an-ip",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.ForceReconciliation: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			wantCreated: map[string]int{},
+			wantUpdated: map[string]int{},
+			request:     ctrl.Request{},
+			wantErrMsg:  `invalid apiIntIP: ParseAddr("not-an-ip"): unable to parse IP`,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable, defaultProgressing, {
+					Type:               "DnsmasqClusterControllerDegraded",
+					Status:             "True",
+					Message:            `invalid apiIntIP: ParseAddr("not-an-ip"): unable to parse IP`,
+					LastTransitionTime: transitionTime,
+				},
+			},
+		},
+		{
+			name: "invalid IngressIP returns error",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "not-an-ip",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.ForceReconciliation: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			wantCreated: map[string]int{},
+			wantUpdated: map[string]int{},
+			request:     ctrl.Request{},
+			wantErrMsg:  `invalid ingressIP: ParseAddr("not-an-ip"): unable to parse IP`,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable, defaultProgressing, {
+					Type:               "DnsmasqClusterControllerDegraded",
+					Status:             "True",
+					Message:            `invalid ingressIP: ParseAddr("not-an-ip"): unable to parse IP`,
+					LastTransitionTime: transitionTime,
+				},
+			},
+		},
+		{
+			name: "invalid GatewayPrivateEndpointIP returns error",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "not-an-ip",
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.ForceReconciliation: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			wantCreated: map[string]int{},
+			wantUpdated: map[string]int{},
+			request:     ctrl.Request{},
+			wantErrMsg:  `invalid gatewayPrivateEndpointIP: ParseAddr("not-an-ip"): unable to parse IP`,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable, defaultProgressing, {
+					Type:               "DnsmasqClusterControllerDegraded",
+					Status:             "True",
+					Message:            `invalid gatewayPrivateEndpointIP: ParseAddr("not-an-ip"): unable to parse IP`,
+					LastTransitionTime: transitionTime,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -364,11 +667,10 @@ func TestClusterReconciler(t *testing.T) {
 			createTally := make(map[string]int)
 			updateTally := make(map[string]int)
 
-			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
-				WithObjects(tt.objects...).
+			client := testclienthelper.NewHookingClient(testclienthelper.NewAROFakeClientBuilder(tt.objects...).
 				Build()).WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			ch := clienthelper.NewWithClient(log, client)
 
 			r := NewClusterReconciler(

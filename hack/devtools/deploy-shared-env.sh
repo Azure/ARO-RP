@@ -106,25 +106,6 @@ deploy_miwi_infra_for_dedicated_rp() {
     az storage blob service-properties update --static-website true --account-name $(yq '.rps[].configuration.oidcStorageAccountName' dev-config.yaml) --auth-mode login >/dev/null
 }
 
-deploy_env_dev_override() {
-    echo "########## Deploying env-development in RG $RESOURCEGROUP ##########"
-    az deployment group create \
-        -g "$RESOURCEGROUP" \
-        -n env-development \
-        --template-file pkg/deploy/assets/env-development.json \
-        --parameters \
-            "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
-            "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
-            "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
-            "proxyImage=arointsvc.azurecr.io/proxy:latest" \
-            "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
-            "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
-            "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
-            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" \
-            "publicIPAddressSkuName=Basic" \
-            "publicIPAddressAllocationMethod=Dynamic" >/dev/null
-}
-
 import_certs_secrets() {
     echo "########## Import certificates to $KEYVAULT_PREFIX-svc KV ##########"
     az keyvault certificate import \

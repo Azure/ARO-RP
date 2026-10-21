@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -18,8 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armcontainerregistry "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcontainerregistry"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 )
 
 const (
@@ -39,8 +36,8 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 	tokens.EXPECT().
 		CreateAndWait(ctx, "global", "arointsvc", gomock.Any(), sdkarmcontainerregistry.Token{
 			Properties: &sdkarmcontainerregistry.TokenProperties{
-				ScopeMapID: pointerutils.ToPtr(registryResourceID + "/scopeMaps/_repositories_pull"),
-				Status:     pointerutils.ToPtr(sdkarmcontainerregistry.TokenStatusEnabled),
+				ScopeMapID: new(registryResourceID + "/scopeMaps/_repositories_pull"),
+				Status:     new(sdkarmcontainerregistry.TokenStatusEnabled),
 			},
 		}).
 		Return(nil, nil)
@@ -51,7 +48,8 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 		Return(&sdkarmcontainerregistry.GenerateCredentialsResult{
 			Passwords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Value: pointerutils.ToPtr("foo"),
+					Value:        new("foo"),
+					CreationTime: new(time.UnixMilli(1000)),
 				},
 			},
 		}, nil)
@@ -69,7 +67,7 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 		tokens:     tokens,
 	}
 	fiftyDaysInThePast := time.Now().UTC().AddDate(0, 0, -50)
-	password, err := m.EnsureTokenAndPassword(ctx, &api.RegistryProfile{Username: tokenName, IssueDate: &fiftyDaysInThePast})
+	password, _, err := m.EnsureTokenAndPassword(ctx, &api.RegistryProfile{Username: tokenName, IssueDate: &fiftyDaysInThePast})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,8 +77,11 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 }
 
 func TestRotateTokenPassword(t *testing.T) {
+	now := time.Now().UTC()
+
 	tests := []struct {
 		name                  string
+		registryProfile       *api.RegistryProfile
 		currentTokenPasswords []*sdkarmcontainerregistry.TokenPassword
 		wantRenewalName       sdkarmcontainerregistry.TokenPasswordName
 		wantPassword          string
@@ -95,8 +96,8 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "uses password1 when only password2 exists",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(time.Now()),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: new(now),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword1,
@@ -106,8 +107,8 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "uses password2 when only password1 exists",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(time.Now()),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: new(now),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
@@ -117,11 +118,11 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "renews password1 when it has no creation time",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name: pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					Name: new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
 				},
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(time.Now()),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: new(now),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword1,
@@ -131,11 +132,11 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "renews password2 when it has no creation time",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(time.Now()),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: new(now),
 				},
 				{
-					Name: pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					Name: new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
@@ -145,12 +146,12 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "renews password1 when it is the oldest password",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(time.Now().Add(-60 * time.Hour * 24)),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: new(now.Add(-60 * time.Hour * 24)),
 				},
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(time.Now()),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: new(now),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword1,
@@ -160,12 +161,12 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "renews password2 when it is the oldest password",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(time.Now()),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: new(now),
 				},
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(time.Now().Add(-60 * time.Hour * 24)),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: new(now.Add(-60 * time.Hour * 24)),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
@@ -175,12 +176,31 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "renews password2 when it is the oldest password, even if in reverse order",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(time.Now().Add(-60 * time.Hour * 24)),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: new(now.Add(-60 * time.Hour * 24)),
 				},
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(time.Now()),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: new(now),
+				},
+			},
+			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
+			wantPassword:    "bar",
+		},
+		{
+			name: "renews password2 even when password1 is the oldest password, if password2 is in use",
+			registryProfile: &api.RegistryProfile{
+				Username:  tokenName,
+				IssueDate: new(now.Add(-60 * time.Hour * 24)),
+			},
+			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
+				{
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: new(now.Add(-60 * time.Hour * 24)),
+				},
+				{
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: new(now),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
@@ -190,27 +210,36 @@ func TestRotateTokenPassword(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			controller := gomock.NewController(t)
 			tokens := mock_armcontainerregistry.NewMockTokensClient(controller)
 			registries := mock_armcontainerregistry.NewMockRegistriesClient(controller)
 
 			tokens.EXPECT().GetTokenProperties(ctx, "global", "arointsvc", tokenName).Return(fakeTokenProperties(tt.currentTokenPasswords), nil)
 
-			registries.EXPECT().GenerateCredentialsAndWait(ctx, "global", "arointsvc", generateCredentialsParameters(tt.wantRenewalName)).Return(fakeCredentialResult(), nil)
+			registries.EXPECT().GenerateCredentialsAndWait(ctx, "global", "arointsvc", generateCredentialsParameters(tt.wantRenewalName)).Return(fakeCredentialResult(tt.wantRenewalName), nil)
 
 			m := setupManager(controller, tokens, registries)
 
-			registryProfile := api.RegistryProfile{
-				Username: tokenName,
+			var registryProfile *api.RegistryProfile
+
+			if tt.registryProfile != nil {
+				registryProfile = tt.registryProfile
+			} else {
+				registryProfile = &api.RegistryProfile{
+					Username: tokenName,
+				}
 			}
 
-			err := m.RotateTokenPassword(ctx, &registryProfile)
+			err := m.RotateTokenPassword(ctx, registryProfile)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if registryProfile.Password != api.SecureString(tt.wantPassword) {
 				t.Errorf("got '%s', want '%s'", registryProfile.Password, tt.wantPassword)
+			}
+			if registryProfile.IssueDate == nil || *registryProfile.IssueDate != time.UnixMilli(1000).UTC() {
+				t.Errorf("got issuedate '%s', want '%s'", registryProfile.IssueDate, time.UnixMilli(1000).UTC())
 			}
 		})
 	}
@@ -224,7 +253,7 @@ func TestRotateTokenPasswordOnlyUsernameStruct(t *testing.T) {
 
 	tokens.EXPECT().GetTokenProperties(ctx, "global", "arointsvc", tokenName).Return(&sdkarmcontainerregistry.TokenProperties{}, nil)
 
-	registries.EXPECT().GenerateCredentialsAndWait(ctx, "global", "arointsvc", generateCredentialsParameters(sdkarmcontainerregistry.TokenPasswordNamePassword1)).Return(fakeCredentialResult(), nil)
+	registries.EXPECT().GenerateCredentialsAndWait(ctx, "global", "arointsvc", generateCredentialsParameters(sdkarmcontainerregistry.TokenPasswordNamePassword1)).Return(fakeCredentialResult(sdkarmcontainerregistry.TokenPasswordNamePassword1), nil)
 
 	m := setupManager(controller, tokens, registries)
 
@@ -250,11 +279,11 @@ func TestRotateTokenPasswordNeedsName(t *testing.T) {
 	tokens.EXPECT().GetTokenProperties(ctx, "global", "arointsvc", tokenName).Return(
 		fakeTokenProperties([]*sdkarmcontainerregistry.TokenPassword{
 			{
-				CreationTime: pointerutils.ToPtr(time.Now().Add(-60 * time.Hour * 24)),
+				CreationTime: new(time.Now().Add(-60 * time.Hour * 24)),
 			},
 			{
-				Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-				CreationTime: pointerutils.ToPtr(time.Now()),
+				Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+				CreationTime: new(time.Now()),
 			},
 		}), nil)
 
@@ -274,28 +303,46 @@ func setupManager(controller *gomock.Controller, tc *mock_armcontainerregistry.M
 	env.EXPECT().ACRDomain().AnyTimes().Return(registryDomain)
 	env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time { return time.UnixMilli(1000) })
 	r, _ := azure.ParseResourceID(registryResourceID)
-	u := deterministicuuid.NewTestUUIDGenerator(0x22)
 	return &manager{
 		env:        env,
 		r:          r,
 		tokens:     tc,
 		registries: rc,
-		uuid:       u,
 	}
 }
 
-func fakeCredentialResult() *sdkarmcontainerregistry.GenerateCredentialsResult {
-	return &sdkarmcontainerregistry.GenerateCredentialsResult{
-		Passwords: []*sdkarmcontainerregistry.TokenPassword{
-			{
-				Name:  pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-				Value: pointerutils.ToPtr("foo"),
+func fakeCredentialResult(oneGenerated sdkarmcontainerregistry.TokenPasswordName) *sdkarmcontainerregistry.GenerateCredentialsResult {
+	switch oneGenerated {
+	case sdkarmcontainerregistry.TokenPasswordNamePassword1:
+		return &sdkarmcontainerregistry.GenerateCredentialsResult{
+			Passwords: []*sdkarmcontainerregistry.TokenPassword{
+				{
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					Value:        new("foo"),
+					CreationTime: new(time.UnixMilli(1000).UTC()),
+				},
+				{
+					Name:  new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					Value: new("bar"),
+				},
 			},
-			{
-				Name:  pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-				Value: pointerutils.ToPtr("bar"),
+		}
+	case sdkarmcontainerregistry.TokenPasswordNamePassword2:
+		return &sdkarmcontainerregistry.GenerateCredentialsResult{
+			Passwords: []*sdkarmcontainerregistry.TokenPassword{
+				{
+					Name:  new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					Value: new("foo"),
+				},
+				{
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					Value:        new("bar"),
+					CreationTime: new(time.UnixMilli(1000).UTC()),
+				},
 			},
-		},
+		}
+	default:
+		panic("not a password you can rotate")
 	}
 }
 
@@ -309,123 +356,20 @@ func fakeTokenProperties(tp []*sdkarmcontainerregistry.TokenPassword) *sdkarmcon
 
 func generateCredentialsParameters(tpn sdkarmcontainerregistry.TokenPasswordName) sdkarmcontainerregistry.GenerateCredentialsParameters {
 	return sdkarmcontainerregistry.GenerateCredentialsParameters{
-		TokenID: pointerutils.ToPtr(registryResourceID + "/tokens/" + tokenName),
-		Name:    pointerutils.ToPtr(tpn),
+		TokenID: new(registryResourceID + "/tokens/" + tokenName),
+		Name:    new(tpn),
 	}
 }
 
-func TestGetRegistryProfiles(t *testing.T) {
+func TestNewARegistryProfile(t *testing.T) {
 	a := require.New(t)
 	controller := gomock.NewController(t)
 	mgr := setupManager(controller, nil, nil)
 
-	ocWithProfile := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			RegistryProfiles: []*api.RegistryProfile{
-				{
-					Name:     "notwanted.example.com",
-					Username: "other",
-				},
-				{
-					Name:     "arointsvc.example.com",
-					Username: "foo",
-				},
-			},
-		},
-	}
-	ocWithoutProfile := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			RegistryProfiles: []*api.RegistryProfile{
-				{
-					Name:     "notwanted.example.com",
-					Username: "other",
-				},
-			},
-		},
-	}
-
-	// GetRegistryProfile finds it successfully
-	r := mgr.GetRegistryProfile(ocWithProfile)
-	a.NotNil(r)
-	a.Equal("arointsvc.example.com", r.Name)
-	a.Equal("foo", r.Username)
-
-	// GetRegistryProfile can't find it as it doesn't exist
-	r = mgr.GetRegistryProfile(ocWithoutProfile)
-	a.Nil(r)
-
-	// GetRegistryProfileFromSlice finds it successfully
-	r = GetRegistryProfileFromSlice(mgr.env, ocWithProfile.Properties.RegistryProfiles)
-	a.NotNil(r)
-	a.Equal("arointsvc.example.com", r.Name)
-	a.Equal("foo", r.Username)
-
-	// GetRegistryProfileFromSlice can't find it as it doesn't exist
-	r = GetRegistryProfileFromSlice(mgr.env, ocWithoutProfile.Properties.RegistryProfiles)
-	a.Nil(r)
-}
-
-func TestNewAndPutRegistryProfile(t *testing.T) {
-	a := require.New(t)
-	controller := gomock.NewController(t)
-	mgr := setupManager(controller, nil, nil)
-
-	newProfile := mgr.NewRegistryProfile()
+	newProfile := mgr.NewRegistryProfile("foobar")
 	a.NotNil(newProfile)
-	a.Equal("token-22222222-2222-2222-2222-222222220001", newProfile.Username)
-	a.Equal("1970-01-01T00:00:01Z", newProfile.IssueDate.Format(time.RFC3339))
-
-	ocWithProfile := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			RegistryProfiles: []*api.RegistryProfile{
-				{
-					Name:     "arointsvc.example.com",
-					Username: "foo",
-				},
-				{
-					Name:     "notwanted.example.com",
-					Username: "other",
-				},
-			},
-		},
-	}
-	ocWithoutProfile := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			RegistryProfiles: []*api.RegistryProfile{
-				{
-					Name:     "notwanted.example.com",
-					Username: "other",
-				},
-			},
-		},
-	}
-
-	// If it doesn't exist, it appends it
-	mgr.PutRegistryProfile(ocWithoutProfile, newProfile)
-	a.Len(ocWithoutProfile.Properties.RegistryProfiles, 2)
-
-	// If it does exist, it replaces it
-	mgr.PutRegistryProfile(ocWithProfile, newProfile)
-	a.Len(ocWithProfile.Properties.RegistryProfiles, 2)
-
-	// Check that it has been replaced
-	aLongTimeAgo := time.UnixMilli(1000)
-
-	for _, err := range deep.Equal(
-		ocWithProfile.Properties.RegistryProfiles,
-		[]*api.RegistryProfile{
-			{
-				Name:      "arointsvc.example.com",
-				Username:  "token-22222222-2222-2222-2222-222222220001",
-				IssueDate: &aLongTimeAgo,
-			},
-			{
-				Name:     "notwanted.example.com",
-				Username: "other",
-			},
-		}) {
-		t.Error(err)
-	}
+	a.Equal("token-foobar", newProfile.Username)
+	a.Nil(newProfile.IssueDate)
 }
 
 func TestShouldRotate(t *testing.T) {
@@ -452,7 +396,7 @@ func TestShouldRotate(t *testing.T) {
 		{
 			name: "old token causes rotation",
 			registryProfile: &api.RegistryProfile{
-				IssueDate: pointerutils.ToPtr(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+				IssueDate: new(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
 			},
 			shouldRotate:                true,
 			shouldBeValid:               false,
@@ -462,7 +406,7 @@ func TestShouldRotate(t *testing.T) {
 		{
 			name: "future token (somehow) does not cause rotation",
 			registryProfile: &api.RegistryProfile{
-				IssueDate: pointerutils.ToPtr(time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)),
+				IssueDate: new(time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)),
 			},
 			shouldRotate:                false,
 			shouldBeValid:               true,
@@ -472,7 +416,7 @@ func TestShouldRotate(t *testing.T) {
 		{
 			name: "current token does not cause rotation",
 			registryProfile: &api.RegistryProfile{
-				IssueDate: pointerutils.ToPtr(time.Date(2025, 12, 1, 0, 0, 0, 0, time.UTC)),
+				IssueDate: new(time.Date(2025, 12, 1, 0, 0, 0, 0, time.UTC)),
 			},
 			shouldRotate:                false,
 			shouldBeValid:               true,

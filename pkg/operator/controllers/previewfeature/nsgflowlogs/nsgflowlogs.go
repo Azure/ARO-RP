@@ -13,7 +13,6 @@ import (
 
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -82,10 +81,10 @@ func (n *nsgFlowLogsFeature) newFlowLog(instance *aropreviewv1alpha1.PreviewFeat
 		Location: &n.location,
 		Properties: &sdknetwork.FlowLogPropertiesFormat{
 			TargetResourceID: &nsgID,
-			Enabled:          pointerutils.ToPtr(true),
+			Enabled:          new(true),
 			Format: &sdknetwork.FlowLogFormatParameters{
-				Type:    pointerutils.ToPtr(sdknetwork.FlowLogFormatTypeJSON),
-				Version: pointerutils.ToPtr(int32(instance.Spec.NSGFlowLogs.Version)),
+				Type:    new(sdknetwork.FlowLogFormatTypeJSON),
+				Version: new(int32(instance.Spec.NSGFlowLogs.Version)),
 			},
 			RetentionPolicy: &sdknetwork.RetentionPolicyParameters{
 				Days: &instance.Spec.NSGFlowLogs.RetentionDays,
@@ -94,7 +93,7 @@ func (n *nsgFlowLogsFeature) newFlowLog(instance *aropreviewv1alpha1.PreviewFeat
 			FlowAnalyticsConfiguration: &sdknetwork.TrafficAnalyticsProperties{
 				NetworkWatcherFlowAnalyticsConfiguration: &sdknetwork.TrafficAnalyticsConfigurationProperties{
 					WorkspaceID:              &instance.Spec.NSGFlowLogs.TrafficAnalyticsLogAnalyticsWorkspaceID,
-					TrafficAnalyticsInterval: pointerutils.ToPtr(int32(instance.Spec.NSGFlowLogs.TrafficAnalyticsInterval.Truncate(time.Minute).Minutes())),
+					TrafficAnalyticsInterval: new(int32(instance.Spec.NSGFlowLogs.TrafficAnalyticsInterval.Truncate(time.Minute).Minutes())),
 				},
 			},
 		},

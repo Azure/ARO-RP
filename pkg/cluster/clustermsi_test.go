@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -25,9 +24,9 @@ import (
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_msidataplane "github.com/Azure/ARO-RP/pkg/util/mocks/msidataplane"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEnsureClusterMsiCertificate(t *testing.T) {
@@ -146,8 +145,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 						Attributes: &azsecrets.SecretAttributes{},
 						Value:      &credString,
 						Tags: map[string]*string{
-							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(-1 * time.Hour).Format(time.RFC3339)),
-							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.RenewAfterKeyVaultTag:       new(now().Add(-1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: new(now().Add(1 * time.Hour).Format(time.RFC3339)),
 						},
 					},
 				}
@@ -175,8 +174,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 						Attributes: &azsecrets.SecretAttributes{},
 						Value:      &credString,
 						Tags: map[string]*string{
-							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
-							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(2 * time.Hour).Format(time.RFC3339)),
+							dataplane.RenewAfterKeyVaultTag:       new(now().Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: new(now().Add(2 * time.Hour).Format(time.RFC3339)),
 						},
 					},
 				}
@@ -226,8 +225,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 						Attributes: &azsecrets.SecretAttributes{},
 						Value:      &credString,
 						Tags: map[string]*string{
-							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
-							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(2 * time.Hour).Format(time.RFC3339)),
+							dataplane.RenewAfterKeyVaultTag:       new(now().Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: new(now().Add(2 * time.Hour).Format(time.RFC3339)),
 						},
 					},
 				}
@@ -240,7 +239,6 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			factory := mock_msidataplane.NewMockClientFactory(controller)
 			if tt.msiDataplaneStub != nil {
@@ -257,8 +255,9 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			mockEnv := mock_env.NewMockInterface(controller)
 			mockEnv.EXPECT().Now().AnyTimes().DoAndReturn(now)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log:                     logrus.NewEntry(logrus.StandardLogger()),
+				log:                     log,
 				doc:                     tt.doc,
 				msiDataplane:            factory,
 				clusterMsiKeyVaultStore: mockKvClient,
@@ -290,8 +289,8 @@ func TestNeedsRefresh(t *testing.T) {
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
-						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(renewTime),
-						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(expireTime),
+						dataplane.RenewAfterKeyVaultTag:       new(renewTime),
+						dataplane.CannotRenewAfterKeyVaultTag: new(expireTime),
 					},
 				},
 			},
@@ -304,8 +303,8 @@ func TestNeedsRefresh(t *testing.T) {
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
-						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
-						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now.Add(2 * time.Hour).Format(time.RFC3339)),
+						dataplane.RenewAfterKeyVaultTag:       new(now.Add(1 * time.Hour).Format(time.RFC3339)),
+						dataplane.CannotRenewAfterKeyVaultTag: new(now.Add(2 * time.Hour).Format(time.RFC3339)),
 					},
 				},
 			},
@@ -318,8 +317,8 @@ func TestNeedsRefresh(t *testing.T) {
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
-						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now.Add(-2 * time.Hour).Format(time.RFC3339)),
-						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now.Add(-1 * time.Hour).Format(time.RFC3339)),
+						dataplane.RenewAfterKeyVaultTag:       new(now.Add(-2 * time.Hour).Format(time.RFC3339)),
+						dataplane.CannotRenewAfterKeyVaultTag: new(now.Add(-1 * time.Hour).Format(time.RFC3339)),
 					},
 				},
 			},
@@ -340,7 +339,7 @@ func TestNeedsRefresh(t *testing.T) {
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
-						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(expireTime),
+						dataplane.CannotRenewAfterKeyVaultTag: new(expireTime),
 					},
 				},
 			},
@@ -354,7 +353,7 @@ func TestNeedsRefresh(t *testing.T) {
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
-						dataplane.RenewAfterKeyVaultTag: pointerutils.ToPtr(renewTime),
+						dataplane.RenewAfterKeyVaultTag: new(renewTime),
 					},
 				},
 			},
@@ -368,8 +367,8 @@ func TestNeedsRefresh(t *testing.T) {
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
-						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr("not-a-valid-time"),
-						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(expireTime),
+						dataplane.RenewAfterKeyVaultTag:       new("not-a-valid-time"),
+						dataplane.CannotRenewAfterKeyVaultTag: new(expireTime),
 					},
 				},
 			},
@@ -592,7 +591,6 @@ func TestClusterIdentityIDs(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 			fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
@@ -608,8 +606,9 @@ func TestClusterIdentityIDs(t *testing.T) {
 			}
 			factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log:          logrus.NewEntry(logrus.StandardLogger()),
+				log:          log,
 				doc:          tt.doc,
 				db:           openShiftClustersDatabase,
 				msiDataplane: factory,

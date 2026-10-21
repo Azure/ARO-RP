@@ -20,19 +20,17 @@ import (
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -157,7 +155,7 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 	}
 
 	// Run all pre-flight validations (API server health, etcd health, SP, VM SKU, quota).
-	_, err = f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, vmSize, log)
+	err = f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, vmSize, log)
 	if err != nil {
 		return err
 	}
@@ -212,7 +210,7 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 
 		machine := machines[name]
 		if machine.size == desiredVMSize {
-			log.Infof("%s is already running %s, skipping", name, desiredVMSize)
+			log.Infof("%s is already running %s, skipping", name, utillog.Sanitize(desiredVMSize))
 			continue
 		}
 
@@ -226,11 +224,11 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 		nodeState := &controlPlaneNodeProgress{snapshot: snapshot}
 		operation.nodes = append(operation.nodes, nodeState)
 
-		log.Infof("Resizing control plane node %s from %s to %s", name, machine.size, desiredVMSize)
+		log.Infof("Resizing control plane node %s from %s to %s", name, machine.size, utillog.Sanitize(desiredVMSize))
 		if err := operation.resizeNode(ctx, nodeState); err != nil {
 			return triggerRollback(fmt.Errorf("failed to resize node %s: %w", name, err))
 		}
-		log.Infof("Successfully resized node %s to %s", name, desiredVMSize)
+		log.Infof("Successfully resized node %s to %s", name, utillog.Sanitize(desiredVMSize))
 	}
 
 	return nil
@@ -244,47 +242,9 @@ func uncordonNode(ctx context.Context, k adminactions.KubeActions, nodeName stri
 	return k.CordonNode(ctx, nodeName, false)
 }
 
-// getControlPlaneMachines is a thin wrapper around getClusterMachines that
-// makes the intent explicit at the call site. getClusterMachines already
-// filters by the machine.openshift.io/cluster-api-machine-role=master label.
-func getControlPlaneMachines(ctx context.Context, k adminactions.KubeActions) (map[string]machineValidationData, error) {
-	return getClusterMachines(ctx, k)
-}
-
-// checkCPMSNotActive verifies that the ControlPlaneMachineSet is not Active.
-// If it is active, direct VM manipulation would conflict with the CPMS operator.
-// Only NotFound / CRD-not-installed errors are treated as "CPMS absent";
-// all other errors fail the operation closed so we don't bypass the safety check.
-func checkCPMSNotActive(ctx context.Context, k adminactions.KubeActions) error {
-	rawCPMS, err := k.KubeGet(ctx, "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster")
-	if err != nil {
-		if kerrors.IsNotFound(err) || meta.IsNoMatchError(err) {
-			return nil
-		}
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			fmt.Sprintf("failed to check ControlPlaneMachineSet state: %v", err))
-	}
-
-	var cpms machinev1.ControlPlaneMachineSet
-	if err := json.Unmarshal(rawCPMS, &cpms); err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			fmt.Sprintf("failed to parse ControlPlaneMachineSet object: %v", err))
-	}
-
-	if cpms.Spec.State == machinev1.ControlPlaneMachineSetStateActive {
-		return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "",
-			"ControlPlaneMachineSet is currently Active. Deactivate CPMS before running this operation.")
-	}
-
-	return nil
-}
-
 func waitForNodeReady(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, nodeName string) error {
-	ctx, cancel := context.WithTimeout(ctx, nodeReadyPollTimeout)
-	defer cancel()
-
-	return wait.PollImmediateUntilWithContext(ctx, nodeReadyPollInterval, func(ctx context.Context) (bool, error) {
-		ready, err := isNodeReady(ctx, k, nodeName)
+	return wait.PollUntilContextTimeout(ctx, nodeReadyPollInterval, nodeReadyPollTimeout, true, func(_ctx context.Context) (bool, error) {
+		ready, err := isNodeReady(_ctx, k, nodeName)
 		if err != nil {
 			log.Infof("Error checking node %s readiness: %v", nodeName, err)
 			return false, nil
@@ -351,7 +311,7 @@ func updateMachineVMSize(ctx context.Context, k adminactions.KubeActions, machin
 }
 
 func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, machineName, vmSize string) error {
-	rawMachine, err := k.KubeGet(ctx, "Machine.machine.openshift.io", machineNamespace, machineName)
+	rawMachine, err := k.KubeGet(ctx, machineGroupKind, machineNamespace, machineName)
 	if err != nil {
 		return err
 	}
@@ -361,9 +321,9 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 		return err
 	}
 
-	providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
-	if err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, providerSpec); err != nil {
-		return fmt.Errorf("parsing providerSpec: %w", err)
+	providerSpec, err := unmarshalAzureMachineProviderSpec(&machine)
+	if err != nil {
+		return fmt.Errorf("parsing providerSpec for machine %s: %w", machineName, err)
 	}
 
 	providerSpec.VMSize = vmSize

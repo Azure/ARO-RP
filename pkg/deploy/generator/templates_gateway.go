@@ -37,7 +37,9 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		"gatewayLogLevel",
 		"gatewayMdsdConfigVersion",
 		"gatewayOtelCollectorImage",
+		"gatewayOtelKustoIngestionEndpoint",
 		"gatewayServicePrincipalId",
+		"gatewayClientId",
 		"gatewayVmSize",
 		"gatewayVmssCapacity",
 		"keyvaultDNSSuffix",
@@ -60,10 +62,11 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
 		case "gatewayDomains",
-			"gatewayFeatures":
+			"gatewayFeatures",
+			"gatewayOtelKustoIngestionEndpoint":
 			p.DefaultValue = ""
 		case "gatewayVmSize":
-			p.DefaultValue = "Standard_D4s_v3"
+			p.DefaultValue = "Standard_D8s_v4"
 		case "gatewayVmssCapacity":
 			p.Type = "int"
 			p.DefaultValue = 3
@@ -94,6 +97,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		g.gatewayLB(),
 		g.gatewayPLS(),
 		g.gatewayVMSS(),
+		g.gatewayVMSSAutoscale(),
 		// TODO: use rpLBAlert() to define Azure monitoring alerts around the readiness of the gateway ILB
 	)
 

@@ -9,13 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -25,8 +22,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // Test reconcile function
@@ -270,6 +269,8 @@ func TestImageConfigReconciler(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			instance := &arov1alpha1.Cluster{
@@ -290,9 +291,9 @@ func TestImageConfigReconciler(t *testing.T) {
 				instance = tt.instance
 			}
 
-			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance, tt.image).Build()
+			clientFake := testclienthelper.NewAROFakeClientBuilder(instance, tt.image).Build()
 
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			r := NewReconciler(log, clientFake)
 			request := ctrl.Request{}
 			request.Name = "cluster"
 

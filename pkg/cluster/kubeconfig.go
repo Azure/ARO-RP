@@ -16,6 +16,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/installer"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -89,7 +90,12 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 
-	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
+	var pg graph.PersistedGraph
+	err := arm.Retryable(ctx, func() error {
+		var e error
+		pg, e = m.graph.LoadPersisted(ctx, resourceGroup, account)
+		return e
+	}, m.log, "loading persisted graph")
 	if err != nil {
 		return err
 	}

@@ -8,15 +8,17 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type (
-	getFunc  func(key client.ObjectKey, obj client.Object) error
-	listFunc func(obj client.ObjectList, opts *client.ListOptions) error
-	hookFunc func(obj client.Object) error
+	getFunc   func(key client.ObjectKey, obj client.Object, opts ...client.GetOption) error
+	applyFunc func(obj runtime.ApplyConfiguration, opts ...client.ApplyOption) error
+	listFunc  func(obj client.ObjectList, opts *client.ListOptions) error
+	hookFunc  func(obj client.Object) error
 )
 
 type HookingClient struct {
@@ -28,6 +30,7 @@ type HookingClient struct {
 	preCreateHook []hookFunc
 	preUpdateHook []hookFunc
 	prePatchHook  []hookFunc
+	preApplyHook  []applyFunc
 
 	postGetHook    []getFunc
 	postListHook   []listFunc
@@ -35,6 +38,7 @@ type HookingClient struct {
 	postCreateHook []hookFunc
 	postUpdateHook []hookFunc
 	postPatchHook  []hookFunc
+	postApplyHook  []applyFunc
 }
 
 var _ client.Client = &HookingClient{}
@@ -53,6 +57,7 @@ func NewHookingClient(c client.WithWatch) *HookingClient {
 		preCreateHook: []hookFunc{},
 		preUpdateHook: []hookFunc{},
 		prePatchHook:  []hookFunc{},
+		preApplyHook:  []applyFunc{},
 
 		postGetHook:    []getFunc{},
 		postListHook:   []listFunc{},
@@ -60,6 +65,7 @@ func NewHookingClient(c client.WithWatch) *HookingClient {
 		postCreateHook: []hookFunc{},
 		postUpdateHook: []hookFunc{},
 		postPatchHook:  []hookFunc{},
+		postApplyHook:  []applyFunc{},
 	}
 }
 
@@ -93,6 +99,11 @@ func (c *HookingClient) WithPostPatchHook(f hookFunc) *HookingClient {
 	return c
 }
 
+func (c *HookingClient) WithPostApplyHook(f applyFunc) *HookingClient {
+	c.postApplyHook = append(c.postApplyHook, f)
+	return c
+}
+
 func (c *HookingClient) WithPreGetHook(f getFunc) *HookingClient {
 	c.preGetHook = append(c.preGetHook, f)
 	return c
@@ -123,22 +134,27 @@ func (c *HookingClient) WithPrePatchHook(f hookFunc) *HookingClient {
 	return c
 }
 
+func (c *HookingClient) WithPreApplyHook(f applyFunc) *HookingClient {
+	c.preApplyHook = append(c.preApplyHook, f)
+	return c
+}
+
 // See [sigs.k8s.io/controller-runtime/pkg/client.Reader.Get]
-func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	for _, h := range c.preGetHook {
-		err := h(key, obj)
+		err := h(key, obj, opts...)
 		if err != nil {
 			return err
 		}
 	}
 
-	err := c.f.Get(ctx, key, obj)
+	err := c.f.Get(ctx, key, obj, opts...)
 	if err != nil {
 		return err
 	}
 
 	for _, h := range c.postGetHook {
-		err := h(key, obj)
+		err := h(key, obj, opts...)
 		if err != nil {
 			return err
 		}
@@ -276,6 +292,29 @@ func (c *HookingClient) Patch(ctx context.Context, obj client.Object, patch clie
 	return nil
 }
 
+// See [sigs.k8s.io/controller-runtime/pkg/client.Writer.Apply]
+func (c *HookingClient) Apply(ctx context.Context, obj runtime.ApplyConfiguration, opts ...client.ApplyOption) error {
+	for _, h := range c.preApplyHook {
+		err := h(obj, opts...)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := c.f.Apply(ctx, obj, opts...)
+	if err != nil {
+		return err
+	}
+
+	for _, h := range c.postApplyHook {
+		err := h(obj, opts...)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // See [sigs.k8s.io/controller-runtime/pkg/client.Client.Scheme]
 func (c *HookingClient) Scheme() *runtime.Scheme {
 	return c.f.Scheme()
@@ -289,4 +328,18 @@ func (c *HookingClient) RESTMapper() meta.RESTMapper {
 // See [sigs.k8s.io/controller-runtime/pkg/client.Client.Status]
 func (c *HookingClient) Status() client.StatusWriter {
 	return c.f.Status()
+}
+
+// See [sigs.k8s.io/controller-runtime/pkg/client.Client.GroupVersionKindFor]
+func (c *HookingClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
+	return c.f.GroupVersionKindFor(obj)
+}
+
+// See [sigs.k8s.io/controller-runtime/pkg/client.Client.IsObjectNamespaced]
+func (c *HookingClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
+	return c.f.IsObjectNamespaced(obj)
+}
+
+func (c *HookingClient) SubResource(input string) client.SubResourceClient {
+	return c.f.SubResource(input)
 }

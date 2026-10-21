@@ -145,6 +145,13 @@ func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 		return err
 	}
 
+	// Shared with the portal binary: admin kubeconfig endpoints write here,
+	// portal's /kubeconfig/proxy/* reads.
+	dbPortal, err := database.NewPortal(ctx, dbc, dbName)
+	if err != nil {
+		return err
+	}
+
 	dbSubscriptions, err := database.NewSubscriptions(ctx, dbc, dbName)
 	if err != nil {
 		return err
@@ -194,7 +201,8 @@ func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
 		WithSubscriptions(dbSubscriptions).
 		WithMaintenanceManifests(dbMaintenanceManifests).
-		WithMaintenanceSchedules(dbMaintenanceSchedules)
+		WithMaintenanceSchedules(dbMaintenanceSchedules).
+		WithPortal(dbPortal)
 
 	size, err := _env.OtelAuditQueueSize()
 	if err != nil {

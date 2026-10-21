@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -24,9 +23,9 @@ import (
 	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_checkaccess "github.com/Azure/ARO-RP/pkg/util/mocks/checkaccess"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 	"github.com/Azure/ARO-RP/test/util/token"
 )
 
@@ -78,9 +77,6 @@ func TestGetRouteTableID(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			vnet := &sdknetwork.VirtualNetwork{
 				ID: &vnetID,
 				Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
@@ -132,9 +128,6 @@ func TestGetNatGatewayID(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			vnet := &sdknetwork.VirtualNetwork{
 				ID: &vnetID,
 				Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
@@ -199,8 +192,9 @@ func TestValidateCIDRRanges(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -228,14 +222,14 @@ func TestValidateCIDRRanges(t *testing.T) {
 			vnets := []sdknetwork.VirtualNetwork{
 				{
 					ID:       &vnetID,
-					Location: pointerutils.ToPtr("eastus"),
-					Name:     pointerutils.ToPtr("VNET With AddressPrefix"),
+					Location: new("eastus"),
+					Name:     new("VNET With AddressPrefix"),
 					Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
 						Subnets: []*sdknetwork.Subnet{
 							{
 								ID: &masterSubnet,
 								Properties: &sdknetwork.SubnetPropertiesFormat{
-									AddressPrefix: pointerutils.ToPtr("10.0.0.0/24"),
+									AddressPrefix: new("10.0.0.0/24"),
 									NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 										ID: &masterNSGv1,
 									},
@@ -244,7 +238,7 @@ func TestValidateCIDRRanges(t *testing.T) {
 							{
 								ID: &workerSubnet,
 								Properties: &sdknetwork.SubnetPropertiesFormat{
-									AddressPrefix: pointerutils.ToPtr("10.0.1.0/24"),
+									AddressPrefix: new("10.0.1.0/24"),
 									NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 										ID: &workerNSGv1,
 									},
@@ -255,14 +249,14 @@ func TestValidateCIDRRanges(t *testing.T) {
 				},
 				{
 					ID:       &vnetID,
-					Location: pointerutils.ToPtr("eastus"),
-					Name:     pointerutils.ToPtr("VNET With AddressPrefixes"),
+					Location: new("eastus"),
+					Name:     new("VNET With AddressPrefixes"),
 					Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
 						Subnets: []*sdknetwork.Subnet{
 							{
 								ID: &masterSubnet,
 								Properties: &sdknetwork.SubnetPropertiesFormat{
-									AddressPrefixes: []*string{pointerutils.ToPtr("10.0.0.0/24")},
+									AddressPrefixes: []*string{new("10.0.0.0/24")},
 									NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 										ID: &masterNSGv1,
 									},
@@ -271,7 +265,7 @@ func TestValidateCIDRRanges(t *testing.T) {
 							{
 								ID: &workerSubnet,
 								Properties: &sdknetwork.SubnetPropertiesFormat{
-									AddressPrefixes: []*string{pointerutils.ToPtr("10.0.1.0/24")},
+									AddressPrefixes: []*string{new("10.0.1.0/24")},
 									NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 										ID: &workerNSGv1,
 									},
@@ -293,7 +287,7 @@ func TestValidateCIDRRanges(t *testing.T) {
 				}
 
 				dv := &dynamic{
-					log:             logrus.NewEntry(logrus.StandardLogger()),
+					log:             log,
 					virtualNetworks: vnetClient,
 				}
 
@@ -327,13 +321,14 @@ func TestValidateVnetLocation(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			vnet := sdknetwork.VirtualNetworksClientGetResponse{
 				VirtualNetwork: sdknetwork.VirtualNetwork{
-					ID:       pointerutils.ToPtr(vnetID),
-					Location: pointerutils.ToPtr(tt.location),
+					ID:       new(vnetID),
+					Location: new(tt.location),
 				},
 			}
 
@@ -343,7 +338,7 @@ func TestValidateVnetLocation(t *testing.T) {
 				Return(vnet, nil)
 
 			dv := &dynamic{
-				log:             logrus.NewEntry(logrus.StandardLogger()),
+				log:             log,
 				virtualNetworks: vnetClient,
 			}
 
@@ -413,7 +408,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "pass: subnet provisioning state is succeeded",
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.ProvisioningState = pointerutils.ToPtr(sdknetwork.ProvisioningStateSucceeded)
+				vnet.Properties.Subnets[0].Properties.ProvisioningState = new(sdknetwork.ProvisioningStateSucceeded)
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -422,7 +417,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "fail: subnet provisioning state is not succeeded",
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.ProvisioningState = pointerutils.ToPtr(sdknetwork.ProvisioningStateFailed)
+				vnet.Properties.Subnets[0].Properties.ProvisioningState = new(sdknetwork.ProvisioningStateFailed)
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -448,7 +443,7 @@ func TestValidateSubnets(t *testing.T) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGDisabled
 			},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr("not-the-correct-nsg")
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = new("not-the-correct-nsg")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -462,7 +457,7 @@ func TestValidateSubnets(t *testing.T) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr("attached")
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = new("attached")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -483,7 +478,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "fail: nsg id doesn't match expected",
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr("not matching")
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = new("not matching")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -497,7 +492,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "pass: byonsg doesn't check if nsg ids are matched after creating",
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr("don't care what it is")
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = new("don't care what it is")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -538,7 +533,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "fail: invalid subnet CIDR",
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.AddressPrefix = pointerutils.ToPtr("not-valid")
+				vnet.Properties.Subnets[0].Properties.AddressPrefix = new("not-valid")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -548,7 +543,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "fail: too small subnet CIDR",
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.AddressPrefix = pointerutils.ToPtr("10.0.0.0/28")
+				vnet.Properties.Subnets[0].Properties.AddressPrefix = new("10.0.0.0/28")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -557,8 +552,9 @@ func TestValidateSubnets(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -574,11 +570,11 @@ func TestValidateSubnets(t *testing.T) {
 						{
 							ID: &masterSubnet,
 							Properties: &sdknetwork.SubnetPropertiesFormat{
-								AddressPrefix: pointerutils.ToPtr("10.0.0.0/24"),
+								AddressPrefix: new("10.0.0.0/24"),
 								NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 									ID: &masterNSGv1,
 								},
-								ProvisioningState: pointerutils.ToPtr(sdknetwork.ProvisioningStateSucceeded),
+								ProvisioningState: new(sdknetwork.ProvisioningStateSucceeded),
 							},
 						},
 					},
@@ -594,7 +590,7 @@ func TestValidateSubnets(t *testing.T) {
 			}
 			dv := &dynamic{
 				virtualNetworks: vnetClient,
-				log:             logrus.NewEntry(logrus.StandardLogger()),
+				log:             log,
 			}
 
 			err := dv.ValidateSubnets(ctx, oc, []Subnet{{ID: masterSubnet, Path: masterSubnetPath}})
@@ -790,7 +786,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidFpspVnetAuthorizationDecisionsReadNotAllowed, nil)
@@ -838,7 +834,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspVnetAuthorizationDecisionsReadNotAllowed, nil)
@@ -855,7 +851,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspVnetAuthorizationDecisionsReadNotAllowed, nil)
@@ -871,7 +867,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspVnetAuthorizationDecisionsMissingWrite, nil)
@@ -896,7 +892,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(nil, errors.New("Unexpected failure calling CheckAccessV2"))
@@ -912,7 +908,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(nil, nil)
@@ -921,8 +917,9 @@ func TestValidateVnetPermissions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -936,9 +933,9 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 			dv := &dynamic{
 				env:                        env,
-				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      new("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				authorizerType:             AuthorizerClusterServicePrincipal,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				log:                        log,
 				pdpClient:                  pdpClient,
 				checkAccessSubjectInfoCred: tokenCred,
 			}
@@ -1015,7 +1012,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
@@ -1032,7 +1029,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
@@ -1048,7 +1045,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidSubnetsAuthorizationDecisionsMissingWrite, nil)
@@ -1073,7 +1070,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(nil, errors.New("Unexpected failure calling CheckAccessV2"))
@@ -1089,7 +1086,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(nil, nil)
@@ -1098,8 +1095,9 @@ func TestValidateSubnetPermissions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -1113,9 +1111,9 @@ func TestValidateSubnetPermissions(t *testing.T) {
 
 			dv := &dynamic{
 				env:                        env,
-				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      new("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				authorizerType:             AuthorizerClusterServicePrincipal,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				log:                        log,
 				pdpClient:                  pdpClient,
 				checkAccessSubjectInfoCred: tokenCred,
 			}
@@ -1254,7 +1252,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidFpspRouteTablesAuthorizationDecisionsJoinNotAllowed, nil)
@@ -1286,7 +1284,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			name:   "fail: CSP validation for CSP cluster - worker subnet ID doesn't exist",
 			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[1].ID = pointerutils.ToPtr("not valid")
+				vnet.Properties.Subnets[1].ID = new("not valid")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -1319,7 +1317,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
@@ -1342,7 +1340,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
@@ -1364,7 +1362,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspRouteTablesAuthorizationDecisionsMissingWrite, nil)
@@ -1423,8 +1421,9 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -1459,10 +1458,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      new("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				env:                        env,
 				authorizerType:             AuthorizerClusterServicePrincipal,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				log:                        log,
 				checkAccessSubjectInfoCred: tokenCred,
 				pdpClient:                  pdpClient,
 				virtualNetworks:            vnetClient,
@@ -1605,7 +1604,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidFpspNatGWAuthorizationDecisionsJoinNotAllowed, nil)
@@ -1637,7 +1636,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			name:   "fail: CSP validation for CSP cluster - worker subnet ID doesn't exist",
 			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[1].ID = pointerutils.ToPtr("not valid")
+				vnet.Properties.Subnets[1].ID = new("not valid")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -1660,7 +1659,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspNatGWAuthorizationDecisionsReadNotAllowed, nil)
@@ -1683,7 +1682,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspNatGWAuthorizationDecisionsReadNotAllowed, nil)
@@ -1706,7 +1705,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspNatGWAuthorizationDecisionsMissingWrite, nil)
@@ -1775,8 +1774,9 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -1811,10 +1811,10 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      new("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				env:                        env,
 				authorizerType:             AuthorizerClusterServicePrincipal,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				log:                        log,
 				checkAccessSubjectInfoCred: tokenCred,
 				pdpClient:                  pdpClient,
 				virtualNetworks:            vnetClient,
@@ -1887,8 +1887,10 @@ func TestCheckPreconfiguredNSG(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			dv := &dynamic{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 			}
 			err := dv.checkPreconfiguredNSG(tt.subnetByID)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
@@ -1974,7 +1976,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					Resource: client.ResourceInfo{Id: workerNSGv1},
 				}, nil).AnyTimes()
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(_, _ interface{}) {
+					Do(func(_, _ any) {
 						cancel()
 					}).
 					Return(&validFpspNsgAuthorizationDecisions, nil).
@@ -2001,7 +2003,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					Resource: client.ResourceInfo{Id: workerNSGv1},
 				}, nil).AnyTimes()
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(_, _ interface{}) {
+					Do(func(_, _ any) {
 						cancel()
 					}).
 					Return(&invalidFpspNsgAuthorizationDecisionsJoinNotAllowed, nil).
@@ -2111,7 +2113,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					Resource: client.ResourceInfo{Id: workerNSGv1},
 				}, nil).AnyTimes()
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(_, _ interface{}) {
+					Do(func(_, _ any) {
 						cancel()
 					}).
 					Return(&validCspNsgAuthorizationDecisions, nil).
@@ -2131,7 +2133,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			},
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(_, _ interface{}) {
+					Do(func(_, _ any) {
 						cancel()
 					}).
 					Return(&validCspNsgAuthorizationDecisions, nil).
@@ -2155,7 +2157,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			},
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(_, _ interface{}) {
+					Do(func(_, _ any) {
 						cancel()
 					}).
 					Return(&validCspNsgAuthorizationDecisions, nil).
@@ -2168,8 +2170,9 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -2188,21 +2191,21 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 						{
 							ID: &masterSubnet,
 							Properties: &sdknetwork.SubnetPropertiesFormat{
-								AddressPrefix: pointerutils.ToPtr("10.0.0.0/24"),
+								AddressPrefix: new("10.0.0.0/24"),
 								NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 									ID: &masterNSGv1,
 								},
-								ProvisioningState: pointerutils.ToPtr(sdknetwork.ProvisioningStateSucceeded),
+								ProvisioningState: new(sdknetwork.ProvisioningStateSucceeded),
 							},
 						},
 						{
 							ID: &workerSubnet,
 							Properties: &sdknetwork.SubnetPropertiesFormat{
-								AddressPrefix: pointerutils.ToPtr("10.0.1.0/24"),
+								AddressPrefix: new("10.0.1.0/24"),
 								NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 									ID: &workerNSGv1,
 								},
-								ProvisioningState: pointerutils.ToPtr(sdknetwork.ProvisioningStateSucceeded),
+								ProvisioningState: new(sdknetwork.ProvisioningStateSucceeded),
 							},
 						},
 					},
@@ -2229,12 +2232,12 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 
 			dv := &dynamic{
 				env:                        env,
-				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      new("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				virtualNetworks:            vnetClient,
 				pdpClient:                  pdpClient,
 				checkAccessSubjectInfoCred: tokenCred,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				log:                        log,
 			}
 
 			if tt.validatingFpsp {

@@ -8,8 +8,6 @@ import (
 	"crypto/rsa"
 	"testing"
 
-	"go.uber.org/mock/gomock"
-
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -28,7 +26,7 @@ func TestKeyIDFromPublicKey(t *testing.T) {
 
 	for _, tt := range []struct {
 		name      string
-		publicKey interface{}
+		publicKey any
 		wantkid   string
 		wantErr   string
 	}{
@@ -44,9 +42,6 @@ func TestKeyIDFromPublicKey(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			kid, err := keyIDFromPublicKey(tt.publicKey)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 

@@ -13,7 +13,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armfeatures"
 
 	mock_armfeatures "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armfeatures"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestValidateEncryptionAtHostFeature(t *testing.T) {
@@ -31,13 +30,13 @@ func TestValidateEncryptionAtHostFeature(t *testing.T) {
 		{
 			name:             "feature is registered - should return nil",
 			fieldPath:        "properties.masterProfile.encryptionAtHost",
-			mockFeatureState: pointerutils.ToPtr("Registered"),
+			mockFeatureState: new("Registered"),
 			wantErr:          "",
 		},
 		{
 			name:             "feature is not registered - should return 400 BadRequest",
 			fieldPath:        "properties.masterProfile.encryptionAtHost",
-			mockFeatureState: pointerutils.ToPtr("NotRegistered"),
+			mockFeatureState: new("NotRegistered"),
 			wantErr:          "400: InvalidParameter: properties.masterProfile.encryptionAtHost: Microsoft.Compute/EncryptionAtHost feature is not registered on subscription test-subscription. Please register the feature on your subscription before creating the cluster.",
 		},
 		{
@@ -61,7 +60,6 @@ func TestValidateEncryptionAtHostFeature(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			featuresClient := mock_armfeatures.NewMockFeaturesClient(controller)
 

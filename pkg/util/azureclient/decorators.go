@@ -7,13 +7,20 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 )
 
 // DecorateSenderWithLogging decorates a sender in order to intercept HTTP calls using a custom RoundTripper
 // and log low level HTTP request's information.
 func DecorateSenderWithLogging(sender autorest.Sender) autorest.Sender {
-	loggingDecorator := loggingDecorator()
-	return autorest.DecorateSender(sender, loggingDecorator, autorest.DoCloseIfError())
+	decorators := []autorest.SendDecorator{loggingDecorator(), autorest.DoCloseIfError()}
+	if d := common.NewFirstFailSendDecorator(); d != nil {
+		// fault injector is appended last, making it outermost in the autorest chain (runs first).
+		// The injector returns a synthetic HTTP response and logs each injection directly.
+		decorators = append(decorators, d)
+	}
+	return autorest.DecorateSender(sender, decorators...)
 }
 
 // loggingDecorator returns a function which is used to wrap and modify the behaviour of an autorest.Sender.

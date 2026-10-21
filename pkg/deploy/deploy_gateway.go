@@ -32,14 +32,14 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
 	// Special cases where the config isn't marshalled into the ARM template parameters cleanly
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 	parameters.Parameters["rpImage"] = &arm.ParametersParameter{
 		Value: *d.config.Configuration.RPImagePrefix + ":" + d.version,
 	}
@@ -51,6 +51,9 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 	}
 	parameters.Parameters["gatewayServicePrincipalId"] = &arm.ParametersParameter{
 		Value: gwMSI.PrincipalID.String(),
+	}
+	parameters.Parameters["gatewayClientId"] = &arm.ParametersParameter{
+		Value: gwMSI.ClientID.String(),
 	}
 	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
 		Value: d.version,

@@ -6,6 +6,7 @@ package dnsmasq
 import (
 	"context"
 	"fmt"
+	"net/netip"
 
 	"github.com/sirupsen/logrus"
 
@@ -18,10 +19,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	configv1 "github.com/openshift/api/config/v1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -106,14 +106,40 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Named(ClusterControllerName).
 		Watches(
-			&source.Kind{Type: &configv1.ClusterVersion{}},
+			&configv1.ClusterVersion{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(clusterVersionPredicate),
 		).
 		Complete(r)
 }
 
+func validateDnsmasqProperties(instance *arov1alpha1.Cluster) error {
+	validateIP := func(name, value string) error {
+		if _, err := netip.ParseAddr(value); err != nil {
+			return fmt.Errorf("invalid %s: %w", name, err)
+		}
+		return nil
+	}
+
+	if err := validateIP("apiIntIP", instance.Spec.APIIntIP); err != nil {
+		return err
+	}
+	if err := validateIP("ingressIP", instance.Spec.IngressIP); err != nil {
+		return err
+	}
+	if len(instance.Spec.GatewayDomains) > 0 {
+		if err := validateIP("gatewayPrivateEndpointIP", instance.Spec.GatewayPrivateEndpointIP); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, ch clienthelper.Interface, c client.Client, allowReconcile bool, restartDnsmasq bool, mcps ...mcv1.MachineConfigPool) error {
+	err := validateDnsmasqProperties(instance)
+	if err != nil {
+		return err
+	}
 	var resources []kruntime.Object
 	for _, mcp := range mcps {
 		resource, err := dnsmasqMachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, mcp.Name, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP, restartDnsmasq)
@@ -129,7 +155,7 @@ func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster,
 		resources = append(resources, resource)
 	}
 
-	err := dynamichelper.Prepare(resources)
+	err = dynamichelper.Prepare(resources)
 	if err != nil {
 		return err
 	}

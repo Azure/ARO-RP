@@ -226,7 +226,6 @@ func TestValidateVMSku(t *testing.T) {
 			}
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			oc := &api.OpenShiftCluster{
 				Location: "eastus",
@@ -250,9 +249,9 @@ func TestValidateVMSku(t *testing.T) {
 
 			encryptionAtHost := func(enabled bool) *string {
 				if enabled {
-					return pointerutils.ToPtr("True")
+					return new("True")
 				}
-				return pointerutils.ToPtr("False")
+				return new("False")
 			}
 
 			skus := []*armcompute.ResourceSKU{
@@ -265,11 +264,11 @@ func TestValidateVMSku(t *testing.T) {
 					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
 					Capabilities: pointerutils.ToSlicePtr([]armcompute.ResourceSKUCapabilities{
 						{
-							Name:  pointerutils.ToPtr("EncryptionAtHostSupported"),
+							Name:  new("EncryptionAtHostSupported"),
 							Value: encryptionAtHost(tt.availableSkuHasEncryption),
 						},
 					}),
-					ResourceType: pointerutils.ToPtr("virtualMachines"),
+					ResourceType: new("virtualMachines"),
 				},
 				{
 					Name:      &tt.availableSku2,
@@ -280,11 +279,11 @@ func TestValidateVMSku(t *testing.T) {
 					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
 					Capabilities: pointerutils.ToSlicePtr([]armcompute.ResourceSKUCapabilities{
 						{
-							Name:  pointerutils.ToPtr("EncryptionAtHostSupported"),
+							Name:  new("EncryptionAtHostSupported"),
 							Value: encryptionAtHost(tt.availableSku2HasEncryption),
 						},
 					}),
-					ResourceType: pointerutils.ToPtr("virtualMachines"),
+					ResourceType: new("virtualMachines"),
 				},
 				{
 					Name:      &tt.restrictedSku,
@@ -294,14 +293,14 @@ func TestValidateVMSku(t *testing.T) {
 					}),
 					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{
 						{
-							ReasonCode: pointerutils.ToPtr(tt.restrictions),
+							ReasonCode: new(tt.restrictions),
 							RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
 								Locations: tt.restrictionLocation,
 							},
 						},
 					}),
 					Capabilities: pointerutils.ToSlicePtr([]armcompute.ResourceSKUCapabilities{}),
-					ResourceType: pointerutils.ToPtr("virtualMachines"),
+					ResourceType: new("virtualMachines"),
 				},
 			}
 
@@ -320,13 +319,13 @@ func TestValidateVMSku(t *testing.T) {
 			resourceSkusClient := mock_armcompute.NewMockResourceSKUsClient(controller)
 			resourceSkusClient.EXPECT().
 				List(gomock.Any(), fmt.Sprintf("location eq %v", "eastus"), false).
-				Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+				Return(func(yield func(armcompute.ResourceSKU, error) bool) {
 					if tt.resourceSkusClientErr != nil {
-						yield(nil, tt.resourceSkusClientErr)
+						yield(armcompute.ResourceSKU{}, tt.resourceSkusClientErr)
 						return
 					}
 					for _, v := range skus {
-						if !yield(v, nil) {
+						if !yield(*v, nil) {
 							return
 						}
 					}

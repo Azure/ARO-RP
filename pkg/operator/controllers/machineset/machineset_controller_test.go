@@ -9,14 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -24,10 +21,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestReconciler(t *testing.T) {
@@ -47,7 +45,7 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			Spec: machinev1beta1.MachineSetSpec{
-				Replicas: pointerutils.ToPtr(replicas0), // Modify replicas accordingly
+				Replicas: new(replicas0), // Modify replicas accordingly
 			},
 		}
 		workerMachineSet1 := &machinev1beta1.MachineSet{
@@ -59,7 +57,7 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			Spec: machinev1beta1.MachineSetSpec{
-				Replicas: pointerutils.ToPtr(replicas1),
+				Replicas: new(replicas1),
 			},
 		}
 		workerMachineSet2 := &machinev1beta1.MachineSet{
@@ -71,7 +69,7 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			Spec: machinev1beta1.MachineSetSpec{
-				Replicas: pointerutils.ToPtr(replicas2),
+				Replicas: new(replicas2),
 			},
 		}
 		return []client.Object{workerMachineSet0, workerMachineSet1, workerMachineSet2}
@@ -125,7 +123,7 @@ func TestReconciler(t *testing.T) {
 							},
 						},
 						Spec: machinev1beta1.MachineSetSpec{
-							Replicas: pointerutils.ToPtr(int32(0)),
+							Replicas: new(int32(0)),
 						},
 					},
 				)
@@ -201,6 +199,8 @@ func TestReconciler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			instance := &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
@@ -214,12 +214,11 @@ func TestReconciler(t *testing.T) {
 				},
 			}
 
-			clientFake := ctrlfake.NewClientBuilder().
-				WithObjects(instance).
+			clientFake := testclienthelper.NewAROFakeClientBuilder(instance).
 				WithObjects(tt.machinesets...).
 				Build()
 
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			r := NewReconciler(log, clientFake)
 
 			request := ctrl.Request{}
 			request.Name = tt.objectName

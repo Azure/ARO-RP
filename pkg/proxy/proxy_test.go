@@ -17,6 +17,7 @@ func TestRequestValidation(t *testing.T) {
 		method     string
 		subnet     string
 		hostname   string
+		host       string
 		wantStatus int
 		wantErr    bool
 	}{
@@ -48,7 +49,8 @@ func TestRequestValidation(t *testing.T) {
 			name:       "wrong hostname",
 			method:     http.MethodGet,
 			subnet:     "127.0.0.1/24",
-			hostname:   "https://127.0.0.1::",
+			hostname:   "https://127.0.0.1",
+			host:       "127.0.0.1::",
 			wantStatus: http.StatusBadRequest,
 			wantErr:    true,
 		},
@@ -65,6 +67,9 @@ func TestRequestValidation(t *testing.T) {
 
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(tt.method, tt.hostname, nil)
+			if tt.host != "" {
+				request.Host = tt.host
+			}
 
 			err = server.validateProxyRequest(recorder, request)
 			if (err != nil && !tt.wantErr) || (err == nil && tt.wantErr) {

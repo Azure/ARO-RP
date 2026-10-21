@@ -27,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -260,12 +259,10 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 			asyncdoc.AsyncOperation.EndTime = &now
 
 			if provisioningState == api.ProvisioningStateFailed {
-				// if type is CloudError - we want to propagate it to the
-				// asyncOperations errors. Otherwise - return generic error
-				err, ok := backendErr.(*api.CloudError)
-				if ok {
+				var cloudErr *api.CloudError
+				if errors.As(backendErr, &cloudErr) {
 					log.Print(backendErr)
-					asyncdoc.AsyncOperation.Error = err.CloudErrorBody
+					asyncdoc.AsyncOperation.Error = cloudErr.CloudErrorBody
 				} else {
 					log.Error(backendErr)
 					asyncdoc.AsyncOperation.Error = &api.CloudErrorBody{
@@ -350,9 +347,9 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		}
 
 		if backendErr == nil {
-			adminUpdateError = pointerutils.ToPtr("")
+			adminUpdateError = new("")
 		} else {
-			adminUpdateError = pointerutils.ToPtr(backendErr.Error())
+			adminUpdateError = new(backendErr.Error())
 		}
 	}
 

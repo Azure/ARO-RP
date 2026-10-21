@@ -79,7 +79,7 @@ func (dv *dynamic) validateDiskEncryptionSetPermissions(ctx context.Context, des
 		"Microsoft.Compute/diskEncryptionSets/read",
 	})
 
-	if err == wait.ErrWaitTimeout {
+	if wait.Interrupted(err) {
 		if dv.authorizerType == AuthorizerWorkloadIdentity {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidWorkloadIdentityPermissions, path, fmt.Sprintf("The %s platform managed identity does not have required permissions on disk encryption set '%s'.", *operatorName, desr.String()))
 		}

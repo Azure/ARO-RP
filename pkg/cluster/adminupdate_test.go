@@ -54,7 +54,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 	}
 
 	generalFixesSteps := []string{
-		"[Action ensureResourceGroup]",
+		"[AuthorizationRetryingAction ensureResourceGroup]",
 		"[Action createOrUpdateDenyAssignment]",
 		"[Action ensureServiceEndpoints]",
 		"[Action populateRegistryStorageAccountName]",
@@ -62,8 +62,8 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action fixSSH]",
 		"[Action startVMs]",
 		"[Condition apiServersReady, timeout 30m0s]",
-		"[Action fixSREKubeconfig]",
-		"[Action fixUserAdminKubeconfig]",
+		"[AuthorizationRetryingAction fixSREKubeconfig]",
+		"[AuthorizationRetryingAction fixUserAdminKubeconfig]",
 		"[Action createOrUpdateRouterIPFromCluster]",
 		"[Action ensureGatewayUpgrade]",
 		"[Action rotateACRTokenPassword]",
@@ -77,7 +77,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Condition apiServersReady, timeout 30m0s]",
 		"[Action populateDatabaseIntIP]",
 		"[Action correctCertificateIssuer]",
-		"[Action fixMCSCert]",
+		"[AuthorizationRetryingAction fixMCSCert]",
 		"[Action fixMCSUserData]",
 		"[Action configureAPIServerCertificate]",
 		"[Action configureIngressCertificate]",
@@ -210,7 +210,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 			),
 		},
 		{
-			name: "Rotate in-cluster MDSD/Ingress/API certs",
+			name: "Rotate in-cluster Ingress/API certs",
 			fixture: func() (*api.OpenShiftClusterDocument, bool) {
 				doc := baseClusterDoc()
 				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating

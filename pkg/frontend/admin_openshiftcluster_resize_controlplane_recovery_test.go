@@ -82,12 +82,11 @@ func assertErrorContainsAll(t *testing.T, err error, substrs ...string) {
 }
 
 func TestRunStepRecordsAndWrapsStepErrors(t *testing.T) {
-	ctx := context.Background()
-	_, log := testlog.New()
+	_, log := testlog.LogForTesting(t)
 
 	op := &resizeControlPlaneOperation{log: log}
 
-	err := op.runStep(ctx, "master-0", "resize", steps.Action(func(context.Context) error {
+	err := op.runStep(t.Context(), "master-0", "resize", steps.Action(func(context.Context) error {
 		return errors.New("boom")
 	}))
 
@@ -101,12 +100,11 @@ func TestRunStepRecordsAndWrapsStepErrors(t *testing.T) {
 }
 
 func TestRunStepPreservesOriginalActionErrors(t *testing.T) {
-	ctx := context.Background()
-	_, log := testlog.New()
+	_, log := testlog.LogForTesting(t)
 
 	op := &resizeControlPlaneOperation{log: log}
 
-	err := op.runStep(ctx, "master-0", "start", steps.Action(func(context.Context) error {
+	err := op.runStep(t.Context(), "master-0", "start", steps.Action(func(context.Context) error {
 		return errors.New("AADSTS700016 original Azure failure")
 	}))
 	if err == nil {
@@ -122,11 +120,9 @@ func TestRunStepPreservesOriginalActionErrors(t *testing.T) {
 
 func TestWaitForEtcdHealthyBoundsHealthCheckByEtcdTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		ctx := context.Background()
-		_, log := testlog.New()
+		_, log := testlog.LogForTesting(t)
 
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 
@@ -149,17 +145,16 @@ func TestWaitForEtcdHealthyBoundsHealthCheckByEtcdTimeout(t *testing.T) {
 			}).
 			Times(1)
 
-		err := waitForEtcdHealthy(ctx, log, k)
+		err := waitForEtcdHealthy(t.Context(), log, k)
 		assertErrorContainsAll(t, err,
-			"Failed to retrieve etcd ClusterOperator",
+			"failed to retrieve etcd ClusterOperator",
 			context.DeadlineExceeded.Error(),
 		)
 	})
 }
 
 func TestResizeControlPlaneRollback(t *testing.T) {
-	ctx := context.Background()
-	_, log := testlog.New()
+	_, log := testlog.LogForTesting(t)
 
 	running := "Running"
 	desiredSize := "Standard_D16s_v5"
@@ -167,12 +162,11 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 	t.Run("rolls back stopped and cordoned node when resize fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
 
-		k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+		k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(
 			masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
 
 		gomock.InOrder(
@@ -194,7 +188,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 		k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 			Return(healthyEtcdJSON(), nil).AnyTimes()
-		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
+		err := resizeControlPlane(t.Context(), log, k, a, desiredSize, true, clusterResourceGroupName)
 		assertErrorContainsAll(t, err,
 			"failed to resize node master-0: resize: Azure resize error",
 			"Steps:",
@@ -211,12 +205,11 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 	t.Run("rolls back previously resized node when a later node fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
 
-		k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+		k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(
 			masterMachineListJSON(
 				masterMachine("master-0", desiredSize, running),
 				masterMachine("master-1", "Standard_D8s_v3", running),
@@ -271,7 +264,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 		k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 			Return(healthyEtcdJSON(), nil).AnyTimes()
-		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
+		err := resizeControlPlane(t.Context(), log, k, a, desiredSize, true, clusterResourceGroupName)
 		assertErrorContainsAll(t, err,
 			"failed to resize node master-1: drain: could not drain node after 3 retries: drain error",
 			"master-1:restoreSchedulability",
@@ -283,12 +276,11 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 	t.Run("rechecks control plane health before the next node and rolls back prior progress", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
 
-		k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+		k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(
 			masterMachineListJSON(
 				masterMachine("master-0", desiredSize, running),
 				masterMachine("master-1", "Standard_D8s_v3", running),
@@ -331,7 +323,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 		k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 			Return(healthyEtcdJSON(), nil).AnyTimes()
-		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
+		err := resizeControlPlane(t.Context(), log, k, a, desiredSize, true, clusterResourceGroupName)
 		assertErrorContainsAll(t, err,
 			"Control plane node master-2 is not Ready",
 			"master-2:restoreVMSize",
@@ -342,12 +334,11 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 	t.Run("rolls back prior progress when later snapshot capture fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
 
-		k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+		k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(
 			masterMachineListJSON(
 				masterMachine("master-0", desiredSize, running),
 				masterMachine("master-1", "Standard_D8s_v3", running),
@@ -394,7 +385,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 		k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 			Return(healthyEtcdJSON(), nil).AnyTimes()
-		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
+		err := resizeControlPlane(t.Context(), log, k, a, desiredSize, true, clusterResourceGroupName)
 		assertErrorContainsAll(t, err,
 			"failed to capture Azure VM state for master-1",
 			"master-2:restoreVMSize",
@@ -405,7 +396,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 }
 
 func TestNewResizeControlPlaneExecutionContext(t *testing.T) {
-	parent, cancelParent := context.WithCancel(context.Background())
+	parent, cancelParent := context.WithCancel(t.Context())
 	start := time.Now()
 	ctx, cancel := newResizeControlPlaneExecutionContext(parent)
 	cancelParent()
@@ -430,16 +421,15 @@ func TestNewResizeControlPlaneExecutionContext(t *testing.T) {
 }
 
 func TestCaptureNodeSnapshotUsesLiveStateForSnapshotOnly(t *testing.T) {
-	ctx := context.Background()
-	_, log := testlog.New()
+	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 	a := mock_adminactions.NewMockAzureActions(ctrl)
 
 	op := newResizeControlPlaneOperation(log, k, a, "Standard_D16s_v5", true, "test-cluster")
+	op.retryDelay = time.Millisecond
 	machine := machineValidationData{
 		size:              "Standard_D8s_v3",
 		phase:             "Running",
@@ -451,15 +441,15 @@ func TestCaptureNodeSnapshotUsesLiveStateForSnapshotOnly(t *testing.T) {
 			Return(mgmtcompute.VirtualMachine{}, errors.New("azure get failed")),
 	)
 
-	_, err := op.captureNodeSnapshot(ctx, "master-0", machine)
+	_, err := op.captureNodeSnapshot(t.Context(), "master-0", machine)
 	assertErrorContainsAll(t, err, "failed to capture Azure VM state for master-0")
 
 	ctrl = gomock.NewController(t)
-	defer ctrl.Finish()
 
 	k = mock_adminactions.NewMockKubeActions(ctrl)
 	a = mock_adminactions.NewMockAzureActions(ctrl)
 	op = newResizeControlPlaneOperation(log, k, a, "Standard_D16s_v5", true, "test-cluster")
+	op.retryDelay = time.Millisecond
 	machine.phase = "Failed"
 	machine.labelInstanceType = "stale"
 
@@ -470,7 +460,7 @@ func TestCaptureNodeSnapshotUsesLiveStateForSnapshotOnly(t *testing.T) {
 			Return(nodeJSONWithLabels("master-0", true, false, "mismatched", "another-mismatch"), nil),
 	)
 
-	snapshot, err := op.captureNodeSnapshot(ctx, "master-0", machine)
+	snapshot, err := op.captureNodeSnapshot(t.Context(), "master-0", machine)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -486,16 +476,15 @@ func TestCaptureNodeSnapshotUsesLiveStateForSnapshotOnly(t *testing.T) {
 }
 
 func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
-	ctx := context.Background()
-	_, log := testlog.New()
+	_, log := testlog.LogForTesting(t)
 	desiredSize := "Standard_D16s_v5"
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 	a := mock_adminactions.NewMockAzureActions(ctrl)
 	op := newResizeControlPlaneOperation(log, k, a, desiredSize, true, "test-cluster")
+	op.retryDelay = time.Millisecond
 	state := &controlPlaneNodeProgress{
 		snapshot: controlPlaneNodeSnapshot{
 			machineName:           "master-0",
@@ -521,7 +510,7 @@ func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
 		k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
 	)
 
-	err := op.rollbackNode(ctx, state)
+	err := op.rollbackNode(t.Context(), state)
 	assertErrorContainsAll(t, err,
 		"starting VM after restoring original size",
 		"start failed after size restore",
@@ -533,9 +522,7 @@ func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
 }
 
 func TestRollbackAllFailsFastWhenEtcdUnhealthyBetweenNodes(t *testing.T) {
-	ctx := context.Background()
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 	a := mock_adminactions.NewMockAzureActions(ctrl)
@@ -553,7 +540,7 @@ func TestRollbackAllFailsFastWhenEtcdUnhealthyBetweenNodes(t *testing.T) {
 		KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 		Return(nil, errors.New("api server unavailable"))
 
-	err := op.rollbackAll(ctx)
+	err := op.rollbackAll(t.Context())
 	assertErrorContainsAll(t, err, "etcd unhealthy before rollback of master-0", "api server unavailable")
 }
 
@@ -561,7 +548,7 @@ func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 	t.Parallel()
 
 	recorder := httptest.NewRecorder()
-	_, log := testlog.New()
+	_, log := testlog.LogForTesting(t)
 
 	err := &resizeControlPlaneError{
 		baseErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "controlPlaneInventory", "inventory mismatch"),
@@ -618,7 +605,7 @@ func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 
 func TestAdminReplyFallsBackTo500WhenNoCloudError(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	_, log := testlog.New()
+	_, log := testlog.LogForTesting(t)
 
 	err := &resizeControlPlaneError{
 		baseErr: fmt.Errorf("failed to resize node master-0: resize: %w", errors.New("Azure resize error")),
@@ -664,7 +651,7 @@ func TestAdminReplyFallsBackTo500WhenNoCloudError(t *testing.T) {
 
 func TestAdminReplyPreservesWrappedCloudErrorWithoutBody(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	_, log := testlog.New()
+	_, log := testlog.LogForTesting(t)
 
 	err := &resizeControlPlaneError{
 		baseErr: &api.CloudError{StatusCode: http.StatusBadGateway},
@@ -709,7 +696,7 @@ func TestAdminReplyPreservesWrappedCloudErrorWithoutBody(t *testing.T) {
 func TestRetryAzureOperation(t *testing.T) {
 	t.Run("succeeds on first attempt", func(t *testing.T) {
 		calls := 0
-		err := retryAzureOperation(context.Background(), "test op", func() error {
+		err := retryAzureOperation(t.Context(), "test op", time.Millisecond, func() error {
 			calls++
 			return nil
 		})
@@ -724,7 +711,7 @@ func TestRetryAzureOperation(t *testing.T) {
 	t.Run("succeeds on second attempt", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			calls := 0
-			err := retryAzureOperation(context.Background(), "test op", func() error {
+			err := retryAzureOperation(t.Context(), "test op", time.Millisecond, func() error {
 				calls++
 				if calls == 1 {
 					return errors.New("transient")
@@ -743,7 +730,7 @@ func TestRetryAzureOperation(t *testing.T) {
 	t.Run("fails after max attempts", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			calls := 0
-			err := retryAzureOperation(context.Background(), "test op", func() error {
+			err := retryAzureOperation(t.Context(), "test op", time.Millisecond, func() error {
 				calls++
 				return errors.New("persistent")
 			})
@@ -758,9 +745,9 @@ func TestRetryAzureOperation(t *testing.T) {
 	})
 
 	t.Run("respects context cancellation", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		cancel()
-		err := retryAzureOperation(ctx, "test op", func() error {
+		err := retryAzureOperation(ctx, "test op", time.Millisecond, func() error {
 			return errors.New("will retry")
 		})
 		if !errors.Is(err, context.Canceled) {

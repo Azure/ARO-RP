@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -17,10 +15,11 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-func TestClusterServidePrincipalEnricherTask(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
+func TestClusterServicePrincipalEnricherTask(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
 
 	name := "azure-credentials"
 	namespace := "kube-system"
@@ -76,7 +75,6 @@ func TestClusterServidePrincipalEnricherTask(t *testing.T) {
 				},
 			}
 			e := clusterServicePrincipalEnricher{}
-			e.SetDefaults(oc)
 
 			clients := clients{k8s: tt.client}
 			err := e.Enrich(context.Background(), log, oc, clients.k8s, clients.config, clients.machine, clients.operator)

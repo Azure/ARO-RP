@@ -18,6 +18,7 @@ type DeploymentsClientAddons interface {
 	CreateOrUpdateAtSubscriptionScopeAndWait(ctx context.Context, deploymentName string, parameters mgmtfeatures.Deployment) error
 	DeleteAndWait(ctx context.Context, resourceGroupName string, deploymentName string) error
 	Wait(ctx context.Context, resourceGroupName string, deploymentName string) error
+	WhatIfAndWait(ctx context.Context, resourceGroupName string, deploymentName string, parameters mgmtfeatures.DeploymentWhatIf) (mgmtfeatures.WhatIfOperationResult, error)
 }
 
 func (c *deploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(ctx context.Context, deploymentName string, parameters mgmtfeatures.Deployment) error {
@@ -61,4 +62,18 @@ func (c *deploymentsClient) Wait(ctx context.Context, resourceGroupName string, 
 
 		return *deployment.Properties.ProvisioningState == "Succeeded", nil
 	})
+}
+
+func (c *deploymentsClient) WhatIfAndWait(ctx context.Context, resourceGroupName string, deploymentName string, parameters mgmtfeatures.DeploymentWhatIf) (mgmtfeatures.WhatIfOperationResult, error) {
+	future, err := c.WhatIf(ctx, resourceGroupName, deploymentName, parameters)
+	if err != nil {
+		return mgmtfeatures.WhatIfOperationResult{}, err
+	}
+
+	err = future.WaitForCompletionRef(ctx, c.Client)
+	if err != nil {
+		return mgmtfeatures.WhatIfOperationResult{}, err
+	}
+
+	return future.Result(c.DeploymentsClient)
 }

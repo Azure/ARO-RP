@@ -9,12 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -25,7 +23,9 @@ import (
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestMUOReconciler(t *testing.T) {
@@ -150,15 +150,12 @@ func TestMUOReconciler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			instance := &arov1alpha1.Cluster{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Cluster",
-					APIVersion: "aro.openshift.io/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -184,14 +181,14 @@ func TestMUOReconciler(t *testing.T) {
 			}
 
 			deployer := mock_deployer.NewMockDeployer(controller)
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance, cv)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder(instance, cv)
 
 			if tt.mocks != nil {
 				tt.mocks(deployer, instance)
 			}
 
 			r := &Reconciler{
-				log:               logrus.NewEntry(logrus.StandardLogger()),
+				log:               log,
 				deployer:          deployer,
 				client:            clientBuilder.Build(),
 				readinessTimeout:  0 * time.Second,

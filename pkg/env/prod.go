@@ -40,7 +40,6 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
 	"github.com/Azure/ARO-RP/pkg/util/pki"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -80,6 +79,8 @@ type prod struct {
 	clusterGenevaLoggingEnvironment   string
 	clusterGenevaLoggingNamespace     string
 
+	rpParentDomainName string
+
 	gatewayDomains []string
 
 	log *logrus.Entry
@@ -101,7 +102,8 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 			"GATEWAY_DOMAINS",
 			"GATEWAY_RESOURCEGROUP",
 			"MDSD_ENVIRONMENT",
-			"CLUSTER_MDSD_NAMESPACE")
+			"CLUSTER_MDSD_NAMESPACE",
+			"RP_PARENT_DOMAIN_NAME")
 		if err != nil {
 			return nil, err
 		}
@@ -129,6 +131,8 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 		clusterGenevaLoggingNamespace:     os.Getenv("CLUSTER_MDSD_NAMESPACE"),
 		environment:                       os.Getenv("ENVIRONMENT"),
 
+		rpParentDomainName: strings.ToLower(os.Getenv("RP_PARENT_DOMAIN_NAME")),
+
 		log: log,
 
 		features: map[Feature]bool{},
@@ -136,7 +140,7 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 
 	features := os.Getenv("RP_FEATURES")
 	if features != "" {
-		for _, feature := range strings.Split(features, ",") {
+		for feature := range strings.SplitSeq(features, ",") {
 			f, err := FeatureString("Feature" + feature)
 			if err != nil {
 				return nil, err
@@ -409,6 +413,10 @@ func (p *prod) Domain() string {
 	return os.Getenv("DOMAIN_NAME")
 }
 
+func (p *prod) RPParentDomainName() string {
+	return p.rpParentDomainName
+}
+
 func (p *prod) EnvironmentType() string {
 	return p.environment
 }
@@ -488,8 +496,8 @@ func (p *prod) MsiDataplaneClientOptions(correlationData *api.CorrelationData) (
 func ClientDebugLoggerMiddleware(log *logrus.Entry) policy.Policy {
 	return azureclient.PolicyFunc(func(req *policy.Request) (*http.Response, error) {
 		log := log.WithFields(logrus.Fields{
-			"method": req.Raw().Method,
-			"url":    req.Raw().URL,
+			"method": utillog.Sanitize(req.Raw().Method),
+			"url":    utillog.Sanitize(req.Raw().URL.String()),
 		})
 		if req.Raw().Body != nil {
 			body, err := io.ReadAll(req.Raw().Body)
@@ -499,7 +507,7 @@ func ClientDebugLoggerMiddleware(log *logrus.Entry) policy.Policy {
 			if err := req.Raw().Body.Close(); err != nil {
 				log.WithError(err).Error("error closing request body")
 			}
-			log = log.WithField("body", string(body))
+			log = log.WithField("body", utillog.Sanitize(string(body)))
 			req.Raw().Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the delegate can use it
 		}
 		log.Info("Sending request.")
@@ -535,7 +543,7 @@ func ClientDebugLoggerMiddleware(log *logrus.Entry) policy.Policy {
 				// error codes don't have anything in them that we need to censor
 				responseBody = string(body)
 			}
-			log = log.WithField("body", responseBody)
+			log = log.WithField("body", utillog.Sanitize(responseBody))
 			resp.Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the upstream round-trippers can use it
 		}
 		log.Info("Received response.")
@@ -619,18 +627,18 @@ func (m *mockClient) GetUserAssignedIdentitiesCredentials(ctx context.Context, r
 	return &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
-				ClientID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_CLIENT_ID")),
-				ClientSecret:               pointerutils.ToPtr(os.Getenv("MOCK_MSI_CERT")),
-				TenantID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_TENANT_ID")),
-				ObjectID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_OBJECT_ID")),
-				ResourceID:                 pointerutils.ToPtr(m.msiResourceId),
-				AuthenticationEndpoint:     pointerutils.ToPtr(m.aadHost),
-				CannotRenewAfter:           pointerutils.ToPtr(now.AddDate(0, 0, mockMsiCertValidityDays*5).Format(time.RFC3339)),
+				ClientID:                   new(os.Getenv("MOCK_MSI_CLIENT_ID")),
+				ClientSecret:               new(os.Getenv("MOCK_MSI_CERT")),
+				TenantID:                   new(os.Getenv("MOCK_MSI_TENANT_ID")),
+				ObjectID:                   new(os.Getenv("MOCK_MSI_OBJECT_ID")),
+				ResourceID:                 new(m.msiResourceId),
+				AuthenticationEndpoint:     new(m.aadHost),
+				CannotRenewAfter:           new(now.AddDate(0, 0, mockMsiCertValidityDays*5).Format(time.RFC3339)),
 				ClientSecretURL:            &placeholder,
 				MtlsAuthenticationEndpoint: &placeholder,
-				NotAfter:                   pointerutils.ToPtr(now.AddDate(0, 0, mockMsiCertValidityDays).Format(time.RFC3339)),
-				NotBefore:                  pointerutils.ToPtr(now.Add(-1 * time.Hour).Format(time.RFC3339)),
-				RenewAfter:                 pointerutils.ToPtr(now.AddDate(0, 0, mockMsiCertValidityDays/2).Format(time.RFC3339)),
+				NotAfter:                   new(now.AddDate(0, 0, mockMsiCertValidityDays).Format(time.RFC3339)),
+				NotBefore:                  new(now.Add(-1 * time.Hour).Format(time.RFC3339)),
+				RenewAfter:                 new(now.AddDate(0, 0, mockMsiCertValidityDays/2).Format(time.RFC3339)),
 				CustomClaims: &dataplane.CustomClaims{
 					XMSAzNwperimid: []string{placeholder},
 					XMSAzTm:        &placeholder,

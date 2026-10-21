@@ -614,11 +614,10 @@ func TestBackendTry(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			tlc := testliveconfig.NewTestLiveConfig(false, false)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			manager := mock_cluster.NewMockInterface(controller)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().LiveConfig().AnyTimes().Return(tlc)
@@ -866,11 +865,10 @@ func TestNullOrInvalidGuidExcludePrincipalIdReclassification(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			tlc := testliveconfig.NewTestLiveConfig(false, false)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			manager := mock_cluster.NewMockInterface(controller)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().LiveConfig().AnyTimes().Return(tlc)
