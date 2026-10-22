@@ -64,7 +64,7 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 		RequestLatency: k8s.NewLatency(m),
 	})
 
-	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
+	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName, encryption.WithLogger(log))
 	if err != nil {
 		return err
 	}
