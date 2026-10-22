@@ -53,8 +53,6 @@ type ClusterManager interface {
 	GetClusterDeployment(ctx context.Context, oc *api.OpenShiftCluster) (*hivev1.ClusterDeployment, error)
 	ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error
 	GetClusterSync(ctx context.Context, oc *api.OpenShiftCluster) (*hivev1alpha1.ClusterSync, error)
-	ListHiveK8sObjects(ctx context.Context, resource, namespace string) ([]byte, error)
-	GetHiveK8sObject(ctx context.Context, resource, namespace, name string) ([]byte, error)
 	InvestigateCluster(ctx context.Context, hiveNamespace string, kubeconfig []byte, holmesConfig *holmes.HolmesConfig, apiServerIP string, question string, w io.Writer) error
 }
 
@@ -367,24 +365,6 @@ func (hr *syncSetManager) List(ctx context.Context, namespace string, label stri
 	}
 
 	return list, nil
-}
-
-func (hr *clusterManager) ListHiveK8sObjects(ctx context.Context, resource, namespace string) ([]byte, error) {
-	ul, err := hr.dh.List(ctx, resource, namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	return ul.MarshalJSON()
-}
-
-func (hr *clusterManager) GetHiveK8sObject(ctx context.Context, resource, namespace, name string) ([]byte, error) {
-	un, err := hr.dh.Get(ctx, resource, namespace, name)
-	if err != nil {
-		return nil, err
-	}
-
-	return un.MarshalJSON()
 }
 
 func (hr *syncSetManager) Get(ctx context.Context, namespace string, name string, getType reflect.Type) (any, error) {
