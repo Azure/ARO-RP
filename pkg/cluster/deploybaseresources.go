@@ -275,6 +275,15 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	return arm.MismatchesToCloudError(mismatches)
 }
 
+// waitForClusterGraphAccess confirms blob access for the cluster storage account
+func (m *manager) waitForClusterGraphAccess(ctx context.Context) error {
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	_, err := m.graph.Exists(ctx, resourceGroup, clusterStorageAccountName)
+	return err
+}
+
 func (m *manager) newPublicLoadBalancer(ctx context.Context, resources *[]*arm.Resource) {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	azureRegion := strings.ToLower(m.doc.OpenShiftCluster.Location) // Used in k8s object names, so must pass DNS-1123 validation
