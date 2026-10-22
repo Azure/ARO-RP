@@ -35,8 +35,6 @@ type Interface interface {
 	EnsureDeletedGVR(ctx context.Context, groupKind, namespace, name, optionalVersion string) error
 	Ensure(ctx context.Context, objs ...kruntime.Object) error
 	IsConstraintTemplateReady(ctx context.Context, name string) (bool, error)
-	Get(ctx context.Context, groupKind, namespace, name string) (*unstructured.Unstructured, error)
-	List(ctx context.Context, groupKind, namespace string) (*unstructured.UnstructuredList, error)
 }
 
 type dynamicHelper struct {
@@ -241,22 +239,4 @@ func makeURLSegments(gvr *schema.GroupVersionResource, namespace, name string) (
 	}
 
 	return url
-}
-
-func (dh *dynamicHelper) Get(ctx context.Context, groupKind, namespace, name string) (*unstructured.Unstructured, error) {
-	gvr, err := dh.Resolve(groupKind, "")
-	if err != nil {
-		return nil, err
-	}
-
-	return dh.dynamicClient.Resource(*gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
-}
-
-func (dh *dynamicHelper) List(ctx context.Context, groupKind, namespace string) (*unstructured.UnstructuredList, error) {
-	gvr, err := dh.Resolve(groupKind, "")
-	if err != nil {
-		return nil, err
-	}
-
-	return dh.dynamicClient.Resource(*gvr).Namespace(namespace).List(ctx, metav1.ListOptions{Limit: 1000})
 }
