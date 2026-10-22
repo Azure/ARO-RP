@@ -21,19 +21,6 @@ else
   PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS="$(yq eval -o=json '.versions' "$(dirname -- "${BASH_SOURCE[0]}")/platform_workload_identity_role_sets.yaml")"
 fi
 
-build_development_az_aro_extension() {
-    echo "INFO: Building development az aro extension..."
-    make az
-}
-
-verify_aro_extension() {
-    echo "INFO: Verifying aro extension..."
-    grep -q 'dev_sources' ~/.azure/config || cat >>~/.azure/config <<EOF
-[extension]
-dev_sources = $PWD/python
-EOF
-}
-
 set_storage_account() {
     echo "INFO: Setting storage account..."
     export SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets
@@ -254,8 +241,6 @@ run_the_RP() {
 }
 
 main() {
-    build_development_az_aro_extension
-    verify_aro_extension
     set_storage_account
     ask_to_create_default_env_config
     source_env

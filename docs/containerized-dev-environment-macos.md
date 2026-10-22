@@ -20,7 +20,7 @@ Follow these steps from the **root directory** of the ARO-RP repository.
 
 Copy the example environment file and edit it with your specific configuration.
 
-```bash
+```sh
 cp env.example env
 # Edit the newly created 'env' file with your settings
 ```
@@ -29,7 +29,7 @@ cp env.example env
 
 Use the project's Makefile to fetch necessary secrets from Azure storage. The secrets will be downloaded and extracted to the `./secrets` directory.
 
-```bash
+```sh
 SECRET_SA_ACCOUNT_NAME=<secrets_storage_account_name> make secrets
 ```
 
@@ -37,7 +37,7 @@ Replace `<secrets_storage_account_name>` with the actual storage account name fo
 
 Then source your environment file to load the configuration (including secrets):
 
-```bash
+```sh
 source ./env
 ```
 
@@ -45,19 +45,19 @@ source ./env
 
 If you are on Apple Silicon, add the following to your `env` file:
 
-```bash
+```sh
 export PLATFORM=linux/arm64
 ```
 
 ### 4. Build the container image
 
-```bash
+```sh
 make dev-env-build
 ```
 
 ### 5. Start the container
 
-```bash
+```sh
 make dev-env-start
 ```
 
@@ -65,7 +65,7 @@ The container runs an entrypoint script that sources your environment variables,
 
 Verify the container is running:
 
-```bash
+```sh
 docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml ps
 ```
 
@@ -73,7 +73,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml ps
 
 Check the logs to see the RP startup output.
 
-```bash
+```sh
 docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml logs aro-dev-env
 ```
 
@@ -81,7 +81,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml logs ar
 
 To interact with the environment inside the container (e.g., run other commands, debug):
 
-```bash
+```sh
 docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml exec aro-dev-env bash
 ```
 
@@ -89,7 +89,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml exec ar
 
 From inside the container, you can run project-specific `make` commands or scripts that expect the Go environment to be set up.
 
-```bash
+```sh
 # Example: Run tests
 make test-go
 
@@ -105,7 +105,7 @@ On Linux, the dev-env container uses `network_mode: host`, which gives the conta
 
 The simplest approach is to run e2e tests from inside the container shell, where `localhost:8443` always reaches the RP directly:
 
-```bash
+```sh
 # Enter the container
 docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml exec aro-dev-env bash
 
@@ -118,7 +118,7 @@ make test-e2e
 
 Docker Desktop forwards ports from the Linux VM to your Mac, so you can verify the RP is running from your Mac terminal:
 
-```bash
+```sh
 curl -k https://localhost:8443/healthz/ready
 ```
 
@@ -141,13 +141,13 @@ When testing Geneva Actions, you need a Windows VM running the .NET extension cl
 
 Check if Remote Login (SSH) is enabled:
 
-```bash
+```sh
 sudo systemsetup -getremotelogin
 ```
 
 If it shows `Remote Login: Off`, enable it:
 
-```bash
+```sh
 sudo systemsetup -setremotelogin on
 ```
 
@@ -155,7 +155,7 @@ sudo systemsetup -setremotelogin on
 
 ### 2. Get your Mac's IP address
 
-```bash
+```sh
 ipconfig getifaddr en0
 ```
 
@@ -165,7 +165,7 @@ Use the returned IP address (e.g., `192.168.x.x`) in the SSH command below. Alte
 
 On the Windows VM (using Git Bash, PowerShell, or Command Prompt), create an SSH tunnel that forwards the VM's `localhost:8443` to the Mac's `localhost:8443`:
 
-```bash
+```sh
 ssh YOUR_MACOS_USERNAME@YOUR_MAC_IP -L 8443:localhost:8443
 ```
 
@@ -184,31 +184,25 @@ To use your local Azure CLI (`az`) to interact with the RP running in the contai
 1. **Exit the container shell** if you are in it.
 2. **Set the `RP_MODE` environment variable** in your local host terminal:
 
-   ```bash
+   ```sh
    export RP_MODE="development"
    # Or set it in your local .env file if your local az setup loads it
    ```
 
-3. **Install the development `az aro` extension** from your local source code:
+3. Set up local development for the `az aro` upstream extension, as described in [az-aro-python-development.md](az-aro-python-development.md#ext-dev)
 
-   ```bash
-   make az
-   ```
-
-   This should build the extension and configure your local `az` to use it when `RP_MODE` is set to `development`.
-
-Now, when you run `az aro` commands on your local host (from the project root), they should be directed to the RP running in your container (accessible via `localhost:8443`).
+Now, when you run `az aro` commands on your local host (from the azure-cli-extensions virtualenv), they should be directed to the RP running in your container (accessible via `localhost:8443`).
 
 ## Cleanup
 
 To stop and remove the containerized development environment:
 
-```bash
+```sh
 make dev-env-stop
 ```
 
 If you also want to remove the built image:
 
-```bash
+```sh
 docker rmi localhost/aro-rp_aro-dev
 ```

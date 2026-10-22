@@ -18,9 +18,6 @@ gomock_reflect_*
 !/env-int.example
 /id_rsa
 /proxy
-/pyenv*
-/python/az/aro/build
-/python/az/aro/dist
 /secrets*
 /mdm_statsd.socket
 /uts.txt
@@ -47,7 +44,6 @@ megalinter-reports/
 podmanlog
 .python-version
 .tool-versions
-./venv
 Session.vim
 .cache/
 .DS_Store
