@@ -66,6 +66,11 @@ type service struct {
 	workerCount  *atomic.Int32
 	newScheduler newSchedulerFunc
 
+	// changefeeds tracks the goroutines started by startChangefeeds. Run waits
+	// for them before it returns, so that a caller which waits on done can
+	// release what they use.
+	changefeeds sync.WaitGroup
+
 	buckets  atomic.Value // []int
 	b        buckets.WorkerPool[*api.MaintenanceScheduleDocument]
 	subs     changefeed.SubscriptionsCache
@@ -250,10 +255,23 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 		return context.Cause(ctx)
 	}
 
-	err = s.startChangefeeds(ctx, stop)
+	// The changefeeds stop on ctx rather than on stop. ctx is cancelled when
+	// stop closes, but also when Run exits for any other reason, and stop may
+	// be nil; a changefeed waiting on stop alone could then never exit, and Run
+	// waits for them below.
+	err = s.startChangefeeds(ctx, ctx.Done())
 	if err != nil {
 		return err
 	}
+
+	// Deferred rather than called at the end, so that Run also waits for the
+	// changefeeds if it panics. Deferred calls run last-in first-out, so this
+	// runs before done is closed; it cancels ctx itself because on a panic
+	// nothing else will have done so yet.
+	defer func() {
+		cancel(nil)
+		s.changefeeds.Wait()
+	}()
 
 	t := time.NewTicker(s.schedulePollInterval)
 
@@ -292,18 +310,28 @@ func (s *service) startChangefeeds(ctx context.Context, stop <-chan struct{}) er
 	}
 
 	// start subscription changefeed
-	go changefeed.RunChangefeed(
-		ctx, s.baseLog.WithField("component", "changefeed"), dbSubscriptions.ChangeFeed(),
-		s.changefeedInterval,
-		s.changefeedBatchSize, s.subs, stop,
-	)
+	s.changefeeds.Add(1)
+	go func() {
+		defer s.changefeeds.Done()
+		changefeed.RunChangefeed(
+			ctx, s.baseLog.WithField("component", "changefeed"), s.m, "SubscriptionDocument",
+			dbSubscriptions.ChangeFeed(),
+			s.changefeedInterval,
+			s.changefeedBatchSize, s.subs, stop,
+		)
+	}()
 
 	// start cluster changefeed
-	go changefeed.RunChangefeed(
-		ctx, s.baseLog.WithField("component", "changefeed"), dbOpenShiftClusters.ChangeFeed(),
-		s.changefeedInterval,
-		s.changefeedBatchSize, s.clusters, stop,
-	)
+	s.changefeeds.Add(1)
+	go func() {
+		defer s.changefeeds.Done()
+		changefeed.RunChangefeed(
+			ctx, s.baseLog.WithField("component", "changefeed"), s.m, "OpenShiftClusterDocument",
+			dbOpenShiftClusters.ChangeFeed(),
+			s.changefeedInterval,
+			s.changefeedBatchSize, s.clusters, stop,
+		)
+	}()
 
 	return nil
 }

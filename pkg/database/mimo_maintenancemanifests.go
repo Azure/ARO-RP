@@ -196,7 +196,7 @@ func (c *maintenanceManifests) update(ctx context.Context, doc *api.MaintenanceM
 }
 
 func (c *maintenanceManifests) ChangeFeed() cosmosdb.MaintenanceManifestDocumentIterator {
-	return c.c.ChangeFeed(nil)
+	return cosmosdb.NewResilientMaintenanceManifestDocumentChangeFeed(c.c, nil)
 }
 
 func (c *maintenanceManifests) GetByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error) {
