@@ -22,12 +22,10 @@ steps:
   - script: |
       set -e
       mdm_image_tag=$(get_digest_tag "MdmImage")
-      mdsd_image_tag=$(get_digest_tag "MdsdImage")
 
       az acr import --name ${{ parameters.dst_acr_name }}.azurecr.io/${mdm_image_tag} --source linuxgeneva-microsoft.azurecr.io/${mdm_image_tag}
-      az acr import --name ${{ parameters.dst_acr_name }}.azurecr.io/${mdsd_image_tag} --source linuxgeneva-microsoft.azurecr.io/${mdsd_image_tag}
-    name: import-mdm-mdsd-images-to-acr
-    displayName: ⚙️ Import MDM and MDSD images to ACR
+    name: import-mdm-image-to-acr
+    displayName: ⚙️ Import MDM image to ACR
 
   - script: make publish-image-aro-multistage
     name: import-aro-image-to-acr

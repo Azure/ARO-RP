@@ -3,9 +3,8 @@
 
 # Function to extract the image tag - (FUNCTION_NAME)
 extract_image_tag() {
-    # Extract the line containing the return statement
-    local return_line=$(grep -A 1 "func $1" "$2" | grep 'return')
-    echo "$return_line" | sed 's/.*"\(.*\)@sha256.*/\1/'
+    local image_line=$(grep -E "^[[:space:]]*$1:" "$2")
+    echo "$image_line" | sed 's/.*"\(\/.*\)@sha256.*/\1/'
 }
 
 # Function to copy image using skopeo
@@ -26,12 +25,12 @@ copy_digest_tag() {
         "docker://$DST_ACR_NAME.azurecr.io$IMAGE_TAG"
 }
 
-VERSION_CONST_FILE="pkg/util/version/const.go"
+DEV_CONFIG_FILE="pkg/deploy/devconfig.go"
 # Function to get image name and tag
 # Usage: get_digest_tag "FluentbitImage"
 get_digest_tag() {
     local IMAGE_NAME=$1
-    local IMAGE_TAG=$(extract_image_tag "$IMAGE_NAME" "$VERSION_CONST_FILE")
+    local IMAGE_TAG=$(extract_image_tag "$IMAGE_NAME" "$DEV_CONFIG_FILE")
     echo "$IMAGE_NAME and Tag: $IMAGE_TAG"
     echo "$IMAGE_TAG"
 }
