@@ -1,8 +1,8 @@
-# `az aro` Python development
+# `az aro` Python Development
 
 > [!IMPORTANT]
 > **Where did the `python/` directory go?**
-> 
+>
 > The `az aro` development and preview extension has been moved into the azure-cli-extensions repo. The primary benefit for doing this is we get automated builds and published artifacts of the extension in a preview capacity for any customers that may want it.
 >
 > Please read more below for an explanation of how to develop the `az aro` upstream extension and downstream command module.
@@ -38,13 +38,14 @@ azdev setup -c .
 The `az aro` command module is located in `src/azure-cli/azure/cli/command_modules/aro` with tests in the corresponding `tests` directory.
 
 ## Dev environment setup for the `az aro` **upstream extension**
+<a href="#ext-dev"></a>
 
 ```sh
 git clone https://github.com/Azure/azure-cli-extensions.git
 cd azure-cli-extensions
 
 python3 -m venv env
-source ./env/bin/activate 
+source ./env/bin/activate
 pip install --upgrade pip && pip install azdev
 azdev setup -r . -e aro
 
