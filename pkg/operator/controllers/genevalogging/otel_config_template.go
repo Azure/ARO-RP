@@ -33,7 +33,7 @@ type otelLogSource struct {
 	EventName string
 }
 
-func renderOTelConfig(profile otelProfile, isControlPlane bool) (string, error) {
+func renderOTelConfig(profile otelProfile, isControlPlane bool, gatewayTLSInsecure bool) (string, error) {
 	sources := []otelLogSource{
 		{
 			Name:      "journald",
@@ -56,15 +56,17 @@ func renderOTelConfig(profile otelProfile, isControlPlane bool) (string, error) 
 
 	var rendered bytes.Buffer
 	err := otelConfigParsedTemplate.Execute(&rendered, struct {
-		Profile           otelProfile
-		GatewayExporterID string
-		IsControlPlane    bool
-		Sources           []otelLogSource
+		Profile            otelProfile
+		GatewayExporterID  string
+		GatewayTLSInsecure bool
+		IsControlPlane     bool
+		Sources            []otelLogSource
 	}{
-		Profile:           profile,
-		GatewayExporterID: "otlp_grpc/gateway",
-		IsControlPlane:    isControlPlane,
-		Sources:           sources,
+		Profile:            profile,
+		GatewayExporterID:  "otlp_grpc/gateway",
+		GatewayTLSInsecure: gatewayTLSInsecure,
+		IsControlPlane:     isControlPlane,
+		Sources:            sources,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to render otel config template for profile %q: %w", profile, err)
