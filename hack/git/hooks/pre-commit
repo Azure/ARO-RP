@@ -37,5 +37,3 @@ To rename your current branch, run:
 Replace <NEW-BRANCH-NAME> with a valid branch name and try again."
     exit 1
 fi
-
-exit 0
