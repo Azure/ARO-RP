@@ -270,7 +270,6 @@ services:
     # Volumes are mounted in the overrides file to manage SELinux labels
     volumes: []
     environment:
-      AZURE_EXTENSION_DEV_SOURCES: /workspace/python
       GOCACHE: /workspace/.cache/go-build
       GOMODCACHE: /workspace/.cache/gomod
       USER: ${USER}
