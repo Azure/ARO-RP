@@ -456,13 +456,18 @@ func (m *manager) ensureJob(ctx context.Context, installerInputs *inputs.Install
 	return nil
 }
 
-// jobCompleted checks if the Job has completed (success or failure)
+// jobCompleted checks if the Job has completed (success or failure).
+//
+// ensureJob has already created the Job by the time this is polled, so a
+// NotFound means the Job was removed rather than not yet created. Treating
+// that as "still running" would poll until the install deadline while the
+// cluster stays in a non-terminal state, so fail fast instead.
 func (m *manager) jobCompleted(ctx context.Context, installerInputs *inputs.InstallerInputs) (bool, error) {
 	job, err := m.client.BatchV1().Jobs(installerInputs.Namespace).Get(ctx, installerInputs.JobName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			m.log.Debug("job not found yet")
-			return false, nil
+			m.log.Error("job disappeared before completing")
+			return true, fmt.Errorf("installer job %s/%s was removed before completing", installerInputs.Namespace, installerInputs.JobName)
 		}
 		return false, fmt.Errorf("failed to get job: %w", err)
 	}
@@ -510,10 +515,46 @@ func (m *manager) jobCompleted(ctx context.Context, installerInputs *inputs.Inst
 		}
 	}
 
+	if reason := m.unschedulableReason(ctx, installerInputs.Namespace, installerInputs.JobName); reason != "" {
+		m.log.Warnf("installer job cannot be scheduled, still consuming the install deadline: %s", reason)
+		return false, nil
+	}
+
 	// Still running
 	m.log.Debugf("job still running: active=%d, succeeded=%d, failed=%d",
 		job.Status.Active, job.Status.Succeeded, job.Status.Failed)
 	return false, nil
+}
+
+// unschedulableReason returns the scheduler's message when the Job's Pod cannot
+// be placed, or "" when it can. A Pending Pod is counted as active by the Job,
+// so without this an unschedulable install is indistinguishable from one that
+// is progressing. activeDeadlineSeconds runs from Job creation, so the install
+// still fails on the deadline rather than reporting the capacity shortfall.
+func (m *manager) unschedulableReason(ctx context.Context, namespace, jobName string) string {
+	pods, err := m.client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: "job-name=" + jobName,
+	})
+	if err != nil {
+		m.log.Warnf("failed to list pods to check scheduling: %v", err)
+		return ""
+	}
+
+	for _, pod := range pods.Items {
+		if pod.Status.Phase != corev1.PodPending {
+			continue
+		}
+
+		for _, cond := range pod.Status.Conditions {
+			if cond.Type == corev1.PodScheduled &&
+				cond.Status == corev1.ConditionFalse &&
+				cond.Reason == corev1.PodReasonUnschedulable {
+				return cond.Message
+			}
+		}
+	}
+
+	return ""
 }
 
 // parseInstallationError analyzes installation logs to return a structured error

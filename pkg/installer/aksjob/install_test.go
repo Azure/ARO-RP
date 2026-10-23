@@ -5,6 +5,7 @@ package aksjob
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -142,6 +143,97 @@ func TestJobCompletedReturnsFailure(t *testing.T) {
 	}
 }
 
+func TestJobCompletedFailsWhenJobRemoved(t *testing.T) {
+	ctx := context.Background()
+	namespace := "aro-install-cluster-uuid"
+	jobName := JobName("execution-id")
+	// ensureJob runs before polling starts, so a missing Job means it was
+	// removed. Polling on would hold the cluster until the install deadline.
+	client := fake.NewSimpleClientset()
+	_, log := testlog.New()
+	manager := newManager(log, client)
+
+	done, err := manager.jobCompleted(ctx, &inputs.InstallerInputs{Namespace: namespace, JobName: jobName})
+	if !done {
+		t.Fatal("expected removed Job to stop polling")
+	}
+	if err == nil {
+		t.Fatal("expected removed Job to return an error")
+	}
+}
+
+func TestCleanupRefusesForeignExecution(t *testing.T) {
+	ctx := context.Background()
+	jobName := JobName("execution-id")
+	names := resourceNames(jobName)
+	// A resumed caller holding a stale profile must not delete a Job that a
+	// later execution reused the name for, nor its Secrets.
+	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{
+		Name: jobName, Namespace: Namespace,
+		Labels: map[string]string{"execution-id": "newer-execution-id"},
+	}}
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: names.inputsSecret, Namespace: Namespace}}
+	client := fake.NewSimpleClientset(job, secret)
+	_, log := testlog.New()
+	manager := newManager(log, client)
+
+	if err := manager.Cleanup(ctx, Namespace, jobName, "execution-id"); err == nil {
+		t.Fatal("expected cleanup of a foreign execution to error")
+	}
+	if _, err := client.BatchV1().Jobs(Namespace).Get(ctx, jobName, metav1.GetOptions{}); err != nil {
+		t.Fatalf("foreign execution Job was removed: %v", err)
+	}
+	if _, err := client.CoreV1().Secrets(Namespace).Get(ctx, names.inputsSecret, metav1.GetOptions{}); err != nil {
+		t.Fatalf("foreign execution Secret was removed: %v", err)
+	}
+}
+
+func TestJobCompletedReportsUnschedulablePod(t *testing.T) {
+	ctx := context.Background()
+	jobName := JobName("execution-id")
+	job := &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{Name: jobName, Namespace: Namespace},
+		Status:     batchv1.JobStatus{Active: 1},
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "installer-pod",
+			Namespace: Namespace,
+			Labels:    map[string]string{"job-name": jobName},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodPending,
+			Conditions: []corev1.PodCondition{{
+				Type:    corev1.PodScheduled,
+				Status:  corev1.ConditionFalse,
+				Reason:  corev1.PodReasonUnschedulable,
+				Message: "0/2 nodes are available: insufficient cpu",
+			}},
+		},
+	}
+	client := fake.NewSimpleClientset(job, pod)
+	hook, log := testlog.New()
+	manager := newManager(log, client)
+
+	done, err := manager.jobCompleted(ctx, &inputs.InstallerInputs{Namespace: Namespace, JobName: jobName})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if done {
+		t.Fatal("unschedulable Job should not report completion")
+	}
+
+	var logged bool
+	for _, entry := range hook.AllEntries() {
+		if strings.Contains(entry.Message, "cannot be scheduled") {
+			logged = true
+		}
+	}
+	if !logged {
+		t.Fatal("expected unschedulable Pod to be reported")
+	}
+}
+
 func TestEnsureJobReattachesToExecution(t *testing.T) {
 	ctx := context.Background()
 	namespace := "aro-install-cluster-uuid"
@@ -181,15 +273,21 @@ func TestCleanupRetainsSharedAndOtherExecutionResources(t *testing.T) {
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: ServiceAccountName, Namespace: Namespace},
 	}
-	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: jobName, Namespace: Namespace}}
-	otherJob := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: otherJobName, Namespace: Namespace}}
+	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{
+		Name: jobName, Namespace: Namespace,
+		Labels: map[string]string{"execution-id": "execution-id"},
+	}}
+	otherJob := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{
+		Name: otherJobName, Namespace: Namespace,
+		Labels: map[string]string{"execution-id": "other-execution-id"},
+	}}
 	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: names.inputsSecret, Namespace: Namespace}}
 	otherSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: otherNames.inputsSecret, Namespace: Namespace}}
 	client := fake.NewSimpleClientset(namespace, serviceAccount, job, otherJob, secret, otherSecret)
 	_, log := testlog.New()
 	manager := newManager(log, client)
 
-	if err := manager.Cleanup(ctx, Namespace, jobName); err != nil {
+	if err := manager.Cleanup(ctx, Namespace, jobName, "execution-id"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := client.CoreV1().Namespaces().Get(ctx, Namespace, metav1.GetOptions{}); err != nil {

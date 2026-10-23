@@ -58,7 +58,7 @@ func (m *manager) runAKSJobInstaller(ctx context.Context) error {
 	}
 
 	if profile.CompletedAt != nil {
-		if err := aksJobManager.Cleanup(ctx, profile.Namespace, profile.JobName); err != nil {
+		if err := aksJobManager.Cleanup(ctx, profile.Namespace, profile.JobName, profile.ExecutionID); err != nil {
 			m.log.WithError(err).Warn("failed to clean up completed AKS Job installer")
 		}
 		return nil
@@ -98,7 +98,7 @@ func (m *manager) runAKSJobInstaller(ctx context.Context) error {
 	m.log.Infof("starting AKS Job installer in namespace %s with execution ID %s", profile.Namespace, profile.ExecutionID)
 	err = aksJobManager.Install(ctx, installerInputs)
 	if err != nil {
-		if cleanupErr := aksJobManager.Cleanup(ctx, profile.Namespace, profile.JobName); cleanupErr != nil {
+		if cleanupErr := aksJobManager.Cleanup(ctx, profile.Namespace, profile.JobName, profile.ExecutionID); cleanupErr != nil {
 			m.log.WithError(cleanupErr).Error("failed to clean up unsuccessful AKS Job installer")
 		}
 		return err
@@ -117,7 +117,7 @@ func (m *manager) runAKSJobInstaller(ctx context.Context) error {
 		return fmt.Errorf("failed to persist completed installer profile: %w", err)
 	}
 
-	if err := aksJobManager.Cleanup(ctx, profile.Namespace, profile.JobName); err != nil {
+	if err := aksJobManager.Cleanup(ctx, profile.Namespace, profile.JobName, profile.ExecutionID); err != nil {
 		m.log.WithError(err).Warn("failed to clean up completed AKS Job installer")
 	}
 

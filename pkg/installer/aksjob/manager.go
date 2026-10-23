@@ -24,7 +24,7 @@ type Manager interface {
 
 	// Cleanup removes resources belonging to one installer execution. The
 	// namespace and ServiceAccount are provisioned with the SVC cluster.
-	Cleanup(ctx context.Context, namespace, jobName string) error
+	Cleanup(ctx context.Context, namespace, jobName, executionID string) error
 
 	// GetStatus returns the current status of an installer Job
 	GetStatus(ctx context.Context, namespace, jobName string) (*JobStatus, error)
