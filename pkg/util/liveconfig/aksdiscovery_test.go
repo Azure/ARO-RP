@@ -224,3 +224,66 @@ func TestAKSServerScope(t *testing.T) {
 		})
 	}
 }
+
+func TestProdInstallerAKSSubnets(t *testing.T) {
+	t.Setenv(installerBackendEnvVar, "aks-job")
+	t.Setenv(installerAKSClusterEnvVar, "aro-classic-int-eastus-svc")
+	t.Setenv(installerAKSRGEnvVar, "aro-classic-int-bl-svc")
+
+	const (
+		podSubnet  = "/subscriptions/s/resourceGroups/svc/providers/Microsoft.Network/virtualNetworks/svc-net/subnets/PodSubnet"
+		nodeSubnet = "/subscriptions/s/resourceGroups/svc/providers/Microsoft.Network/virtualNetworks/svc-net/subnets/NodeSubnet"
+	)
+
+	server := fake.ManagedClustersServer{
+		Get: func(_ context.Context, resourceGroupName, resourceName string, _ *armcontainerservice.ManagedClustersClientGetOptions) (resp azfake.Responder[armcontainerservice.ManagedClustersClientGetResponse], errResp azfake.ErrorResponder) {
+			if resourceGroupName != "aro-classic-int-bl-svc" || resourceName != "aro-classic-int-eastus-svc" {
+				t.Fatalf("unexpected cluster: %s/%s", resourceGroupName, resourceName)
+			}
+
+			response := azfake.Responder[armcontainerservice.ManagedClustersClientGetResponse]{}
+			response.SetResponse(http.StatusOK, armcontainerservice.ManagedClustersClientGetResponse{
+				ManagedCluster: armcontainerservice.ManagedCluster{
+					Properties: &armcontainerservice.ManagedClusterProperties{
+						AgentPoolProfiles: []*armcontainerservice.ManagedClusterAgentPoolProfile{
+							// pod subnet wins when the pool has one
+							{PodSubnetID: new(podSubnet), VnetSubnetID: new(nodeSubnet)},
+							// duplicates are collapsed
+							{PodSubnetID: new(podSubnet)},
+							// pools without a pod subnet fall back to the node subnet
+							{VnetSubnetID: new(nodeSubnet)},
+						},
+					},
+				},
+			}, nil)
+			return response, azfake.ErrorResponder{}
+		},
+	}
+
+	managedClustersClient, err := utilcontainerservice.NewManagedClustersClientWithTransport(
+		&azureclient.PublicCloud,
+		"subscription",
+		&azfake.TokenCredential{},
+		fake.NewManagedClustersServerTransport(&server),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	manager := NewProd("eastus", managedClustersClient, &azfake.TokenCredential{})
+
+	subnets, err := manager.InstallerAKSSubnets(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []string{podSubnet, nodeSubnet}
+	if len(subnets) != len(want) {
+		t.Fatalf("got %v, want %v", subnets, want)
+	}
+	for i := range want {
+		if subnets[i] != want[i] {
+			t.Fatalf("got %v, want %v", subnets, want)
+		}
+	}
+}

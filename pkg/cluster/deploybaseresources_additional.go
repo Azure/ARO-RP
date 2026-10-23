@@ -4,6 +4,7 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -153,10 +154,40 @@ func (m *manager) fpspStorageBlobContributorRBAC(storageAccountName, principalID
 	), nil
 }
 
+// installerSubnets returns the subnets the remote installer sends traffic from,
+// which the cluster storage account must admit so the installer can persist the
+// installConfig graph.
+//
+// For AKSJob the execution cluster is the configured SVC cluster, which need not
+// share the Hive host's subnet, so the subnets are discovered from it. Discovery
+// returns nothing in dev and CI, where the installer runs on the Hive host, so
+// fall back to that cluster's pod subnet.
+func (m *manager) installerSubnets(ctx context.Context) ([]string, error) {
+	if m.installerBackend != api.InstallerBackendHive && m.installerBackend != api.InstallerBackendAKSJob {
+		return nil, nil
+	}
+
+	if m.installerBackend == api.InstallerBackendAKSJob {
+		subnets, err := m.env.LiveConfig().InstallerAKSSubnets(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if len(subnets) > 0 {
+			return subnets, nil
+		}
+	}
+
+	hiveShard := 1
+	return []string{
+		fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aks-net/subnets/PodSubnet-%03d",
+			m.env.SubscriptionID(), m.env.ResourceGroup(), hiveShard),
+	}, nil
+}
+
 // storageAccount will return storage account resource.
 // Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
 // The flag controls this behavior in update/create.
-func (m *manager) storageAccount(name, region string, ocpSubnets []string, encrypted bool, setSasPolicy bool) *arm.Resource {
+func (m *manager) storageAccount(name, region string, ocpSubnets, installerSubnets []string, encrypted bool, setSasPolicy bool) *arm.Resource {
 	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
 		{
 			VirtualNetworkResourceID: new("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
@@ -177,13 +208,13 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 	}
 
 	// when installing via Hive or AKS Job we need to allow the installer to persist the installConfig graph in the cluster's storage account
-	// TODO: add AKS shard support for SVC AKS cluster
-	hiveShard := 1
 	if (m.installerBackend == api.InstallerBackendHive || m.installerBackend == api.InstallerBackendAKSJob) && strings.Index(name, "cluster") == 0 {
-		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-			VirtualNetworkResourceID: new(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aks-net/subnets/PodSubnet-%03d", m.env.SubscriptionID(), m.env.ResourceGroup(), hiveShard)),
-			Action:                   mgmtstorage.ActionAllow,
-		})
+		for _, subnet := range installerSubnets {
+			virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
+				VirtualNetworkResourceID: new(subnet),
+				Action:                   mgmtstorage.ActionAllow,
+			})
+		}
 	}
 
 	// Prod includes a gateway rule as well

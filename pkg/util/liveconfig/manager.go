@@ -43,6 +43,12 @@ type Manager interface {
 	// or the retained Hive-host AKS cluster in CI. For Hive, returns the Hive AKS cluster.
 	InstallerRestConfig(context.Context) (*rest.Config, error)
 
+	// InstallerAKSSubnets returns the subnets the installer execution cluster
+	// sends traffic from, so the cluster storage account firewall can admit it.
+	// Returns nil when the backend is not AKSJob, or when the caller should fall
+	// back to the Hive-host subnet.
+	InstallerAKSSubnets(context.Context) ([]string, error)
+
 	// InstallViaHive is deprecated - use InstallerBackend instead
 	// Kept for backward compatibility during migration
 	InstallViaHive(context.Context) (bool, error)

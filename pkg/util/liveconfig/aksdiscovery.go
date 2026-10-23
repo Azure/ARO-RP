@@ -207,3 +207,77 @@ func aksServerScope(config *rest.Config) (string, error) {
 
 	return "", fmt.Errorf("exec credential provider does not specify --server-id")
 }
+
+// InstallerAKSSubnets returns nil for dev, so callers fall back to the
+// Hive-host subnet. Dev and CI run the installer on that same cluster.
+func (d *dev) InstallerAKSSubnets(ctx context.Context) ([]string, error) {
+	return nil, nil
+}
+
+// InstallerAKSSubnets returns the distinct subnets the installer execution
+// cluster's agent pools run in. The installer Job is not pinned to a pool, so
+// every pool's subnet has to be admitted by the cluster storage account.
+//
+// Pods get their own subnet when the cluster uses an Azure CNI pod subnet;
+// otherwise they share the node subnet.
+func (p *prod) InstallerAKSSubnets(ctx context.Context) ([]string, error) {
+	backend, err := p.InstallerBackend(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if backend != api.InstallerBackendAKSJob {
+		return nil, nil
+	}
+
+	clusterName := os.Getenv(installerAKSClusterEnvVar)
+	if clusterName == "" {
+		return nil, fmt.Errorf("%s must be set for AKS Job installation", installerAKSClusterEnvVar)
+	}
+
+	resourceGroup := os.Getenv(installerAKSRGEnvVar)
+	if resourceGroup == "" {
+		return nil, fmt.Errorf("%s must be set for AKS Job installation", installerAKSRGEnvVar)
+	}
+
+	result, err := p.managedClustersClient.Get(ctx, resourceGroup, clusterName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get installer AKS cluster %s/%s: %w", resourceGroup, clusterName, err)
+	}
+
+	if result.Properties == nil {
+		return nil, fmt.Errorf("installer AKS cluster %s/%s has no properties", resourceGroup, clusterName)
+	}
+
+	seen := map[string]struct{}{}
+	subnets := []string{}
+	for _, pool := range result.Properties.AgentPoolProfiles {
+		if pool == nil {
+			continue
+		}
+
+		subnet := ""
+		switch {
+		case pool.PodSubnetID != nil && *pool.PodSubnetID != "":
+			subnet = *pool.PodSubnetID
+		case pool.VnetSubnetID != nil && *pool.VnetSubnetID != "":
+			subnet = *pool.VnetSubnetID
+		}
+
+		if subnet == "" {
+			continue
+		}
+		if _, ok := seen[subnet]; ok {
+			continue
+		}
+
+		seen[subnet] = struct{}{}
+		subnets = append(subnets, subnet)
+	}
+
+	if len(subnets) == 0 {
+		return nil, fmt.Errorf("installer AKS cluster %s/%s has no agent pool subnets", resourceGroup, clusterName)
+	}
+
+	return subnets, nil
+}

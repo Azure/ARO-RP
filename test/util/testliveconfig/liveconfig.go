@@ -60,6 +60,10 @@ func (t *testLiveConfig) InstallerRestConfig(ctx context.Context) (*rest.Config,
 	return t.HiveRestConfig(ctx, 0)
 }
 
+func (t *testLiveConfig) InstallerAKSSubnets(ctx context.Context) ([]string, error) {
+	return nil, nil
+}
+
 func (t *testLiveConfig) DefaultInstallerPullSpecOverride(ctx context.Context) string {
 	if t.installViaHive {
 		return "example/pull:spec"
