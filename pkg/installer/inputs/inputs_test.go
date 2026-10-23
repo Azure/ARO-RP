@@ -5,14 +5,40 @@ package inputs
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"go.uber.org/mock/gomock"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
+
+func TestMarshalCustomManifests(t *testing.T) {
+	// Typed objects carry no TypeMeta. Without scheme-aware serialization the
+	// manifest has no apiVersion or kind and the installer cannot apply it.
+	manifests, err := marshalCustomManifests(map[string]kruntime.Object{
+		"99_bound_sa_signing_key.yaml": &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "bound-service-account-signing-key", Namespace: "openshift-config"},
+			StringData: map[string]string{"service-account.key": "signing-key"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := string(manifests["99_bound_sa_signing_key.yaml"])
+	for _, want := range []string{"apiVersion: v1", "kind: Secret"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("manifest is missing %q:\n%s", want, got)
+		}
+	}
+}
 
 func TestProductionHostingEnvironment(t *testing.T) {
 	for _, environment := range []azureclient.AROEnvironment{azureclient.PublicCloud, azureclient.USGovernmentCloud} {

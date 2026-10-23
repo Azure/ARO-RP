@@ -466,6 +466,16 @@ func (m *manager) bootstrap() []steps.Step {
 			steps.Action(m.generateKubeconfigs),
 		)
 
+		// A Hive namespace is created above when adopting, but nothing else
+		// creates the ClusterDeployment in it. Without this, the later
+		// hiveResetCorrelationData step fails on an otherwise good install.
+		if m.adoptViaHive {
+			s = append(s,
+				steps.Action(m.hiveEnsureResources),
+				steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+			)
+		}
+
 	case api.InstallerBackendPodman:
 		s = append(s,
 			steps.Action(m.runPodmanInstaller),

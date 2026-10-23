@@ -69,7 +69,7 @@ func (d *dev) InstallerRestConfig(ctx context.Context) (*rest.Config, error) {
 
 	case api.InstallerBackendHive:
 		// For Hive backend, use the Hive AKS cluster
-		return d.HiveRestConfig(ctx, 0)
+		return d.HiveRestConfig(ctx, installerHiveShard)
 
 	case api.InstallerBackendAKSJob:
 		// For dev, check if there's an override kubeconfig for installer execution
@@ -84,7 +84,7 @@ func (d *dev) InstallerRestConfig(ctx context.Context) (*rest.Config, error) {
 
 		// Default to using the Hive AKS cluster for development
 		// (CI will also use this - the retained Hive-host AKS cluster without Hive)
-		return d.HiveRestConfig(ctx, 0)
+		return d.HiveRestConfig(ctx, installerHiveShard)
 
 	default:
 		return nil, fmt.Errorf("unknown installer backend: %s", backend)
@@ -103,7 +103,7 @@ func (p *prod) InstallerRestConfig(ctx context.Context) (*rest.Config, error) {
 
 	case api.InstallerBackendHive:
 		// For Hive backend, use the Hive AKS cluster
-		return p.HiveRestConfig(ctx, 0)
+		return p.HiveRestConfig(ctx, installerHiveShard)
 
 	case api.InstallerBackendAKSJob:
 		return p.installerAKSRestConfig(ctx)

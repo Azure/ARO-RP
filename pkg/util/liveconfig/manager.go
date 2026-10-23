@@ -23,6 +23,13 @@ const (
 	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
 	installerAKSClusterEnvVar = "ARO_INSTALLER_AKS_CLUSTER_NAME"
 	installerAKSRGEnvVar      = "ARO_INSTALLER_AKS_RESOURCE_GROUP"
+
+	// installerHiveShard is the shard used when the installer falls back to the
+	// Hive-host AKS cluster. Shard 0 resolves to aro-aks-cluster-000, which does
+	// not exist, and to HIVE_KUBE_CONFIG_PATH, which CI does not set: CI exports
+	// HIVE_KUBE_CONFIG_PATH_1 and the deployed cluster is aro-aks-cluster-001.
+	// This matches the shard used by pkg/hive and pkg/backend.
+	installerHiveShard = 1
 )
 
 type Manager interface {

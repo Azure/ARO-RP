@@ -15,10 +15,9 @@ import (
 
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
-	"sigs.k8s.io/yaml"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/kubeserializer"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
@@ -143,13 +142,9 @@ func (b *Builder) Build(
 		inputs.ServicePrincipalJSON = spJSON
 	}
 
-	// Convert custom manifests to bytes
-	for key, obj := range customManifests {
-		manifestBytes, err := yaml.Marshal(obj)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal manifest %s: %w", key, err)
-		}
-		inputs.CustomManifests[key] = manifestBytes
+	inputs.CustomManifests, err = marshalCustomManifests(customManifests)
+	if err != nil {
+		return nil, err
 	}
 
 	// Set environment variables
@@ -174,6 +169,26 @@ func (b *Builder) Build(
 }
 
 // getServicePrincipalJSON creates the osServicePrincipal.json for service principal clusters
+// marshalCustomManifests serializes custom manifests for the installer.
+//
+// The objects are typed and carry no TypeMeta, so plain yaml.Marshal emits
+// manifests with no apiVersion or kind, which the installer cannot apply.
+// Serializing through the scheme fills both in, as the Hive and Podman paths do.
+func marshalCustomManifests(customManifests map[string]kruntime.Object) (map[string][]byte, error) {
+	serializer := kubeserializer.NewYamlSerializer()
+	manifests := make(map[string][]byte, len(customManifests))
+
+	for key, obj := range customManifests {
+		manifestBytes, err := serializer.ToYAML(obj)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal manifest %s: %w", key, err)
+		}
+		manifests[key] = manifestBytes
+	}
+
+	return manifests, nil
+}
+
 func (b *Builder) getServicePrincipalJSON(oc *api.OpenShiftCluster, sub *api.SubscriptionDocument) ([]byte, error) {
 	if oc.Properties.ServicePrincipalProfile == nil {
 		return nil, fmt.Errorf("service principal profile is nil")
