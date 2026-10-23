@@ -22,7 +22,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/installer/inputs"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
@@ -401,8 +400,8 @@ func (m *manager) ensureJob(ctx context.Context, installerInputs *inputs.Install
 			Labels:    executionLabels(installerInputs),
 		},
 		Spec: batchv1.JobSpec{
-			BackoffLimit:          pointerutils.ToPtr(int32(0)),
-			ActiveDeadlineSeconds: pointerutils.ToPtr(int64(installerInputs.Timeout.Seconds())),
+			BackoffLimit:          new(int32(0)),
+			ActiveDeadlineSeconds: new(int64(installerInputs.Timeout.Seconds())),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{

@@ -167,10 +167,10 @@ func (p *prod) installerAKSRestConfig(ctx context.Context) (*rest.Config, error)
 	restConfig.BearerTokenFile = ""
 	restConfig.AuthProvider = nil
 	restConfig.ExecProvider = nil
-	restConfig.TLSClientConfig.CertData = nil
-	restConfig.TLSClientConfig.KeyData = nil
-	restConfig.TLSClientConfig.CertFile = ""
-	restConfig.TLSClientConfig.KeyFile = ""
+	restConfig.CertData = nil
+	restConfig.KeyData = nil
+	restConfig.CertFile = ""
+	restConfig.KeyFile = ""
 	restConfig.Wrap(func(next http.RoundTripper) http.RoundTripper {
 		return &tokenCredentialRoundTripper{
 			next:       next,

@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestProductionHostingEnvironment(t *testing.T) {
@@ -94,7 +93,7 @@ func TestGetBoundSASigningKey(t *testing.T) {
 		oc := &api.OpenShiftCluster{
 			Properties: api.OpenShiftClusterProperties{
 				ClusterProfile: api.ClusterProfile{
-					BoundServiceAccountSigningKey: pointerutils.ToPtr(api.SecureString("signing-key")),
+					BoundServiceAccountSigningKey: new(api.SecureString("signing-key")),
 				},
 			},
 		}

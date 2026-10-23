@@ -150,7 +150,12 @@ func TestInstallForwardsLogsBeforeTimedOutPodDisappears(t *testing.T) {
 				}
 			}))
 			defer server.Close()
-			client, err := kubernetes.NewForConfig(&rest.Config{Host: server.URL})
+			// The fake API server encodes and decodes JSON, but client-go
+			// defaults to protobuf for built-in types.
+			client, err := kubernetes.NewForConfig(&rest.Config{
+				Host:          server.URL,
+				ContentConfig: rest.ContentConfig{ContentType: "application/json"},
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -282,7 +287,12 @@ func TestStreamInstallerLogs(t *testing.T) {
 				}
 			}))
 			defer server.Close()
-			client, err := kubernetes.NewForConfig(&rest.Config{Host: server.URL})
+			// The fake API server encodes and decodes JSON, but client-go
+			// defaults to protobuf for built-in types.
+			client, err := kubernetes.NewForConfig(&rest.Config{
+				Host:          server.URL,
+				ContentConfig: rest.ContentConfig{ContentType: "application/json"},
+			})
 			if err != nil {
 				t.Fatal(err)
 			}

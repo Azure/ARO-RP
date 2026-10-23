@@ -20,7 +20,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const installerUserKubeconfig = `apiVersion: v1
@@ -96,7 +95,7 @@ func TestProdInstallerRestConfig(t *testing.T) {
 				CredentialResults: armcontainerservice.CredentialResults{
 					Kubeconfigs: []*armcontainerservice.CredentialResult{
 						{
-							Name:  pointerutils.ToPtr("clusterUser"),
+							Name:  new("clusterUser"),
 							Value: []byte(installerUserKubeconfig),
 						},
 					},
@@ -132,7 +131,7 @@ func TestProdInstallerRestConfig(t *testing.T) {
 	if restConfig.BearerToken != "" || restConfig.ExecProvider != nil || restConfig.AuthProvider != nil {
 		t.Fatal("kubeconfig authentication was not removed")
 	}
-	if len(restConfig.TLSClientConfig.CertData) != 0 || len(restConfig.TLSClientConfig.KeyData) != 0 {
+	if len(restConfig.CertData) != 0 || len(restConfig.KeyData) != 0 {
 		t.Fatal("kubeconfig client certificate authentication was not removed")
 	}
 
