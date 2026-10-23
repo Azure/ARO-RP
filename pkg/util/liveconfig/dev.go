@@ -7,9 +7,12 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 func (d *dev) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, error) {
@@ -52,12 +55,39 @@ func (d *dev) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, erro
 	return rest.CopyConfig(kubeConfig), nil
 }
 
-func (d *dev) InstallViaHive(ctx context.Context) (bool, error) {
+func (d *dev) InstallerBackend(ctx context.Context) (api.InstallerBackend, error) {
+	// Check new explicit backend setting first
+	backend := os.Getenv(installerBackendEnvVar)
+	if backend != "" {
+		backend = strings.ToLower(backend)
+		switch backend {
+		case "hive":
+			return api.InstallerBackendHive, nil
+		case "aksjob", "aks-job", "aks":
+			return api.InstallerBackendAKSJob, nil
+		case "podman":
+			return api.InstallerBackendPodman, nil
+		default:
+			return "", fmt.Errorf("invalid installer backend: %s (valid: hive, aksjob, podman)", backend)
+		}
+	}
+
+	// Fall back to legacy ARO_INSTALL_VIA_HIVE for backward compatibility
 	installViaHive := os.Getenv(hiveInstallerEnableEnvVar)
 	if installViaHive != "" {
-		return true, nil
+		return api.InstallerBackendHive, nil
 	}
-	return false, nil
+
+	// Default to Podman for local development
+	return api.InstallerBackendPodman, nil
+}
+
+func (d *dev) InstallViaHive(ctx context.Context) (bool, error) {
+	backend, err := d.InstallerBackend(ctx)
+	if err != nil {
+		return false, err
+	}
+	return backend == api.InstallerBackendHive, nil
 }
 
 func (d *dev) DefaultInstallerPullSpecOverride(ctx context.Context) string {

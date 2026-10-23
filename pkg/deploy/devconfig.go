@@ -167,9 +167,13 @@ func DevConfig(_env env.Core) (*Config, error) {
 			Environment:                       new("development"),
 
 			// TODO: Replace with Live Service Configuration in KeyVault
-			InstallViaHive:           new(os.Getenv("ARO_INSTALL_VIA_HIVE")),
-			DefaultInstallerPullspec: new(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
-			AdoptByHive:              new(os.Getenv("ARO_ADOPT_BY_HIVE")),
+			InstallerBackend:              new(os.Getenv("ARO_INSTALLER_BACKEND")),
+			InstallerIdentityClientID:     new(os.Getenv("ARO_INSTALLER_IDENTITY_CLIENT_ID")),
+			InstallerAKSClusterName:       new(os.Getenv("ARO_INSTALLER_AKS_CLUSTER_NAME")),
+			InstallerAKSResourceGroupName: new(os.Getenv("ARO_INSTALLER_AKS_RESOURCE_GROUP")),
+			InstallViaHive:                new(os.Getenv("ARO_INSTALL_VIA_HIVE")),
+			DefaultInstallerPullspec:      new(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
+			AdoptByHive:                   new(os.Getenv("ARO_ADOPT_BY_HIVE")),
 		},
 	}, nil
 }

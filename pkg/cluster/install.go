@@ -444,13 +444,14 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.createCertificates),
 	)
 
-	if m.adoptViaHive || m.installViaHive {
+	if m.adoptViaHive || m.installerBackend == api.InstallerBackendHive {
 		// We will always need a Hive namespace, whether we are installing
 		// via Hive or adopting
 		s = append(s, steps.Action(m.hiveCreateNamespace))
 	}
 
-	if m.installViaHive {
+	switch m.installerBackend {
+	case api.InstallerBackendHive:
 		s = append(s,
 			steps.Action(m.runHiveInstaller),
 			// Give Hive 60 minutes to install the cluster, since this includes
@@ -458,7 +459,24 @@ func (m *manager) bootstrap() []steps.Step {
 			steps.Condition(m.hiveClusterInstallationComplete, 60*time.Minute, true),
 			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.generateKubeconfigs, m.managedResourceGroupName()),
 		)
-	} else {
+
+	case api.InstallerBackendAKSJob:
+		s = append(s,
+			steps.Action(m.runAKSJobInstaller),
+			steps.Action(m.generateKubeconfigs),
+		)
+
+		// A Hive namespace is created above when adopting, but nothing else
+		// creates the ClusterDeployment in it. Without this, the later
+		// hiveResetCorrelationData step fails on an otherwise good install.
+		if m.adoptViaHive {
+			s = append(s,
+				steps.Action(m.hiveEnsureResources),
+				steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+			)
+		}
+
+	case api.InstallerBackendPodman:
 		s = append(s,
 			steps.Action(m.runPodmanInstaller),
 			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.generateKubeconfigs, m.managedResourceGroupName()),
@@ -470,9 +488,14 @@ func (m *manager) bootstrap() []steps.Step {
 				steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
 			)
 		}
+
+	default:
+		s = append(s, steps.Action(func(context.Context) error {
+			return fmt.Errorf("unknown installer backend: %s", m.installerBackend)
+		}))
 	}
 
-	if m.adoptViaHive || m.installViaHive {
+	if m.adoptViaHive || m.installerBackend == api.InstallerBackendHive {
 		s = append(s,
 			// Reset correlation data whether adopting or installing via Hive
 			steps.Action(m.hiveResetCorrelationData),

@@ -640,7 +640,7 @@ func (m *manager) Delete(ctx context.Context) error {
 		}
 	}
 
-	if m.adoptViaHive || m.installViaHive {
+	if m.adoptViaHive || m.installerBackend == api.InstallerBackendHive {
 		err = m.hiveDeleteResources(ctx)
 		if err != nil {
 			return err
