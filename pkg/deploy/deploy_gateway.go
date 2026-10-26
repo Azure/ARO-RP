@@ -61,8 +61,8 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 	parameters.Parameters["gwyVmssIpTags"] = &arm.ParametersParameter{
 		Value: d.config.Configuration.GwyVmssIpTags,
 	}
-	parameters.Parameters["gwyVmssIpTagsDisabledRegions"] = &arm.ParametersParameter{
-		Value: d.config.Configuration.GwyVmssIpTagsDisabledRegions,
+	parameters.Parameters["gwyVmssIpTagsDisabled"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.GwyVmssIpTagsDisabled,
 	}
 	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
 		Value: d.env.Environment().ActualCloudName,

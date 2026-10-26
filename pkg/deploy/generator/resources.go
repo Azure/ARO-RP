@@ -93,16 +93,16 @@ func (g *generator) publicLBIPAddressTagged(name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &armnetwork.PublicIPAddress{
 			SKU: &armnetwork.PublicIPAddressSKU{
-				Name: pointerutils.ToPtr(armnetwork.PublicIPAddressSKUNameStandard),
+				Name: new(armnetwork.PublicIPAddressSKUNameStandard),
 			},
 			Properties: &armnetwork.PublicIPAddressPropertiesFormat{
-				PublicIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodStatic),
+				PublicIPAllocationMethod: new(armnetwork.IPAllocationMethodStatic),
 				IPTags:                   []*armnetwork.IPTag{}, // Empty slice, will be replaced by templateFixup
 			},
 			Zones:    []*string{},
 			Name:     &name,
-			Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
-			Location: pointerutils.ToPtr("[resourceGroup().location]"),
+			Type:     new("Microsoft.Network/publicIPAddresses"),
+			Location: new("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}

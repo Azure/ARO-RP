@@ -30,7 +30,7 @@ func (g *generator) rpTemplate() *arm.Template {
 		"rpServicePrincipalId",
 		"globalDevopsServicePrincipalId",
 		"rpVmssIpTags",
-		"rpVmssIpTagsDisabledRegions",
+		"rpVmssIpTagsDisabled",
 	}
 	if g.production {
 		params = append(params,
@@ -103,7 +103,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			// Load Balancer IP Tags
 			"rpLbIpTags",
 			"portalLbIpTags",
-			"lbIpTagsDisabledRegions",
+			"lbIpTagsDisabled",
 		)
 	}
 
@@ -147,9 +147,9 @@ func (g *generator) rpTemplate() *arm.Template {
 		case "rpVmssIpTags":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
-		case "rpVmssIpTagsDisabledRegions":
-			p.Type = "array"
-			p.DefaultValue = []string{}
+		case "rpVmssIpTagsDisabled":
+			p.Type = "bool"
+			p.DefaultValue = false
 		case "nonZonalRegions":
 			p.Type = "array"
 			p.DefaultValue = []string{
@@ -182,9 +182,9 @@ func (g *generator) rpTemplate() *arm.Template {
 			"portalLbIpTags":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
-		case "lbIpTagsDisabledRegions":
-			p.Type = "array"
-			p.DefaultValue = []string{}
+		case "lbIpTagsDisabled":
+			p.Type = "bool"
+			p.DefaultValue = false
 		}
 		t.Parameters[param] = p
 	}

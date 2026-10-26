@@ -83,11 +83,11 @@ type Configuration struct {
 	NonZonalRegions                   []string               `json:"nonZonalRegions,omitempty"`
 	RPLbIpTags                        []interface{}          `json:"rpLbIpTags,omitempty"`
 	PortalLbIpTags                    []interface{}          `json:"portalLbIpTags,omitempty"`
-	LbIpTagsDisabledRegions           []string               `json:"lbIpTagsDisabledRegions,omitempty"`
+	LbIpTagsDisabled                  *bool                  `json:"lbIpTagsDisabled,omitempty"`
 	RPVmssIpTags                      []IPTag                `json:"rpVmssIpTags,omitempty"`
-	RPVmssIpTagsDisabledRegions       []string               `json:"rpVmssIpTagsDisabledRegions,omitempty"`
+	RPVmssIpTagsDisabled              *bool                  `json:"rpVmssIpTagsDisabled,omitempty"`
 	GwyVmssIpTags                     []IPTag                `json:"gwyVmssIpTags,omitempty"`
-	GwyVmssIpTagsDisabledRegions      []string               `json:"gwyVmssIpTagsDisabledRegions,omitempty"`
+	GwyVmssIpTagsDisabled             *bool                  `json:"gwyVmssIpTagsDisabled,omitempty"`
 	PortalAccessGroupIDs              []string               `json:"portalAccessGroupIds,omitempty" value:"required"`
 	PortalClientID                    *string                `json:"portalClientId,omitempty" value:"required"`
 	PortalElevatedGroupIDs            []string               `json:"portalElevatedGroupIds,omitempty" value:"required"`

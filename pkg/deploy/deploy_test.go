@@ -602,7 +602,7 @@ func TestCleanupOrphanedTaggedPIPs(t *testing.T) {
 						PublicIPAddress: armnetwork.PublicIPAddress{
 							Properties: &armnetwork.PublicIPAddressPropertiesFormat{
 								IPConfiguration: &armnetwork.IPConfiguration{
-									ID: pointerutils.ToPtr("/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Network/loadBalancers/rp-lb/frontendIPConfigurations/rp-frontend-tagged"),
+									ID: new("/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Network/loadBalancers/rp-lb/frontendIPConfigurations/rp-frontend-tagged"),
 								},
 							},
 						},
@@ -613,7 +613,7 @@ func TestCleanupOrphanedTaggedPIPs(t *testing.T) {
 						PublicIPAddress: armnetwork.PublicIPAddress{
 							Properties: &armnetwork.PublicIPAddressPropertiesFormat{
 								IPConfiguration: &armnetwork.IPConfiguration{
-									ID: pointerutils.ToPtr("/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Network/loadBalancers/rp-lb/frontendIPConfigurations/portal-frontend-tagged"),
+									ID: new("/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Network/loadBalancers/rp-lb/frontendIPConfigurations/portal-frontend-tagged"),
 								},
 							},
 						},
@@ -701,8 +701,9 @@ func TestCleanupOrphanedTaggedPIPs(t *testing.T) {
 			mockPIP := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 			tt.mocks(mockPIP)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log:               logrus.NewEntry(logrus.StandardLogger()),
+				log:               log,
 				publicipaddresses: mockPIP,
 				config: &RPConfig{
 					RPResourceGroupName: rgName,

@@ -59,10 +59,10 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	// We use targeted regex (not ReplaceAll) to only replace ipTags within the specific PIP resource context,
 	// avoiding clobbering LB PIP ipTags that use different parameters.
 	rpVmssPipRegex := regexp.MustCompile(`("name": "rp-vmss-pip"[\s\S]*?)"ipTags": \[\]`)
-	b = rpVmssPipRegex.ReplaceAll(b, []byte(`$1"ipTags": "[if(or(contains(parameters('rpVmssIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('rpVmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('rpVmssIpTags')[0].type, 'tag', parameters('rpVmssIpTags')[0].value)))]"`))
+	b = rpVmssPipRegex.ReplaceAll(b, []byte(`$1"ipTags": "[if(or(equals(parameters('rpVmssIpTagsDisabled'), true), equals(length(parameters('rpVmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('rpVmssIpTags')[0].type, 'tag', parameters('rpVmssIpTags')[0].value)))]"`))
 
 	gwyVmssPipRegex := regexp.MustCompile(`("name": "gateway-vmss-pip"[\s\S]*?)"ipTags": \[\]`)
-	b = gwyVmssPipRegex.ReplaceAll(b, []byte(`$1"ipTags": "[if(or(contains(parameters('gwyVmssIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('gwyVmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('gwyVmssIpTags')[0].type, 'tag', parameters('gwyVmssIpTags')[0].value)))]"`))
+	b = gwyVmssPipRegex.ReplaceAll(b, []byte(`$1"ipTags": "[if(or(equals(parameters('gwyVmssIpTagsDisabled'), true), equals(length(parameters('gwyVmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('gwyVmssIpTags')[0].type, 'tag', parameters('gwyVmssIpTags')[0].value)))]"`))
 
 	b = bytes.ReplaceAll(b, []byte(`"routes": []`), []byte(`"routes": "[parameters('routes')]"`))
 
@@ -75,11 +75,11 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 		// Load Balancer IP Tags injection - using regex to target specific resources
 		// Replace IP tags for rp-pip-tagged
 		rpPipTaggedRegex := regexp.MustCompile(`("name": "rp-pip-tagged"[\s\S]*?)"ipTags": \[\]`)
-		b = rpPipTaggedRegex.ReplaceAll(b, []byte(`$1"ipTags": "[if(or(contains(parameters('lbIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('rpLbIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('rpLbIpTags')[0].type, 'tag', parameters('rpLbIpTags')[0].value)))]"`))
+		b = rpPipTaggedRegex.ReplaceAll(b, []byte(`$1"ipTags": "[if(or(equals(parameters('lbIpTagsDisabled'), true), equals(length(parameters('rpLbIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('rpLbIpTags')[0].type, 'tag', parameters('rpLbIpTags')[0].value)))]"`))
 
 		// Replace IP tags for portal-pip-tagged
 		portalPipTaggedRegex := regexp.MustCompile(`("name": "portal-pip-tagged"[\s\S]*?)"ipTags": \[\]`)
-		b = portalPipTaggedRegex.ReplaceAll(b, []byte(`$1"ipTags": "[if(or(contains(parameters('lbIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('portalLbIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('portalLbIpTags')[0].type, 'tag', parameters('portalLbIpTags')[0].value)))]"`))
+		b = portalPipTaggedRegex.ReplaceAll(b, []byte(`$1"ipTags": "[if(or(equals(parameters('lbIpTagsDisabled'), true), equals(length(parameters('portalLbIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('portalLbIpTags')[0].type, 'tag', parameters('portalLbIpTags')[0].value)))]"`))
 	}
 
 	return append(b, byte('\n')), nil
