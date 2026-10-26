@@ -60,7 +60,7 @@ The `az aro` extension is located in `src/aro/azext_aro` with tests in the corre
 Tests are run as follows:
 
 ```sh
-azdev test aro
+azdev test azext_aro
 ```
 
 > [!TIP]
