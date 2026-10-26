@@ -38,7 +38,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.7.0
 	github.com/coreos/ignition/v2 v2.22.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/go-chi/chi/v5 v5.2.4
+	github.com/go-chi/chi/v5 v5.4.0
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/go-logr/logr v1.4.4
 	github.com/go-test/deep v1.1.1
