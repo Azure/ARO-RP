@@ -1,188 +1,107 @@
-# `az aro` Python development
+# `az aro` Python Development
+
+> [!IMPORTANT]
+> **Where did the `python/` directory go?**
+>
+> The `az aro` development and preview extension has been moved into the azure-cli-extensions repo. The primary benefit for doing this is we get automated builds and published artifacts of the extension in a preview capacity for any customers that may want it.
+>
+> Please read more below for an explanation of how to develop the `az aro` upstream extension and downstream command module.
 
 There are two codebases for the `az aro` command:
 
-- the [upstream] `az aro` extension in this repo, and
+- the [upstream] `az aro` extension that lives in azure-cli-extensions, and
 - the [downstream] `az aro` module in azure-cli proper
 
-[upstream]: https://github.com/Azure/ARO-RP/tree/master/python/az/aro
+[upstream]: https://github.com/Azure/azure-cli-extensions/tree/main/src/aro
 [downstream]: https://github.com/Azure/azure-cli/tree/dev/src/azure-cli/azure/cli/command_modules/aro
 
-The downstream `az aro` command module is distributed with `az` and is present
-in the Azure cloud shell. Development/maintenance of this module within the
-Azure CLI is treated as a first-party Azure CLI module. Please see [downstream
-documentation] for more info on command module authoring and maintenance.
+The downstream `az aro` command module is distributed with Azure CLI and is present in the Azure cloud shell. Development/maintenance of this module within the Azure CLI is treated as a first-party Azure CLI module. Please see [downstream documentation] for more information on command module authoring and maintenance.
 
 [downstream documentation]: https://github.com/Azure/azure-cli/tree/dev/doc/authoring_command_modules
 
-The upstream extension may be installed by an end user to override the command
-module (for example: to use preview features). We use the extension directly
-from this codebase for development and testing of new API versions. Customers
-are advised to use the downstream CLI module. You can read more about how
-extensions are authored
-[here](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/authoring.md),
-and some of the differences between extensions and command modules
-[here](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/faq.md).
+The upstream extension may be installed by an end user to override the command module (for example: to use preview features). We use the extension for development and testing of new API versions. Customers are advised to use the downstream CLI module. You can read more about [how extensions are authored](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/authoring.md) and about some of the [differences between extensions and command modules](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/faq.md).
 
-We aim for the upstream and downstream codebase to be as synchronized as
-possible.
+We aim for the upstream and downstream codebases to be as synchronized as possible.
 
-## Dev environment setup for the `az aro` **command**
+## Dev environment setup for the `az aro` **downstream command module**
 
 ```sh
 git clone https://github.com/Azure/azure-cli.git
 cd azure-cli
 
 python3 -m venv env
-. ./env/bin/activate
+source ./env/bin/activate
 pip install --upgrade pip && pip install azdev
 azdev setup -c .
 ```
 
-The `az aro` command is located in
-`src/azure-cli/azure/cli/command_modules/aro` with tests in the corresponding
-`tests` directory.
+The `az aro` command module is located in `src/azure-cli/azure/cli/command_modules/aro` with tests in the corresponding `tests` directory.
 
-
-## Dev environment setup for the `az aro` **extension**
+## Dev environment setup for the `az aro` **upstream extension**
+<a href="#ext-dev"></a>
 
 ```sh
-git clone https://github.com/Azure/ARO-RP.git
-cd ARO-RP
+git clone https://github.com/Azure/azure-cli-extensions.git
+cd azure-cli-extensions
 
-make pyenv
-source ./pyenv/bin/activate
+python3 -m venv env
+source ./env/bin/activate
+pip install --upgrade pip && pip install azdev
+azdev setup -r . -e aro
+
+# the extension should show up as "installed" for the following command:
+az extension list
 ```
 
-The `az aro` extension is located in `python/az/aro/azext_aro` with tests in
-the corresponding `tests` folder.
+The `az aro` extension is located in `src/aro/azext_aro` with tests in the corresponding `tests` folder.
 
-## `az aro` Extension Code Structure/Organization
-
-The majority of hand-written code lives in `python/az/aro/azext_aro`:
-
-- `python/az/aro/azext_aro/__init__.py` - ARO extension entrypoint
-- `python/az/aro/azext_aro/commands.py` - ARO extension command structure
-  definitions
-- `python/az/aro/azext_aro/custom.py` - Logic and helper methods for
-  subcommands
-- `python/az/aro/azext_aro/_help.py` - Help output definitions
-
-### Generated code
-
-Helpful to reference, but these don't need edits:
-
-- `python/az/aro/azext_aro/aaz` - Generated code vendored from AZ tooling that
-  we occasionally change when new classes or functions are needed.
-- `python/az/aro/build`
-- `python/az/client`
-
-## Downstream Azure CLI tests
+## Upstream Azure CLI tests
 
 Tests are run as follows:
 
-```bash
-azdev test aro (--live) (--lf) (--verbose) (--debug)
+```sh
+azdev test azext_aro
 ```
 
 > [!TIP]
-> An issue was discovered on macOS when running tests due to additional
-> security to restrict multithreading in macOS High Sierra and later versions
-> of macOS.
+> An issue was discovered on macOS when running tests due to additional security to restrict multithreading in macOS High Sierra and later versions of macOS.
 >
 > If you see the following error:
 > ```
 > +[__NSCFConstantString initialize] may have been in progress in another
 > thread when fork() was called.
 > ```
-> Add this variable to your env or add it to your profile to make it permanent
-> in `~/.bash_profile` or `~/.zshrc`: `export
-> OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
+> Add this variable to your env or add it to your profile to make it permanent in `~/.bash_profile` or `~/.zshrc`: `export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
 
 There are two main types of tests:
 
 - live tests that get recorded and replayed, and
 - mocks
 
-The guide for writing and operating the tests is in the
-[azure-cli](https://github.com/Azure/azure-cli/blob/dev/doc/authoring_tests.md)
-repository.
+The guide for writing and operating the tests is in the [azure-cli](https://github.com/Azure/azure-cli/blob/dev/doc/authoring_tests.md) repository.
 
 
 ### Live tests and recording
 
-Tests can be recorded live, which enables the next run to take place against
-the recorded values. For the recording, the Python VCR library is used;
-recorded "tapes" are stored in
-`src/azure-cli/azure/cli/command_modules/aro/tests/latest/integration/recordings`.
+Tests can be recorded live, which enables following runs to take place against the recorded values. For the recording, the Python VCR library is used; recorded "tapes" are stored in
+`src/aro/azext_aro/tests/latest/{hcp,standard}/integration/recordings`.
 
-When the `--live` flag is passed, the tests run against the Azure API and are
-recorded. Failed tests can be re-run using the `--lf` flag.
-
-Recorded tests are run when the `--live` flag is not passed.
+When the `--live` flag is passed, the tests run against the Azure API and generate new recordings. Failed tests can be re-run using the `--lf` flag.
 
 Before committing new recordings, sanitize them for UUIDs and email addresses.
 
 ## Contributing
 
-Changes made to the `az aro` command will be made to `Azure/ARO-RP` **before**
-being contributed [downstream]. This will allow synchronization between the two
-repositories to be consistent. Once changes are made and approved to
-[upstream], pull requests to downstream can then be opened.
+Merge, publish, and approve changes to the `az aro` [upstream] extension **before** contributing the same changes [downstream] to Azure CLI. This allows us to keep the upstream extension and downstream command module as synchronized as possible.
 
-When contributing to the `az aro` command downstream, imports will be different
-for testing. When submitting pull requests, tests that include `azdev style`,
-`azdev linter`, and `azdev test aro` should pass to ensure that changes will
-not impact CI pipelines.
+When porting changes to the `az aro` [downstream] command module, some imports will be different. When submitting pull requests, tests that include `azdev style`, `azdev linter`, and `azdev test azure-cli-aro` checks should pass to ensure that changes will not impact CI pipelines.
 
-Additional instructions for merging changes downstream are contained in
-internal documentation.
-
-## Updating Azure CLI version
-
-When downstream azure-cli releases a new version that we need to adopt, follow
-these steps to regenerate `requirements.txt`:
-
-```sh
-# 1. Remove existing pyenv
-rm -rf pyenv
-
-# 2. Create fresh virtual environment
-python3 -m venv pyenv
-
-# 3. Install new azure-cli version + azdev
-. pyenv/bin/activate
-pip install -U pip
-pip install azure-cli==<NEW_VERSION> azdev
-
-# 4. Setup azdev with the extension repo
-azdev setup -r .
-
-# 5. Freeze dependencies to regenerate requirements.txt
-pip freeze > requirements.txt
-```
-
-Also update `Dockerfile.ci-azext-aro` to match the new CLI version (both the
-pip install line and the base image).
-
-This lets pip resolve all SDK dependencies automatically rather than manually
-editing individual packages.
+Additional instructions for merging changes downstream are contained in internal documentation.
 
 ## Caveats
 
 > [!NOTE]
-> Be aware that code beneath the `python/az/aro/azext_aro/` dir does not all
-> share the same license. Microsoft code and Microsoft generated code (`aaz/`
-> and `vendored_sdks/`) seem to generally be MIT, whereas `ARO` CLI extension
-> code (`tests/` and everything else in `python/az/aro/azext_aro/`) is Apache
-> 2.0.
+> Code in the upstream extension and downstream command module does not all share the same license. Microsoft code and Microsoft generated code (`aaz/` and `vendored_sdks/`) seem to generally be MIT, whereas most other code is Apache 2.0.
 
-- `azure-cli` CI is not entirely isolated. Test runs may pass or fail depending
-  on the state of `dev` branch. Force push to rerun the tests.
-- Pulling `azure-cli` can break the `venv`. If this happens, delete and
-  recreate it.
-- Care needs to be taken when designing tests for live recording. The recording
-  framework rewrites some fields, possibly including UUIDs.
-- When developing the `az aro` extension in this repository, you may wish to
-  use the [edge](https://github.com/Azure/azure-cli#edge-builds) CLI version to
-  be as close as possible to azure-cli master.
+- Pulling `azure-cli` can break the python virtualenv. If this happens, delete and recreate it.
+- Care needs to be taken when designing tests for live recording. The recording framework rewrites some fields, possibly including UUIDs.

@@ -113,35 +113,6 @@ stages:
       TAG: $[ stageDependencies.Set_Tag_Stage.Set_Tag_Variable.outputs['SetTag.TAG'] ]
 
     jobs:
-      - job: Build_Test_And_Push_Az_ARO_Extension
-        displayName: "Build and Push Az ARO Extension"
-        pool:
-          name: 1es-aro-ci-pool
-        steps:
-          - checkout: self
-          - task: Docker@2
-            inputs:
-              command: "login"
-              containerRegistry: arointsvc #service connection name
-          - template: ./templates/template-acr-login.yml
-            parameters:
-              acrFQDN: "arosvcdev.azurecr.io"
-
-          # Build and Test Az ARO Extension
-          - script: |
-              set -xe
-              echo "Building with TAG: $(TAG)"
-              make ci-azext-aro VERSION=$(TAG)
-            displayName: "🛠 Build & Test Az ARO Extension"
-
-          # Push the image to ACR
-          - template: ./templates/template-acr-push.yml
-            parameters:
-              acrFQDN: "arosvcdev.azurecr.io"
-              repository: "azext-aro"
-              tag: $(TAG)
-              pushLatest: true
-
       - job: Build_And_Test_RP_And_Portal
         pool:
           name: 1es-aro-ci-pool

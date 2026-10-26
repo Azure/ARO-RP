@@ -101,25 +101,9 @@ runlocal-rp: ## Run RP resource provider locally
 runlocal-monitor: ## Run the monitor locally
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} monitor
 
-.PHONY: az
-az: pyenv ## Building development az aro extension
-	. pyenv/bin/activate && \
-	cd python/az/aro && \
-	python3 ./setup.py bdist_egg && \
-	python3 ./setup.py bdist_wheel || true && \
-	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/14997
-
-# Don't depend on az as that will reinstall the requirements.txt which makes this pointless.
-.PHONY: az-freeze
-az-freeze: ## Freeze the dependencies of the current pyenv for hoped-for reproducibility.
-	. pyenv/bin/activate && \
-	pip freeze > requirements.txt
-
 .PHONY: clean
 clean: ## Remove build artifacts
-	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
-	find python -type f -name '*.pyc' -delete
-	find python -type d -name __pycache__ -delete
+	rm -rf aro
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 .PHONY: client
@@ -313,15 +297,6 @@ runlocal-scheduler:
 build-portal:
 	cd portal/v2 && npm install && npm run build
 
-.PHONY: pyenv
-pyenv:
-	python3 -m venv pyenv
-	. pyenv/bin/activate && \
-		pip install -U pip && \
-		pip install -r requirements.txt && \
-		azdev setup -r . && \
-		az config set extension.dev_sources=$(PWD)/python
-
 .PHONY: secrets
 secrets:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
@@ -433,23 +408,6 @@ lint-admin-portal:
 	docker build --platform=$(PLATFORM) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
 	docker run --platform=$(PLATFORM) -t --rm linter:latest
 
-.PHONY: test-python
-test-python: pyenv az
-	. pyenv/bin/activate && \
-		azdev test aro && \
-		azdev linter aro && \
-		azdev style aro && \
-		hack/unit-test-python.sh
-
-.PHONY: test-python-podman
-test-python-podman:
-	rm -rf pyenv
-	docker run --platform=$(PLATFORM) -t --rm \
-	    -v ./:/app:z \
-		--user=0 \
-	 	$(REGISTRY)/ubi9/python-312:latest \
-		bash -c "cd /app && ls && make test-python"
-
 .PHONY: shared-cluster-login
 shared-cluster-login:
 	@oc login $(shell az aro show -g sre-shared-cluster -n sre-shared-cluster -ojson --query apiserverProfile.url) \
@@ -477,10 +435,6 @@ shared-miwi-cluster-create:
 .PHONY: shared-miwi-cluster-delete
 shared-miwi-cluster-delete:
 	./hack/shared-miwi-cluster.sh delete
-
-.PHONY: unit-test-python
-unit-test-python:
-	hack/unit-test-python.sh
 
 .PHONY: admin.kubeconfig
 admin.kubeconfig: ## Get cluster admin kubeconfig
@@ -579,14 +533,6 @@ LOCAL_TUNNEL_IMAGE ?= aro-tunnel
 ###############################################################################
 # Targets
 ###############################################################################
-.PHONY: ci-azext-aro
-ci-azext-aro:
-	docker build . $(DOCKER_BUILD_CI_ARGS) \
-		-f Dockerfile.ci-azext-aro \
-		--platform=$(PLATFORM) \
-		--no-cache=$(NO_CACHE) \
-		-t $(LOCAL_ARO_AZEXT_IMAGE):$(VERSION)
-
 .PHONY: ci-clean
 ci-clean:
 	$(shell podman $(PODMAN_REMOTE_ARGS) ps --external --format "{{.Command}} {{.ID}}" | grep buildah | cut -d " " -f 2 | xargs podman $(PODMAN_REMOTE_ARGS) rm -f > /dev/null)

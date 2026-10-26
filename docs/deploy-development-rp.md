@@ -24,12 +24,11 @@ running off of your local laptop.
     cp env.example env
     ```
 
-2. Build the development `az aro` extension:
+2. Set up local development for the `az aro` upstream extension, as described 
+   in [az-aro-python-development.md](az-aro-python-development.md#ext-dev)
 
-    ```bash
-    . ./env
-    make az
-    ```
+    Now, when you run `az aro` commands on your local host (from the 
+    azure-cli-extensions virtualenv), you will be using your local `aro` extension.
 
 3. Verify the ARO extension is registered:
 
@@ -37,7 +36,7 @@ running off of your local laptop.
     az -v
     ...
     Extensions:
-    aro                                0.4.0 (dev) /path/to/rp/python/az/aro
+    aro                                0.4.0 (dev) /path/to/azure-cli-extensions/src/aro
     ...
     Development extension sources:
         /path/to/rp/python
