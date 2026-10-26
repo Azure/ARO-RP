@@ -94,7 +94,7 @@ Before committing new recordings, sanitize them for UUIDs and email addresses.
 
 Merge, publish, and approve changes to the `az aro` [upstream] extension **before** contributing the same changes [downstream] to Azure CLI. This allows us to keep the upstream extension and downstream command module as synchronized as possible.
 
-When porting changes to the `az aro` [downstream] command module, some imports will be different. When submitting pull requests, tests that include `azdev style`, `azdev linter`, and `azdev test aro` checks should pass to ensure that changes will not impact CI pipelines.
+When porting changes to the `az aro` [downstream] command module, some imports will be different. When submitting pull requests, tests that include `azdev style`, `azdev linter`, and `azdev test azure-cli-aro` checks should pass to ensure that changes will not impact CI pipelines.
 
 Additional instructions for merging changes downstream are contained in internal documentation.
 
