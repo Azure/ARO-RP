@@ -6,7 +6,9 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"os"
@@ -16,44 +18,42 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerinstance/armcontainerinstance"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
-	utilcluster "github.com/Azure/ARO-RP/pkg/util/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
-	otelE2EVnetName            = "dev-vnet"
-	otelE2EContainerName       = "collector"
+	otelE2ECollectorNS         = "aro-e2e-otel"
+	otelE2ECollectorName       = "otel-e2e-collector"
+	otelE2ECollectorContainer  = "collector"
 	otelE2ETelemetryDomain     = "telemetry.e2e.aro.local"
-	otelE2ESinkMarker          = "[ARO-E2E-OTEL]"
-	otelE2ECollectorConfigEnv  = "OTEL_CONFIG"
+	otelE2ECollectorMarker     = "[ARO-E2E-OTEL]"
 	otelE2EImageEnv            = "TELEMETRY_COLLECTOR_IMAGE"
 	otelE2ERegistryUserEnv     = "TELEMETRY_COLLECTOR_REGISTRY_USER"
 	otelE2ERegistryPasswordEnv = "TELEMETRY_COLLECTOR_REGISTRY_PASSWORD"
 	otelE2ELoggingNS           = "openshift-azure-logging"
+	otelE2EOTLPPort            = int32(4317)
 )
 
 var _ = Describe("OTEL gateway integration", func() {
 	var (
-		subnetName         string
-		containerGroupName string
+		collectorClusterIP string
 		originalGatewayIP  string
 		originalGatewayDom string
 		originalInsecure   string
 		hadInsecureFlag    bool
-		aciCreated         bool
-		subnetCreated      bool
+		collectorCreated   bool
 		clusterPatched     bool
 	)
 
@@ -79,49 +79,35 @@ var _ = Describe("OTEL gateway integration", func() {
 				return err
 			})
 			Expect(err).NotTo(HaveOccurred())
-			waitForOTelExporterDaemonSetsReady(ctx, "")
+			waitForOTelExporterDaemonSetsRestored(ctx, collectorClusterIP, originalGatewayIP)
 		}
 
-		if aciCreated {
-			By("deleting ACI container group")
-			err := clients.ContainerGroups.DeleteAndWait(ctx, vnetResourceGroup, containerGroupName, nil)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		if subnetCreated {
-			By("deleting ACI delegated subnet")
-			err := clients.Subnet.DeleteAndWait(ctx, vnetResourceGroup, otelE2EVnetName, subnetName, nil)
+		if collectorCreated {
+			By("deleting in-cluster OTEL collector namespace")
+			err := clients.Kubernetes.CoreV1().Namespaces().Delete(ctx, otelE2ECollectorNS, metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		}
 	})
 
-	It("forwards containers, journald, and audit logs to a synthetic ACI collector", func(ctx context.Context) {
+	It("forwards containers, journald, and audit logs to an in-cluster collector", func(ctx context.Context) {
 		image := os.Getenv(otelE2EImageEnv)
 		if image == "" {
-			Skip(fmt.Sprintf("%s not set; skipping OTEL ACI e2e", otelE2EImageEnv))
+			Skip(fmt.Sprintf("%s not set; skipping OTEL e2e", otelE2EImageEnv))
 		}
 
-		subnetName = clusterName + "-otel-aci"
-		containerGroupName = truncateAzureName("otel-e2e-"+clusterName, 63)
-
-		By("creating ACI-delegated subnet on cluster VNet")
-		subnetID, err := createOTelACIISubnet(ctx, subnetName)
-		Expect(err).NotTo(HaveOccurred())
-		subnetCreated = true
-
-		By("deploying synthetic telemetrycollector ACI")
+		By("deploying in-cluster synthetic telemetrycollector")
 		collectorConfig, err := staticResources.ReadFile("static_resources/otel-collector.yaml")
 		Expect(err).NotTo(HaveOccurred())
-		privateIP, err := deployOTelCollectorACI(ctx, containerGroupName, subnetID, image, string(collectorConfig))
+		collectorClusterIP, err = deployOTelCollectorInCluster(ctx, image, string(collectorConfig))
 		Expect(err).NotTo(HaveOccurred())
-		aciCreated = true
-		Expect(net.ParseIP(privateIP)).NotTo(BeNil())
-		log.Infof("ACI collector private IP: %s", privateIP)
+		collectorCreated = true
+		Expect(net.ParseIP(collectorClusterIP)).NotTo(BeNil())
+		log.Infof("in-cluster collector Service ClusterIP: %s", collectorClusterIP)
 
-		By("waiting for ACI collector process to be healthy before pointing exporters at it")
-		waitForOTelCollectorACIHealthy(ctx, containerGroupName)
+		By("waiting for collector to be healthy before pointing exporters at it")
+		waitForOTelCollectorPodHealthy(ctx)
 
-		By("saving and patching Cluster CR to point exporters at ACI")
+		By("saving and patching Cluster CR to point exporters at in-cluster collector")
 		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		originalGatewayIP = co.Spec.GatewayPrivateEndpointIP
@@ -133,7 +119,7 @@ var _ = Describe("OTEL gateway integration", func() {
 			if err != nil {
 				return err
 			}
-			co.Spec.GatewayPrivateEndpointIP = privateIP
+			co.Spec.GatewayPrivateEndpointIP = collectorClusterIP
 			co.Spec.GatewayTelemetryDomain = otelE2ETelemetryDomain
 			if co.Spec.OperatorFlags == nil {
 				co.Spec.OperatorFlags = arov1alpha1.OperatorFlags{}
@@ -147,7 +133,7 @@ var _ = Describe("OTEL gateway integration", func() {
 
 		By("waiting for otel-exporter DaemonSets to roll out with new gateway target")
 		waitForOTelConfigInsecure(ctx)
-		waitForOTelExporterDaemonSetsReady(ctx, privateIP)
+		waitForOTelExporterDaemonSetsReady(ctx, collectorClusterIP)
 
 		marker := "aro-e2e-otel-marker-" + strings.ToLower(uuid.DefaultGenerator.Generate())
 		for _, src := range []struct {
@@ -162,165 +148,162 @@ var _ = Describe("OTEL gateway integration", func() {
 			{"journald", injectOTelJournaldMarker, []string{`SYSLOG_IDENTIFIER: Str(aro-e2e-otel)`}},
 			{"audit", injectOTelAuditMarker, nil},
 		} {
-			By(fmt.Sprintf("%s: inject marker %q and assert in ACI logs", src.name, marker))
+			By(fmt.Sprintf("%s: inject marker %q and assert in collector logs", src.name, marker))
 			src.inject(ctx, marker)
-			assertOTelSourceInACILogs(ctx, containerGroupName, marker, src.name, src.extra...)
+			assertOTelSourceInCollectorLogs(ctx, marker, src.name, src.extra...)
 		}
 	})
 })
 
-func truncateAzureName(name string, max int) string {
-	if len(name) <= max {
-		return name
+func deployOTelCollectorInCluster(ctx context.Context, image, collectorConfig string) (string, error) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: otelE2ECollectorNS}}
+	if _, err := clients.Kubernetes.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{}); err != nil {
+		return "", fmt.Errorf("create namespace %s: %w", otelE2ECollectorNS, err)
 	}
-	return name[:max]
+
+	if _, err := clients.Kubernetes.CoreV1().ConfigMaps(otelE2ECollectorNS).Create(ctx, &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: otelE2ECollectorName, Namespace: otelE2ECollectorNS},
+		Data:       map[string]string{"config.yaml": collectorConfig},
+	}, metav1.CreateOptions{}); err != nil {
+		return "", fmt.Errorf("create collector configmap: %w", err)
+	}
+
+	var pullSecrets []corev1.LocalObjectReference
+	if secretName, err := maybeCreateOTelPullSecret(ctx, image); err != nil {
+		return "", err
+	} else if secretName != "" {
+		pullSecrets = []corev1.LocalObjectReference{{Name: secretName}}
+	}
+
+	labels := map[string]string{"app": otelE2ECollectorName}
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: otelE2ECollectorName, Namespace: otelE2ECollectorNS},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: new(int32(1)),
+			Selector: &metav1.LabelSelector{MatchLabels: labels},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: labels},
+				Spec: corev1.PodSpec{
+					ImagePullSecrets: pullSecrets,
+					Containers: []corev1.Container{{
+						Name:  otelE2ECollectorContainer,
+						Image: image,
+						Args:  []string{"--config", "/etc/otel/config.yaml"},
+						Ports: []corev1.ContainerPort{{
+							Name: "otlp-grpc", ContainerPort: otelE2EOTLPPort, Protocol: corev1.ProtocolTCP,
+						}},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name: "config", MountPath: "/etc/otel", ReadOnly: true,
+						}},
+						ReadinessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path: "/",
+									Port: intstr.FromInt32(13133),
+								},
+							},
+							InitialDelaySeconds: 5,
+							PeriodSeconds:       5,
+						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("256Mi"),
+							},
+							Limits: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("500m"),
+								corev1.ResourceMemory: resource.MustParse("512Mi"),
+							},
+						},
+					}},
+					Volumes: []corev1.Volume{{
+						Name: "config",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{Name: otelE2ECollectorName},
+							},
+						},
+					}},
+				},
+			},
+		},
+	}
+	if _, err := clients.Kubernetes.AppsV1().Deployments(otelE2ECollectorNS).Create(ctx, deploy, metav1.CreateOptions{}); err != nil {
+		return "", fmt.Errorf("create collector deployment: %w", err)
+	}
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: otelE2ECollectorName, Namespace: otelE2ECollectorNS},
+		Spec: corev1.ServiceSpec{
+			Selector: labels,
+			Ports: []corev1.ServicePort{{
+				Name: "otlp-grpc", Port: otelE2EOTLPPort, TargetPort: intstr.FromInt32(otelE2EOTLPPort), Protocol: corev1.ProtocolTCP,
+			}},
+			Type: corev1.ServiceTypeClusterIP,
+		},
+	}
+	created, err := clients.Kubernetes.CoreV1().Services(otelE2ECollectorNS).Create(ctx, svc, metav1.CreateOptions{})
+	if err != nil {
+		return "", fmt.Errorf("create collector service: %w", err)
+	}
+	if created.Spec.ClusterIP == "" {
+		return "", fmt.Errorf("collector service has empty ClusterIP")
+	}
+	return created.Spec.ClusterIP, nil
 }
 
-func createOTelACIISubnet(ctx context.Context, subnetName string) (string, error) {
-	prefix, err := pickFreeSubnetPrefix(ctx, vnetResourceGroup, otelE2EVnetName, 28)
+func maybeCreateOTelPullSecret(ctx context.Context, image string) (string, error) {
+	user := firstNonEmpty(os.Getenv(otelE2ERegistryUserEnv), os.Getenv("AZURE_CLIENT_ID"))
+	pass := firstNonEmpty(os.Getenv(otelE2ERegistryPasswordEnv), os.Getenv("AZURE_CLIENT_SECRET"))
+	if user == "" || pass == "" {
+		return "", nil
+	}
+	server, err := registryServerFromImage(image)
 	if err != nil {
 		return "", err
 	}
-
-	subnet := armnetwork.Subnet{
-		Properties: &armnetwork.SubnetPropertiesFormat{
-			AddressPrefix: new(prefix),
-			Delegations: []*armnetwork.Delegation{
-				{
-					Name: new("aci-delegation"),
-					Properties: &armnetwork.ServiceDelegationPropertiesFormat{
-						ServiceName: new("Microsoft.ContainerInstance/containerGroups"),
-					},
-				},
+	dockerConfig, err := json.Marshal(map[string]any{
+		"auths": map[string]any{
+			server: map[string]string{
+				"username": user,
+				"password": pass,
 			},
 		},
-	}
-
-	if err := clients.Subnet.CreateOrUpdateAndWait(ctx, vnetResourceGroup, otelE2EVnetName, subnetName, subnet, nil); err != nil {
-		return "", fmt.Errorf("create ACI subnet %s: %w", subnetName, err)
-	}
-
-	resp, err := clients.Subnet.Get(ctx, vnetResourceGroup, otelE2EVnetName, subnetName, nil)
-	if err != nil {
-		return "", fmt.Errorf("get ACI subnet %s: %w", subnetName, err)
-	}
-	if resp.ID == nil || *resp.ID == "" {
-		return "", fmt.Errorf("ACI subnet %s has empty resource ID", subnetName)
-	}
-	return *resp.ID, nil
-}
-
-func pickFreeSubnetPrefix(ctx context.Context, resourceGroup, vnetName string, prefixLen int) (string, error) {
-	existing, err := clients.Subnet.List(ctx, resourceGroup, vnetName, nil)
-	if err != nil {
-		return "", fmt.Errorf("list subnets: %w", err)
-	}
-	var used []*net.IPNet
-	for _, s := range existing {
-		used = append(used, utilcluster.GetIPRangesFromSubnet(s)...)
-	}
-	return utilcluster.PickFreeDevVNetPrefix(used, prefixLen, utilcluster.GenerateSubnetMaxTries, os.Getenv("CI") != "")
-}
-
-func deployOTelCollectorACI(ctx context.Context, groupName, subnetID, image, collectorConfig string) (string, error) {
-	registryServer, err := registryServerFromImage(image)
+	})
 	if err != nil {
 		return "", err
 	}
-	registryUser := firstNonEmpty(os.Getenv(otelE2ERegistryUserEnv), os.Getenv("AZURE_CLIENT_ID"))
-	registryPassword := firstNonEmpty(os.Getenv(otelE2ERegistryPasswordEnv), os.Getenv("AZURE_CLIENT_SECRET"))
-	if registryUser == "" || registryPassword == "" {
-		return "", fmt.Errorf("registry credentials required to pull %s (set %s/%s or AZURE_CLIENT_ID/AZURE_CLIENT_SECRET)", image, otelE2ERegistryUserEnv, otelE2ERegistryPasswordEnv)
-	}
-
-	port4317 := int32(4317)
-	cg := armcontainerinstance.ContainerGroup{
-		Location: new(_env.Location()),
-		Properties: &armcontainerinstance.ContainerGroupProperties{
-			OSType:        new(armcontainerinstance.OperatingSystemTypesLinux),
-			RestartPolicy: new(armcontainerinstance.ContainerGroupRestartPolicyAlways),
-			IPAddress: &armcontainerinstance.IPAddress{
-				Type: new(armcontainerinstance.ContainerGroupIPAddressTypePrivate),
-				Ports: []*armcontainerinstance.Port{
-					{
-						Port:     new(port4317),
-						Protocol: new(armcontainerinstance.ContainerGroupNetworkProtocolTCP),
-					},
-				},
-			},
-			SubnetIDs: []*armcontainerinstance.ContainerGroupSubnetID{
-				{ID: new(subnetID)},
-			},
-			ImageRegistryCredentials: []*armcontainerinstance.ImageRegistryCredential{
-				{
-					Server:   new(registryServer),
-					Username: new(registryUser),
-					Password: new(registryPassword),
-				},
-			},
-			Containers: []*armcontainerinstance.Container{
-				{
-					Name: new(otelE2EContainerName),
-					Properties: &armcontainerinstance.ContainerProperties{
-						Image: new(image),
-						Command: []*string{
-							new("telemetrycollector"),
-							new("--config"),
-							new("env:" + otelE2ECollectorConfigEnv),
-						},
-						EnvironmentVariables: []*armcontainerinstance.EnvironmentVariable{
-							{
-								Name:        new(otelE2ECollectorConfigEnv),
-								SecureValue: new(collectorConfig),
-							},
-						},
-						Ports: []*armcontainerinstance.ContainerPort{
-							{
-								Port:     new(port4317),
-								Protocol: new(armcontainerinstance.ContainerNetworkProtocolTCP),
-							},
-						},
-						Resources: &armcontainerinstance.ResourceRequirements{
-							Requests: &armcontainerinstance.ResourceRequests{
-								CPU:        new(1.0),
-								MemoryInGB: new(1.5),
-							},
-							Limits: &armcontainerinstance.ResourceLimits{
-								CPU:        new(1.0),
-								MemoryInGB: new(1.5),
-							},
-						},
-					},
-				},
-			},
-		},
-		Tags: map[string]*string{
-			"aro-e2e": new("otel-gateway"),
-		},
-	}
-
-	resp, err := clients.ContainerGroups.CreateOrUpdateAndWait(ctx, vnetResourceGroup, groupName, cg, nil)
+	secretName := otelE2ECollectorName + "-pull"
+	_, err = clients.Kubernetes.CoreV1().Secrets(otelE2ECollectorNS).Create(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: otelE2ECollectorNS},
+		Type:       corev1.SecretTypeDockerConfigJson,
+		Data:       map[string][]byte{corev1.DockerConfigJsonKey: dockerConfig},
+	}, metav1.CreateOptions{})
 	if err != nil {
-		return "", fmt.Errorf("create ACI %s: %w", groupName, err)
+		return "", fmt.Errorf("create pull secret: %w", err)
 	}
-	if resp.Properties == nil || resp.Properties.IPAddress == nil || resp.Properties.IPAddress.IP == nil {
-		return "", fmt.Errorf("ACI %s created without private IP", groupName)
-	}
-	return *resp.Properties.IPAddress.IP, nil
+	return secretName, nil
 }
 
-func waitForOTelCollectorACIHealthy(ctx context.Context, containerGroupName string) {
+func waitForOTelCollectorPodHealthy(ctx context.Context) {
 	GinkgoHelper()
-
 	Eventually(func(g Gomega, ctx context.Context) {
-		logs, err := clients.Containers.ListLogs(ctx, vnetResourceGroup, containerGroupName, otelE2EContainerName, &armcontainerinstance.ContainersClientListLogsOptions{
-			Tail: new(int32(100)),
+		pods, err := clients.Kubernetes.CoreV1().Pods(otelE2ECollectorNS).List(ctx, metav1.ListOptions{
+			LabelSelector: "app=" + otelE2ECollectorName,
 		})
 		g.Expect(err).NotTo(HaveOccurred())
-		g.Expect(logs.Content).NotTo(BeNil())
-		g.Expect(*logs.Content).To(ContainSubstring("Everything is ready"),
-			"ACI collector not ready; logs:\n%s", *logs.Content)
-	}).WithContext(ctx).WithTimeout(2 * time.Minute).WithPolling(5 * time.Second).Should(Succeed())
+		g.Expect(pods.Items).NotTo(BeEmpty())
+		pod := pods.Items[0]
+		g.Expect(pod.Status.Phase).To(Equal(corev1.PodRunning))
+		ready := false
+		for _, c := range pod.Status.Conditions {
+			if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+				ready = true
+				break
+			}
+		}
+		g.Expect(ready).To(BeTrue(), "collector pod not Ready: %+v", pod.Status)
+	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 }
 
 func registryServerFromImage(image string) (string, error) {
@@ -367,13 +350,39 @@ func waitForOTelExporterDaemonSetsReady(ctx context.Context, wantHostAliasIP str
 				g.Expect(otelHostAliasContains(ds.Spec.Template.Spec.HostAliases, wantHostAliasIP)).To(BeTrue(),
 					"DaemonSet %s missing hostAlias for %s", daemonSetName, wantHostAliasIP)
 			}
-			g.Expect(ds.Status.DesiredNumberScheduled).To(BeNumerically(">", 0))
-			g.Expect(ds.Status.DesiredNumberScheduled).To(Equal(ds.Status.NumberAvailable))
-			g.Expect(ds.Status.DesiredNumberScheduled).To(Equal(ds.Status.UpdatedNumberScheduled))
-			g.Expect(ds.Status.CurrentNumberScheduled).To(Equal(ds.Status.NumberReady))
-			g.Expect(ds.Generation).To(Equal(ds.Status.ObservedGeneration))
+			assertOTelExporterDaemonSetRolledOut(g, ds)
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	}
+}
+
+// waitForOTelExporterDaemonSetsRestored waits until exporters no longer target
+// leaveIP. If restoreIP is set, also require that hostAlias.
+func waitForOTelExporterDaemonSetsRestored(ctx context.Context, leaveIP, restoreIP string) {
+	GinkgoHelper()
+	for _, daemonSetName := range []string{genevalogging.MasterDaemonsetName, genevalogging.WorkerDaemonsetName} {
+		Eventually(func(g Gomega, ctx context.Context) {
+			ds, err := clients.Kubernetes.AppsV1().DaemonSets(otelE2ELoggingNS).Get(ctx, daemonSetName, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			if leaveIP != "" {
+				g.Expect(otelHostAliasContains(ds.Spec.Template.Spec.HostAliases, leaveIP)).To(BeFalse(),
+					"DaemonSet %s still has hostAlias for collector %s", daemonSetName, leaveIP)
+			}
+			if restoreIP != "" {
+				g.Expect(otelHostAliasContains(ds.Spec.Template.Spec.HostAliases, restoreIP)).To(BeTrue(),
+					"DaemonSet %s missing restored hostAlias for %s", daemonSetName, restoreIP)
+			}
+			assertOTelExporterDaemonSetRolledOut(g, ds)
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	}
+}
+
+func assertOTelExporterDaemonSetRolledOut(g Gomega, ds *appsv1.DaemonSet) {
+	GinkgoHelper()
+	g.Expect(ds.Status.DesiredNumberScheduled).To(BeNumerically(">", 0))
+	g.Expect(ds.Status.DesiredNumberScheduled).To(Equal(ds.Status.NumberAvailable))
+	g.Expect(ds.Status.DesiredNumberScheduled).To(Equal(ds.Status.UpdatedNumberScheduled))
+	g.Expect(ds.Status.CurrentNumberScheduled).To(Equal(ds.Status.NumberReady))
+	g.Expect(ds.Generation).To(Equal(ds.Status.ObservedGeneration))
 }
 
 func otelHostAliasContains(aliases []corev1.HostAlias, ip string) bool {
@@ -385,19 +394,42 @@ func otelHostAliasContains(aliases []corev1.HostAlias, ip string) bool {
 	return false
 }
 
-func assertOTelSourceInACILogs(ctx context.Context, containerGroupName, marker, source string, extra ...string) {
+func assertOTelSourceInCollectorLogs(ctx context.Context, marker, source string, extra ...string) {
 	GinkgoHelper()
-	want := append([]string{marker, otelE2ESinkMarker, "source_name: Str(" + source + ")", "EventName: Str(" + source + ")"}, extra...)
+	want := append([]string{marker, otelE2ECollectorMarker, "source_name: Str(" + source + ")", "EventName: Str(" + source + ")"}, extra...)
 	Eventually(func(g Gomega, ctx context.Context) {
-		logs, err := clients.Containers.ListLogs(ctx, vnetResourceGroup, containerGroupName, otelE2EContainerName, &armcontainerinstance.ContainersClientListLogsOptions{
-			Tail: new(int32(400)),
-		})
+		logs, err := otelCollectorPodLogs(ctx)
 		g.Expect(err).NotTo(HaveOccurred())
-		g.Expect(logs.Content).NotTo(BeNil())
 		for _, s := range want {
-			g.Expect(*logs.Content).To(ContainSubstring(s), "missing %q for source %s:\n%s", s, source, *logs.Content)
+			g.Expect(logs).To(ContainSubstring(s), "missing %q for source %s:\n%s", s, source, logs)
 		}
 	}).WithContext(ctx).WithTimeout(2 * time.Minute).WithPolling(5 * time.Second).Should(Succeed())
+}
+
+func otelCollectorPodLogs(ctx context.Context) (string, error) {
+	pods, err := clients.Kubernetes.CoreV1().Pods(otelE2ECollectorNS).List(ctx, metav1.ListOptions{
+		LabelSelector: "app=" + otelE2ECollectorName,
+	})
+	if err != nil {
+		return "", err
+	}
+	if len(pods.Items) == 0 {
+		return "", fmt.Errorf("no collector pods in %s", otelE2ECollectorNS)
+	}
+	req := clients.Kubernetes.CoreV1().Pods(otelE2ECollectorNS).GetLogs(pods.Items[0].Name, &corev1.PodLogOptions{
+		Container: otelE2ECollectorContainer,
+		TailLines: new(int64(400)),
+	})
+	stream, err := req.Stream(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer stream.Close()
+	b, err := io.ReadAll(stream)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func injectOTelContainerMarker(ctx context.Context, marker string) {
