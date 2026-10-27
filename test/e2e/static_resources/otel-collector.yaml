@@ -12,7 +12,6 @@ receivers:
 
 connectors:
   routing:
-    default_pipelines: [logs/drop]
     table:
       - context: log
         condition: >
@@ -21,7 +20,7 @@ connectors:
         pipelines: [logs/keep]
 
 processors:
-  attributes/e2e-sink:
+  attributes/e2e-collector:
     actions:
       - key: aro.e2e.otel
         value: "[ARO-E2E-OTEL]"
@@ -30,8 +29,6 @@ processors:
 exporters:
   debug:
     verbosity: detailed
-  file/drop:
-    path: /dev/null
 
 service:
   telemetry:
@@ -44,8 +41,5 @@ service:
       exporters: [routing]
     logs/keep:
       receivers: [routing]
-      processors: [attributes/e2e-sink]
+      processors: [attributes/e2e-collector]
       exporters: [debug]
-    logs/drop:
-      receivers: [routing]
-      exporters: [file/drop]
