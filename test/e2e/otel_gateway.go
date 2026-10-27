@@ -355,8 +355,6 @@ func waitForOTelExporterDaemonSetsReady(ctx context.Context, wantHostAliasIP str
 	}
 }
 
-// waitForOTelExporterDaemonSetsRestored waits until exporters no longer target
-// leaveIP. If restoreIP is set, also require that hostAlias.
 func waitForOTelExporterDaemonSetsRestored(ctx context.Context, leaveIP, restoreIP string) {
 	GinkgoHelper()
 	for _, daemonSetName := range []string{genevalogging.MasterDaemonsetName, genevalogging.WorkerDaemonsetName} {
@@ -434,9 +432,6 @@ func otelCollectorPodLogs(ctx context.Context) (string, error) {
 
 func injectOTelContainerMarker(ctx context.Context, marker string) {
 	GinkgoHelper()
-	// Default cluster profile is minimal-logs, which only keeps container lines
-	// from selected platform namespaces that look like errors. Use that NS and
-	// prefix the marker with level=error so the exporter does not drop it.
 	ns := otelE2ELoggingNS
 	podName := "otel-marker-" + strings.ToLower(uuid.DefaultGenerator.Generate()[:8])
 	_, err := clients.Kubernetes.CoreV1().Pods(ns).Create(ctx, &corev1.Pod{
