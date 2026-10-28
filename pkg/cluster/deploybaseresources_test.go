@@ -2690,11 +2690,8 @@ func TestWaitForStorageAccountRBAC(t *testing.T) {
 		wantErr    string
 	}{
 		{
-			name:      "service principal, graph exists",
+			name:      "service principal cluster skips the check",
 			spProfile: &api.ServicePrincipalProfile{},
-			mockExists: func(g *mock_graph.MockManager) {
-				g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(true, nil)
-			},
 		},
 		{
 			name:    "workload identity, graph exists",
@@ -2704,14 +2701,14 @@ func TestWaitForStorageAccountRBAC(t *testing.T) {
 			},
 		},
 		{
-			name:    "graph not found is success",
+			name:    "workload identity, graph not found is success",
 			profile: miwiProfile,
 			mockExists: func(g *mock_graph.MockManager) {
 				g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(false, nil)
 			},
 		},
 		{
-			name:    "error is returned",
+			name:    "workload identity, error is returned",
 			profile: miwiProfile,
 			mockExists: func(g *mock_graph.MockManager) {
 				g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(false, errForbidden)
@@ -2743,7 +2740,7 @@ func TestWaitForStorageAccountRBAC(t *testing.T) {
 				},
 			}
 
-			err := m.waitForClusterGraphAccess(ctx)
+			err := m.waitForStorageAccountRBAC(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
