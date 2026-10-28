@@ -170,59 +170,6 @@ func masterMachineWithZone(name, vmSize, zone string) machinev1beta1.Machine {
 	}
 }
 
-func virtualMachineValidationWithSizeAndZone(vmSize, zone string) mgmtcompute.VirtualMachine {
-	statuses := []mgmtcompute.InstanceViewStatus{
-		{Code: new("ProvisioningState/succeeded")},
-		{Code: new("PowerState/running")},
-	}
-	zones := []string{zone}
-
-	return mgmtcompute.VirtualMachine{
-		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-			HardwareProfile: &mgmtcompute.HardwareProfile{
-				VMSize: mgmtcompute.VirtualMachineSizeTypes(vmSize),
-			},
-			InstanceView: &mgmtcompute.VirtualMachineInstanceView{
-				Statuses: &statuses,
-			},
-		},
-		Zones: &zones,
-	}
-}
-
-func controlPlaneNode(name, nodeInstanceType, betaInstanceType string, ready, unschedulable bool) corev1.Node {
-	readyCondition := corev1.ConditionFalse
-	if ready {
-		readyCondition = corev1.ConditionTrue
-	}
-
-	return corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"node-role.kubernetes.io/master": "",
-				nodeLabelInstanceType:            nodeInstanceType,
-				nodeLabelBetaInstanceType:        betaInstanceType,
-			},
-		},
-		Spec: corev1.NodeSpec{
-			Unschedulable: unschedulable,
-		},
-		Status: corev1.NodeStatus{
-			Conditions: []corev1.NodeCondition{{
-				Type:   corev1.NodeReady,
-				Status: readyCondition,
-			}},
-		},
-	}
-}
-
-func controlPlaneNodeListJSON(nodes ...corev1.Node) []byte {
-	nodeList := &corev1.NodeList{Items: nodes}
-	b, _ := json.Marshal(nodeList)
-	return b
-}
-
 func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
 	running := "Running"
 	allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
@@ -261,34 +208,6 @@ func allKubeChecksHealthyMockWithMachineList(k *mock_adminactions.MockKubeAction
 		KubeList(gomock.Any(), machineGroupKind, machineNamespace).
 		Return(machineList, nil).
 		AnyTimes()
-}
-
-func healthyControlPlaneInventoryMock(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions, resourceGroupName string, vmSize string) {
-	if k != nil {
-		k.EXPECT().
-			KubeList(gomock.Any(), machineGroupKind, machineNamespace).
-			Return(masterMachineListJSON(
-				masterMachineWithZone("master-0", vmSize, "1"),
-				masterMachineWithZone("master-1", vmSize, "2"),
-				masterMachineWithZone("master-2", vmSize, "3"),
-			), nil)
-		k.EXPECT().
-			KubeList(gomock.Any(), "Node", "").
-			Return(controlPlaneNodeListJSON(
-				controlPlaneNode("master-0", vmSize, vmSize, true, false),
-				controlPlaneNode("master-1", vmSize, vmSize, true, false),
-				controlPlaneNode("master-2", vmSize, vmSize, true, false),
-			), nil)
-	}
-
-	if a != nil {
-		a.EXPECT().GetVirtualMachine(gomock.Any(), resourceGroupName, "master-0", mgmtcompute.InstanceView).
-			Return(virtualMachineValidationWithSizeAndZone(vmSize, "1"), nil)
-		a.EXPECT().GetVirtualMachine(gomock.Any(), resourceGroupName, "master-1", mgmtcompute.InstanceView).
-			Return(virtualMachineValidationWithSizeAndZone(vmSize, "2"), nil)
-		a.EXPECT().GetVirtualMachine(gomock.Any(), resourceGroupName, "master-2", mgmtcompute.InstanceView).
-			Return(virtualMachineValidationWithSizeAndZone(vmSize, "3"), nil)
-	}
 }
 
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
