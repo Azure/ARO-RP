@@ -653,6 +653,7 @@ class OpenShiftCluster(TrackedResource):  # pylint: disable=docstring-keyword-sh
 
     __flattened_items = [
         "provisioning_state",
+        "zones",
         "cluster_profile",
         "console_profile",
         "service_principal_profile",
@@ -775,6 +776,8 @@ class OpenShiftClusterProperties(_Model):  # pylint: disable=docstring-keyword-s
     :ivar provisioning_state: The cluster provisioning state. Known values are: "AdminUpdating",
      "Canceled", "Creating", "Deleting", "Failed", "Succeeded", and "Updating".
     :vartype provisioning_state: str or ~azure.mgmt.redhatopenshift.models.ProvisioningState
+    :ivar zones: The zones the cluster is deployed in. Required.
+    :vartype zones: list[str]
     :ivar cluster_profile: The cluster profile.
     :vartype cluster_profile: ~azure.mgmt.redhatopenshift.models.ClusterProfile
     :ivar console_profile: The console profile.
@@ -803,6 +806,8 @@ class OpenShiftClusterProperties(_Model):  # pylint: disable=docstring-keyword-s
     )
     """The cluster provisioning state. Known values are: \"AdminUpdating\", \"Canceled\",
      \"Creating\", \"Deleting\", \"Failed\", \"Succeeded\", and \"Updating\"."""
+    zones: list[str] = rest_field(visibility=["read", "create", "update", "delete", "query"])
+    """The zones the cluster is deployed in. Required."""
     cluster_profile: Optional["_models.ClusterProfile"] = rest_field(
         name="clusterProfile", visibility=["read", "create", "update", "delete", "query"]
     )
@@ -848,6 +853,7 @@ class OpenShiftClusterProperties(_Model):  # pylint: disable=docstring-keyword-s
     def __init__(
         self,
         *,
+        zones: list[str],
         provisioning_state: Optional[Union[str, "_models.ProvisioningState"]] = None,
         cluster_profile: Optional["_models.ClusterProfile"] = None,
         console_profile: Optional["_models.ConsoleProfile"] = None,
@@ -896,6 +902,7 @@ class OpenShiftClusterUpdate(_Model):  # pylint: disable=docstring-keyword-shoul
 
     __flattened_items = [
         "provisioning_state",
+        "zones",
         "cluster_profile",
         "console_profile",
         "service_principal_profile",

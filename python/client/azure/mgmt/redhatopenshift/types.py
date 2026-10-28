@@ -324,6 +324,8 @@ class OpenShiftClusterProperties(TypedDict, total=False):
     :ivar provisioningState: The cluster provisioning state. Known values are: "AdminUpdating",
      "Canceled", "Creating", "Deleting", "Failed", "Succeeded", and "Updating".
     :vartype provisioningState: Union[str, "ProvisioningState"]
+    :ivar zones: The zones the cluster is deployed in. Required.
+    :vartype zones: list[str]
     :ivar clusterProfile: The cluster profile.
     :vartype clusterProfile: "ClusterProfile"
     :ivar consoleProfile: The console profile.
@@ -349,6 +351,8 @@ class OpenShiftClusterProperties(TypedDict, total=False):
     provisioningState: Union[str, "ProvisioningState"]
     """The cluster provisioning state. Known values are: \"AdminUpdating\", \"Canceled\",
      \"Creating\", \"Deleting\", \"Failed\", \"Succeeded\", and \"Updating\"."""
+    zones: Required[list[str]]
+    """The zones the cluster is deployed in. Required."""
     clusterProfile: "ClusterProfile"
     """The cluster profile."""
     consoleProfile: "ConsoleProfile"

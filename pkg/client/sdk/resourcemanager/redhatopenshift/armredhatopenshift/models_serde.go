@@ -560,6 +560,7 @@ func (o OpenShiftClusterProperties) MarshalJSON() ([]byte, error) {
 	populate(objectMap, "servicePrincipalProfile", o.ServicePrincipalProfile)
 	populate(objectMap, "workerProfiles", o.WorkerProfiles)
 	populate(objectMap, "workerProfilesStatus", o.WorkerProfilesStatus)
+	populate(objectMap, "zones", o.Zones)
 	return json.Marshal(objectMap)
 }
 
@@ -604,6 +605,9 @@ func (o *OpenShiftClusterProperties) UnmarshalJSON(data []byte) error {
 			delete(rawMsg, key)
 		case "workerProfilesStatus":
 			err = unpopulate(val, "WorkerProfilesStatus", &o.WorkerProfilesStatus)
+			delete(rawMsg, key)
+		case "zones":
+			err = unpopulate(val, "Zones", &o.Zones)
 			delete(rawMsg, key)
 		}
 		if err != nil {

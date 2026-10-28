@@ -19,7 +19,7 @@ import (
 // PlatformWorkloadIdentityRoleSetClient contains the methods for the PlatformWorkloadIdentityRoleSet group.
 // Don't use this type directly, use NewPlatformWorkloadIdentityRoleSetClient() instead.
 //
-// Generated from API version 2025-07-25
+// Generated from API version 2026-08-26-preview
 type PlatformWorkloadIdentityRoleSetClient struct {
 	internal       *arm.Client
 	subscriptionID string
@@ -88,7 +88,7 @@ func (client *PlatformWorkloadIdentityRoleSetClient) getCreateRequest(ctx contex
 		return nil, err
 	}
 	reqQP := req.Raw().URL.Query()
-	reqQP.Set("api-version", version20250725)
+	reqQP.Set("api-version", version20260826Preview)
 	req.Raw().URL.RawQuery = strings.ReplaceAll(reqQP.Encode(), "+", "%20")
 	req.Raw().Header["Accept"] = []string{"application/json"}
 	return req, nil

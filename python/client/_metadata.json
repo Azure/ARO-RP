@@ -1,6 +1,6 @@
 {
-  "apiVersion": "2025-07-25",
+  "apiVersion": "2026-08-26-preview",
   "apiVersions": {
-    "Microsoft.RedHatOpenShift": "2025-07-25"
+    "Microsoft.RedHatOpenShift": "2026-08-26-preview"
   }
 }

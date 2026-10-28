@@ -196,6 +196,9 @@ type OpenShiftClusterList struct {
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
 type OpenShiftClusterProperties struct {
+	// REQUIRED; The zones the cluster is deployed in.
+	Zones []*string
+
 	// The cluster API server profile.
 	ApiserverProfile *APIServerProfile
 

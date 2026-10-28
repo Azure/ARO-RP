@@ -49,7 +49,7 @@ def build_operations_list_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -70,7 +70,7 @@ def build_open_shift_versions_get_request(
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -96,7 +96,7 @@ def build_open_shift_versions_list_request(location: str, subscription_id: str, 
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -123,7 +123,7 @@ def build_platform_workload_identity_role_sets_list_request(  # pylint: disable=
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -150,7 +150,7 @@ def build_open_shift_clusters_get_request(
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -179,7 +179,7 @@ def build_open_shift_clusters_create_or_update_request(  # pylint: disable=name-
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -210,7 +210,7 @@ def build_open_shift_clusters_update_request(
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -239,7 +239,7 @@ def build_open_shift_clusters_delete_request(
 ) -> HttpRequest:
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     # Construct URL
     _url = "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}"
     path_format_arguments = {
@@ -262,7 +262,7 @@ def build_open_shift_clusters_list_by_resource_group_request(  # pylint: disable
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -287,7 +287,7 @@ def build_open_shift_clusters_list_request(subscription_id: str, **kwargs: Any) 
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -313,7 +313,7 @@ def build_open_shift_clusters_list_admin_credentials_request(  # pylint: disable
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -341,7 +341,7 @@ def build_open_shift_clusters_list_credentials_request(  # pylint: disable=name-
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -369,7 +369,7 @@ def build_platform_workload_identity_role_set_get_request(  # pylint: disable=na
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2026-08-26-preview"))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
