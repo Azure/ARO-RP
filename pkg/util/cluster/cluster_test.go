@@ -150,17 +150,17 @@ func TestPolicyNames(t *testing.T) {
 			name:               "shared prefix produces stable names",
 			prefix:             cluster.TestingPolicyPrefix,
 			wantPolicyName:     "e2e-storage-public-access-validate",
-			wantAssignmentName: "e2e-storage-public-access-validate-assign",
+			wantAssignmentName: "e2e-storage-public-access-validate-assign-eastus",
 		},
 		{
 			name:               "custom prefix",
 			prefix:             "custom-prefix",
 			wantPolicyName:     "custom-prefix",
-			wantAssignmentName: "custom-prefix-assign",
+			wantAssignmentName: "custom-prefix-assign-eastus",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			gotPolicy, gotAssignment := cluster.PolicyNames(tt.prefix)
+			gotPolicy, gotAssignment := cluster.PolicyNames(tt.prefix, "eastus")
 			if gotPolicy != tt.wantPolicyName {
 				t.Errorf("policyName = %q, want %q", gotPolicy, tt.wantPolicyName)
 			}
