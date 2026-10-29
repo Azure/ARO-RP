@@ -95,6 +95,18 @@
         "globalDevopsServicePrincipalId": {
             "value": ""
         },
+        "installerAKSClusterName": {
+            "value": ""
+        },
+        "installerAKSResourceGroupName": {
+            "value": ""
+        },
+        "installerBackend": {
+            "value": ""
+        },
+        "installerIdentityClientId": {
+            "value": ""
+        },
         "ipRules": {
             "value": ""
         },

@@ -197,8 +197,13 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		return err
 	}
 
-	clusterStorageAccount := m.storageAccount(clusterStorageAccountName, azureRegion, ocpSubnets, true, true)
-	imageRegistryStorageAccount := m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, ocpSubnets, true, false)
+	installerSubnets, err := m.installerSubnets(ctx)
+	if err != nil {
+		return err
+	}
+
+	clusterStorageAccount := m.storageAccount(clusterStorageAccountName, azureRegion, ocpSubnets, installerSubnets, true, true)
+	imageRegistryStorageAccount := m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, ocpSubnets, installerSubnets, true, false)
 
 	resources := []*arm.Resource{
 		clusterStorageAccount,

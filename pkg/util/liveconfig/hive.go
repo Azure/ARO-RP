@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	armcontainerservice "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
 )
 
@@ -58,6 +59,10 @@ func getAksShardKubeconfig(ctx context.Context, managedClustersClient utilcontai
 }
 
 func parseKubeconfig(credentials []*armcontainerservice.CredentialResult) (*rest.Config, error) {
+	if len(credentials) == 0 || credentials[0] == nil || len(credentials[0].Value) == 0 {
+		return nil, fmt.Errorf("AKS returned no kubeconfig credentials")
+	}
+
 	clientconfig, err := clientcmd.NewClientConfigFromBytes(credentials[0].Value)
 	if err != nil {
 		return nil, err
@@ -95,13 +100,41 @@ func (p *prod) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, err
 	return rest.CopyConfig(kubeConfig), nil
 }
 
-func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
+func (p *prod) InstallerBackend(ctx context.Context) (api.InstallerBackend, error) {
 	// TODO: Replace with RP Live Service Config (KeyVault)
+	// The deployment config sets this as ARO_INSTALLER_BACKEND environment variable
+	// via the ARM template parameter "installerBackend"
+	backend := os.Getenv(installerBackendEnvVar)
+	if backend != "" {
+		backend = strings.ToLower(backend)
+		switch backend {
+		case "hive":
+			return api.InstallerBackendHive, nil
+		case "aksjob", "aks-job", "aks":
+			return api.InstallerBackendAKSJob, nil
+		case "podman":
+			return api.InstallerBackendPodman, nil
+		default:
+			return "", fmt.Errorf("invalid installer backend: %s (valid: hive, aksjob, podman)", backend)
+		}
+	}
+
+	// Fall back to legacy ARO_INSTALL_VIA_HIVE for backward compatibility
 	installViaHive := os.Getenv(hiveInstallerEnableEnvVar)
 	if installViaHive != "" {
-		return true, nil
+		return api.InstallerBackendHive, nil
 	}
-	return false, nil
+
+	// Default to Hive for production during migration
+	return api.InstallerBackendHive, nil
+}
+
+func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
+	backend, err := p.InstallerBackend(ctx)
+	if err != nil {
+		return false, err
+	}
+	return backend == api.InstallerBackendHive, nil
 }
 
 func (p *prod) DefaultInstallerPullSpecOverride(ctx context.Context) string {

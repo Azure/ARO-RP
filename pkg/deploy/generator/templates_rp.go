@@ -94,6 +94,10 @@ func (g *generator) rpTemplate() *arm.Template {
 			"mimoSchedulerLogLevel",
 
 			// TODO: Replace with Live Service Configuration in KeyVault
+			"installerBackend",
+			"installerIdentityClientId",
+			"installerAKSClusterName",
+			"installerAKSResourceGroupName",
 			"clustersInstallViaHive",
 			"clusterDefaultInstallerPullspec",
 			"clustersAdoptByHive",
@@ -161,7 +165,11 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.DefaultValue = "info"
 
 		// TODO: Replace with Live Service Configuration in KeyVault
-		case "clustersInstallViaHive",
+		case "installerBackend",
+			"installerIdentityClientId",
+			"installerAKSClusterName",
+			"installerAKSResourceGroupName",
+			"clustersInstallViaHive",
 			"clustersAdoptByHive",
 			"clusterDefaultInstallerPullspec":
 			p.DefaultValue = ""

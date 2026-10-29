@@ -407,6 +407,10 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"mimoSchedulerLogLevel",
 
 		// TODO: Replace with Live Service Configuration in KeyVault
+		"installerBackend",
+		"installerIdentityClientId",
+		"installerAKSClusterName",
+		"installerAKSResourceGroupName",
 		"clustersInstallViaHive",
 		"clustersAdoptByHive",
 		"clusterDefaultInstallerPullspec",

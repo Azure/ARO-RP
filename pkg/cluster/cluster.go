@@ -121,7 +121,7 @@ type manager struct {
 	samplescli       samplesclient.Interface
 	imageregistrycli imageregistryclient.Interface
 
-	installViaHive       bool
+	installerBackend     api.InstallerBackend
 	adoptViaHive         bool
 	hiveClusterManager   hive.ClusterManager
 	fpServicePrincipalID string
@@ -140,6 +140,22 @@ type manager struct {
 }
 
 // New returns a cluster manager
+// startedInstallerBackend returns the backend an in-flight installation has
+// already committed to, or "" when none has been recorded. A persisted
+// InstallerProfile is authoritative; a Hive namespace means Hive started the
+// install before InstallerProfile existed.
+func startedInstallerBackend(doc *api.OpenShiftClusterDocument) api.InstallerBackend {
+	if profile := doc.OpenShiftCluster.Properties.InstallerProfile; profile != nil && profile.Backend != "" {
+		return profile.Backend
+	}
+
+	if doc.OpenShiftCluster.Properties.HiveProfile.Namespace != "" {
+		return api.InstallerBackendHive
+	}
+
+	return ""
+}
+
 func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, dbGateway database.Gateway, dbOpenShiftVersions database.OpenShiftVersions, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets, aead encryption.AEAD,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, hiveClusterManager hive.ClusterManager, metricsEmitter metrics.Emitter,
 ) (Interface, error) {
@@ -186,9 +202,20 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	installViaHive, err := _env.LiveConfig().InstallViaHive(ctx)
+	installerBackend, err := _env.LiveConfig().InstallerBackend(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// Pin an installation to the backend it started on. The rollout flag is
+	// read on every resume, so flipping it under a cluster that is mid-install
+	// would start a second installer on a different backend while the first is
+	// still provisioning the same resources.
+	if started := startedInstallerBackend(doc); started != "" {
+		if started != installerBackend {
+			log.Infof("installation already started on backend %s, ignoring configured backend %s", started, installerBackend)
+		}
+		installerBackend = started
 	}
 
 	adoptByHive, err := _env.LiveConfig().AdoptByHive(ctx)
@@ -317,7 +344,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		storage:                                storage,
 		graph:                                  graph.NewManager(_env, log, aead, storage),
 		rpBlob:                                 rpBlob,
-		installViaHive:                         installViaHive,
+		installerBackend:                       installerBackend,
 		adoptViaHive:                           adoptByHive,
 		hiveClusterManager:                     hiveClusterManager,
 		openShiftClusterDocumentVersioner:      new(openShiftClusterDocumentVersionerService),

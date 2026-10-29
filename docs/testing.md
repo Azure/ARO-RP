@@ -32,6 +32,19 @@ make lint-go
 
 For faster feedback, you may want to set up [golanglint-ci's editor integration](https://golangci-lint.run/usage/integrations/).
 
+## AKS installer diagnostics
+
+The AKS Job installer forwards logs to the RP log pipeline while the installer
+runs; collecting logs only after completion can race with Pod deletion at the Job
+deadline. Each live stream forwards a bounded head and retains a bounded tail,
+with a combined limit of 1 MiB and an explicit marker when logs are truncated.
+Stream errors are logged and trigger a final snapshot attempt, also capped at
+1 MiB; a snapshot is also attempted if no logs arrived. This fallback can replay
+lines already streamed.
+After Pod deletion, use the RP logs tagged with `clusterUUID` and `executionID`;
+the Pod log API is not durable storage. Reattachment can replay logs from the
+same execution.
+
 ## E2e tests
 
 E2e tests can be run in CI with the `/azp run e2e` command in your GitHub PR.

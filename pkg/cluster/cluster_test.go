@@ -9,6 +9,46 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
+func TestStartedInstallerBackend(t *testing.T) {
+	tests := []struct {
+		Name     string
+		doc      *api.OpenShiftClusterDocument
+		Expected api.InstallerBackend
+	}{
+		{
+			Name:     "no installation started",
+			doc:      &api.OpenShiftClusterDocument{OpenShiftCluster: &api.OpenShiftCluster{}},
+			Expected: "",
+		},
+		{
+			Name: "persisted installer profile wins over the rollout flag",
+			doc: &api.OpenShiftClusterDocument{OpenShiftCluster: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					InstallerProfile: &api.InstallerProfile{Backend: api.InstallerBackendAKSJob},
+				},
+			}},
+			Expected: api.InstallerBackendAKSJob,
+		},
+		{
+			Name: "hive namespace implies hive started the install",
+			doc: &api.OpenShiftClusterDocument{OpenShiftCluster: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					HiveProfile: api.HiveProfile{Namespace: "aro-cluster-uuid"},
+				},
+			}},
+			Expected: api.InstallerBackendHive,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			if got := startedInstallerBackend(test.doc); got != test.Expected {
+				t.Errorf("got %q, want %q", got, test.Expected)
+			}
+		})
+	}
+}
+
 func TestAPICertName(t *testing.T) {
 	tests := []struct {
 		Name                   string
