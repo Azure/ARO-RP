@@ -381,6 +381,9 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 												Primary: new(true),
 												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
 													Name: new("gateway-vmss-pip"),
+													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
+														IPTags: &[]mgmtcompute.VirtualMachineScaleSetIPTag{},
+													},
 												},
 												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
 													{

@@ -47,6 +47,19 @@ func (g *generator) rpSecurityGroupForPortalSourceAddressPrefixes() *arm.Resourc
 	}, "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]")
 }
 
+func (g *generator) rpSecurityGroupForPortalSourceAddressPrefixesTagged() *arm.Resource {
+	return g.securityRules("rp-nsg/portal_in_tagged", &armnetwork.SecurityRulePropertiesFormat{
+		Protocol:                 new(armnetwork.SecurityRuleProtocolTCP),
+		SourcePortRange:          new("*"),
+		DestinationPortRange:     new("8444"),
+		SourceAddressPrefixes:    []*string{},
+		DestinationAddressPrefix: new("*"),
+		Access:                   new(armnetwork.SecurityRuleAccessAllow),
+		Priority:                 new(int32(143)),
+		Direction:                new(armnetwork.SecurityRuleDirectionInbound),
+	}, "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]")
+}
+
 func (g *generator) rpSecurityGroup() *arm.Resource {
 	rules := []*armnetwork.SecurityRule{
 		{
@@ -74,6 +87,32 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 				Direction:                new(armnetwork.SecurityRuleDirectionInbound),
 			},
 			Name: new("rp_in_geneva"),
+		},
+		{
+			Properties: &armnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 new(armnetwork.SecurityRuleProtocolTCP),
+				SourcePortRange:          new("*"),
+				DestinationPortRange:     new("8443"),
+				SourceAddressPrefix:      new("AzureResourceManager"),
+				DestinationAddressPrefix: new("*"),
+				Access:                   new(armnetwork.SecurityRuleAccessAllow),
+				Priority:                 new(int32(121)),
+				Direction:                new(armnetwork.SecurityRuleDirectionInbound),
+			},
+			Name: new("rp_in_arm_tagged"),
+		},
+		{
+			Properties: &armnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 new(armnetwork.SecurityRuleProtocolTCP),
+				SourcePortRange:          new("*"),
+				DestinationPortRange:     new("8443"),
+				SourceAddressPrefix:      new("GenevaActions"),
+				DestinationAddressPrefix: new("*"),
+				Access:                   new(armnetwork.SecurityRuleAccessAllow),
+				Priority:                 new(int32(131)),
+				Direction:                new(armnetwork.SecurityRuleDirectionInbound),
+			},
+			Name: new("rp_in_geneva_tagged"),
 		},
 	}
 
@@ -202,6 +241,22 @@ func (g *generator) rpLB() *arm.Resource {
 						},
 						Name: new("portal-frontend"),
 					},
+					{
+						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+							PublicIPAddress: &armnetwork.PublicIPAddress{
+								ID: new("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip-tagged')]"),
+							},
+						},
+						Name: new("rp-frontend-tagged"),
+					},
+					{
+						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+							PublicIPAddress: &armnetwork.PublicIPAddress{
+								ID: new("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip-tagged')]"),
+							},
+						},
+						Name: new("portal-frontend-tagged"),
+					},
 				},
 				BackendAddressPools: []*armnetwork.BackendAddressPool{
 					{
@@ -226,6 +281,42 @@ func (g *generator) rpLB() *arm.Resource {
 							BackendPort:      new(int32(443)),
 						},
 						Name: new("rp-lbrule"),
+					},
+					{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend-tagged')]"),
+							},
+							BackendAddressPool: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe-tagged')]"),
+							},
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
+							FrontendPort:     new(int32(443)),
+							BackendPort:      new(int32(8443)),
+						},
+						Name: new("rp-lbrule-8443"),
+					},
+					{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend-tagged')]"),
+							},
+							BackendAddressPool: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https-tagged')]"),
+							},
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
+							FrontendPort:     new(int32(443)),
+							BackendPort:      new(int32(8444)),
+						},
+						Name: new("portal-lbrule-8444"),
 					},
 					{
 						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
@@ -263,6 +354,24 @@ func (g *generator) rpLB() *arm.Resource {
 						},
 						Name: new("portal-lbrule-ssh"),
 					},
+					{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend-tagged')]"),
+							},
+							BackendAddressPool: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-ssh-tagged')]"),
+							},
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
+							FrontendPort:     new(int32(22)),
+							BackendPort:      new(int32(2223)),
+						},
+						Name: new("portal-lbrule-ssh-tagged"),
+					},
 				},
 				Probes: []*armnetwork.Probe{
 					{
@@ -277,11 +386,29 @@ func (g *generator) rpLB() *arm.Resource {
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
 							Protocol:       new(armnetwork.ProbeProtocolHTTPS),
+							Port:           new(int32(8443)),
+							NumberOfProbes: new(int32(2)),
+							RequestPath:    new("/healthz/ready"),
+						},
+						Name: new("rp-probe-tagged"),
+					},
+					{
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       new(armnetwork.ProbeProtocolHTTPS),
 							Port:           new(int32(444)),
 							NumberOfProbes: new(int32(2)),
 							RequestPath:    new("/healthz/ready"),
 						},
 						Name: new("portal-probe-https"),
+					},
+					{
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       new(armnetwork.ProbeProtocolHTTPS),
+							Port:           new(int32(8444)),
+							NumberOfProbes: new(int32(2)),
+							RequestPath:    new("/healthz/ready"),
+						},
+						Name: new("portal-probe-https-tagged"),
 					},
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
@@ -291,6 +418,14 @@ func (g *generator) rpLB() *arm.Resource {
 						},
 						Name: new("portal-probe-ssh"),
 					},
+					{
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       new(armnetwork.ProbeProtocolTCP),
+							Port:           new(int32(2223)),
+							NumberOfProbes: new(int32(2)),
+						},
+						Name: new("portal-probe-ssh-tagged"),
+					},
 				},
 			},
 			Name:     new("rp-lb"),
@@ -299,8 +434,10 @@ func (g *generator) rpLB() *arm.Resource {
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
-			"[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]",
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]",
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]",
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip-tagged')]",
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip-tagged')]",
 		},
 	}
 }
@@ -560,6 +697,9 @@ func (g *generator) rpVMSS() *arm.Resource {
 												Primary: new(true),
 												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
 													Name: new("rp-vmss-pip"),
+													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
+														IPTags: &[]mgmtcompute.VirtualMachineScaleSetIPTag{},
+													},
 												},
 												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
 													{

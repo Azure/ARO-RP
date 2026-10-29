@@ -17,6 +17,14 @@
         },
         "rpServicePrincipalId": {
             "type": "string"
+        },
+        "rpVmssIpTags": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "rpVmssIpTagsDisabledRegions": {
+            "type": "array",
+            "defaultValue": []
         }
     },
     "resources": [
