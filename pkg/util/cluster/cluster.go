@@ -70,7 +70,7 @@ type ClusterConfig struct {
 	RpMode                string `mapstructure:"RP_MODE"`
 	VnetResourceGroup     string `mapstructure:"CLUSTER_RESOURCEGROUP"`
 	RPResourceGroup       string `mapstructure:"RESOURCEGROUP"`
-	OSClusterVersion      string `mapstructure:"OS_CLUSTER_VERSION"`
+	OCPVersion            string `mapstructure:"OS_CLUSTER_VERSION"`
 	FPServicePrincipalID  string `mapstructure:"AZURE_FP_SERVICE_PRINCIPAL_ID"`
 	IsPrivate             bool   `mapstructure:"PRIVATE_CLUSTER"`
 	NoInternet            bool   `mapstructure:"NO_INTERNET"`
@@ -188,8 +188,8 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 		return nil, fmt.Errorf("resource Group must be set")
 	}
 
-	if conf.OSClusterVersion == "" {
-		conf.OSClusterVersion = version.DefaultInstallStream.Version.String()
+	if conf.OCPVersion == "" {
+		conf.OCPVersion = version.DefaultInstallStream.Version.String()
 	}
 
 	if conf.AzureEnvironment == "" {
@@ -398,12 +398,12 @@ func (c *Cluster) GetPlatformWIRoles() ([]api.PlatformWorkloadIdentityRole, erro
 	}
 
 	for _, rs := range wiRoleSets {
-		if strings.HasPrefix(c.Config.OSClusterVersion, rs.OpenShiftVersion) {
+		if strings.HasPrefix(c.Config.OCPVersion, rs.OpenShiftVersion) {
 			return rs.PlatformWorkloadIdentityRoles, nil
 		}
 	}
 
-	return nil, fmt.Errorf("workload identity role sets for version %s not found", c.Config.OSClusterVersion)
+	return nil, fmt.Errorf("workload identity role sets for version %s not found", c.Config.OCPVersion)
 }
 
 func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup string, diskEncryptionSetID string, routeTableID string) error {
@@ -856,7 +856,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 
 	c.log.Info("creating cluster")
 	c.log.Infof("zones: %s", zones)
-	err = c.createCluster(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, c.Config.OSClusterVersion, fipsMode, zones)
+	err = c.createCluster(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, c.Config.OCPVersion, fipsMode, zones)
 	if err != nil {
 		return err
 	}
