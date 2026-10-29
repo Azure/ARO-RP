@@ -162,8 +162,6 @@
 
 > [!NOTE]
 > Due to the `az` client requiring a specific Python version, you will find the instructions to install the `az` client in the [Getting Started](#getting-started) section. This will use `pyenv` to ensure the correct Python version limited to the local ARO-RP environment.
->
-> ARO-RP comes with `make pyenv`, this will set up the environment and install the `az` client after setting the local Python version via `pyenv`.
 
 ## Install OpenVPN
 

@@ -23,6 +23,9 @@ The upstream extension may be installed by an end user to override the command m
 
 We aim for the upstream and downstream codebases to be as synchronized as possible.
 
+> [!NOTE]
+> On occasion, we may need to generate a new SDK client (i.e. - to add a new feature). See [API version documentation](api-versions.md) for more information on client generation.
+
 ## Dev environment setup for the `az aro` **downstream command module**
 
 ```sh

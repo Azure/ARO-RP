@@ -811,20 +811,6 @@
       "expirationDate": null,
       "type": null
     },
-    "969fee47f4d90a4beee525158d672b752c8a0a90bd238159848de1d314649774": {
-      "signature": "969fee47f4d90a4beee525158d672b752c8a0a90bd238159848de1d314649774",
-      "alternativeSignatures": [],
-      "target": "python/az/aro/azext_aro/tests/latest/unit/test_validators.py",
-      "memberOf": [
-        "default"
-      ],
-      "tool": "credscan",
-      "ruleId": "CSCAN-GENERAL0060",
-      "justification": null,
-      "createdDate": "2023-02-27 11:58:21Z",
-      "expirationDate": null,
-      "type": null
-    },
     "685563c13f6659c00fe00ac7acb11fac653f4953d69e36c4730992d3bee90c8a": {
       "signature": "685563c13f6659c00fe00ac7acb11fac653f4953d69e36c4730992d3bee90c8a",
       "alternativeSignatures": [],

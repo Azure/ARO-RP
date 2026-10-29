@@ -81,9 +81,9 @@ delta from PROD/INT in some cases:
   are used.  In development mode, the authorizer used for ARM is also used for
   Geneva actions, so a developer can test Geneva actions manually.
 
-  The ARO Go and Python client libraries in this repo carry patches such that
-  they when the environment variable `RP_MODE=development` is set, they dial the
-  RP on localhost with no authentication instead of dialling ARM.
+  The ARO Go client libraries in this repo carry patches such that they
+  when the environment variable `RP_MODE=development` is set, they dial
+  the RP on localhost with no authentication instead of dialling ARM.
 
   In addition, any HTTP headers injected by ARM via its proxying are unavailable
   in development mode.  For instance, the RP frontend fakes up the Referer
@@ -180,9 +180,9 @@ section 3, note the following:
 
 * All services listen on localhost only and authentication is largely disabled.
 
-  The ARO Go and Python client libraries in this repo carry patches such that
-  they when the environment variable `RP_MODE=development` is set, they dial the
-  RP on localhost with no authentication instead of dialling ARM.
+  The ARO Go client libraries in this repo carry patches such that they
+  when the environment variable `RP_MODE=development` is set, they dial
+  the RP on localhost with no authentication instead of dialling ARM.
 
 * Generation of ACR tokens per cluster is disabled; the INT ACR is used to pull
   OpenShift container images.

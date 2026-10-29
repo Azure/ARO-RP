@@ -10,10 +10,13 @@ See [agent-guides/api-type-system.md](agent-guides/api-type-system.md)'s "Swagge
 
 `make client-generate`
 
-A few notes about client generation:
+The Make target above generates SDK clients for both Go and Python. Our Azure CLI development extensions and Azure CLI command modules do not live in this repository. Refer to [the `az` development docs](az-aro-python-development.md) for more information.
 
-- You should regenerate the clients whenever you make changes to the API spec (to add a new feature, etc.)
-- The clients will be generated based on the latest API version specified in the TypeSpec
+> [!NOTE]
+> Regenerate the clients whenever one makes changes to the API spec (to add a new feature, etc).
+
+> [!NOTE]
+> The clients are generated based on the latest API version specified in the TypeSpec.
 
 ## Generate API examples from Swagger
 
