@@ -170,59 +170,6 @@ func masterMachineWithZone(name, vmSize, zone string) machinev1beta1.Machine {
 	}
 }
 
-func virtualMachineValidationWithSizeAndZone(vmSize, zone string) mgmtcompute.VirtualMachine {
-	statuses := []mgmtcompute.InstanceViewStatus{
-		{Code: new("ProvisioningState/succeeded")},
-		{Code: new("PowerState/running")},
-	}
-	zones := []string{zone}
-
-	return mgmtcompute.VirtualMachine{
-		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-			HardwareProfile: &mgmtcompute.HardwareProfile{
-				VMSize: mgmtcompute.VirtualMachineSizeTypes(vmSize),
-			},
-			InstanceView: &mgmtcompute.VirtualMachineInstanceView{
-				Statuses: &statuses,
-			},
-		},
-		Zones: &zones,
-	}
-}
-
-func controlPlaneNode(name, nodeInstanceType, betaInstanceType string, ready, unschedulable bool) corev1.Node {
-	readyCondition := corev1.ConditionFalse
-	if ready {
-		readyCondition = corev1.ConditionTrue
-	}
-
-	return corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"node-role.kubernetes.io/master": "",
-				nodeLabelInstanceType:            nodeInstanceType,
-				nodeLabelBetaInstanceType:        betaInstanceType,
-			},
-		},
-		Spec: corev1.NodeSpec{
-			Unschedulable: unschedulable,
-		},
-		Status: corev1.NodeStatus{
-			Conditions: []corev1.NodeCondition{{
-				Type:   corev1.NodeReady,
-				Status: readyCondition,
-			}},
-		},
-	}
-}
-
-func controlPlaneNodeListJSON(nodes ...corev1.Node) []byte {
-	nodeList := &corev1.NodeList{Items: nodes}
-	b, _ := json.Marshal(nodeList)
-	return b
-}
-
 func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
 	running := "Running"
 	allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
@@ -261,34 +208,6 @@ func allKubeChecksHealthyMockWithMachineList(k *mock_adminactions.MockKubeAction
 		KubeList(gomock.Any(), machineGroupKind, machineNamespace).
 		Return(machineList, nil).
 		AnyTimes()
-}
-
-func healthyControlPlaneInventoryMock(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions, resourceGroupName string, vmSize string) {
-	if k != nil {
-		k.EXPECT().
-			KubeList(gomock.Any(), machineGroupKind, machineNamespace).
-			Return(masterMachineListJSON(
-				masterMachineWithZone("master-0", vmSize, "1"),
-				masterMachineWithZone("master-1", vmSize, "2"),
-				masterMachineWithZone("master-2", vmSize, "3"),
-			), nil)
-		k.EXPECT().
-			KubeList(gomock.Any(), "Node", "").
-			Return(controlPlaneNodeListJSON(
-				controlPlaneNode("master-0", vmSize, vmSize, true, false),
-				controlPlaneNode("master-1", vmSize, vmSize, true, false),
-				controlPlaneNode("master-2", vmSize, vmSize, true, false),
-			), nil)
-	}
-
-	if a != nil {
-		a.EXPECT().GetVirtualMachine(gomock.Any(), resourceGroupName, "master-0", mgmtcompute.InstanceView).
-			Return(virtualMachineValidationWithSizeAndZone(vmSize, "1"), nil)
-		a.EXPECT().GetVirtualMachine(gomock.Any(), resourceGroupName, "master-1", mgmtcompute.InstanceView).
-			Return(virtualMachineValidationWithSizeAndZone(vmSize, "2"), nil)
-		a.EXPECT().GetVirtualMachine(gomock.Any(), resourceGroupName, "master-2", mgmtcompute.InstanceView).
-			Return(virtualMachineValidationWithSizeAndZone(vmSize, "3"), nil)
-	}
 }
 
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
@@ -364,7 +283,6 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					"master-1": "Standard_D8s_v3",
 					"master-2": "Standard_D8s_v3",
 				})
-				healthyControlPlaneInventoryMock(nil, a, "test-cluster", "Standard_D8s_v3")
 			},
 			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
 				allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
@@ -372,13 +290,6 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					masterMachineWithZone("master-1", "Standard_D8s_v3", "2"),
 					masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
 				))
-				k.EXPECT().
-					KubeList(gomock.Any(), "Node", "").
-					Return(controlPlaneNodeListJSON(
-						controlPlaneNode("master-0", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
-						controlPlaneNode("master-1", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
-						controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
-					), nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -1341,171 +1252,6 @@ func TestCheckCPMSNotActive(t *testing.T) {
 				k: k,
 			}
 			err := p.validateCPMSNotActive(ctx)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
-	}
-}
-
-func TestValidateAPIServerHealth(t *testing.T) {
-	ctx := context.Background()
-
-	for _, tt := range []struct {
-		name    string
-		mocks   func(*mock_adminactions.MockKubeActions)
-		wantErr string
-	}{
-		{
-			name: "healthy kube-apiserver",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-					Return(healthyKubeAPIServerJSON(), nil)
-			},
-		},
-		{
-			name: "kube-apiserver degraded",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-					Return(fakeClusterOperatorJSON("kube-apiserver", []configv1.ClusterOperatorStatusCondition{
-						{Type: configv1.OperatorAvailable, Status: configv1.ConditionTrue},
-						{Type: configv1.OperatorProgressing, Status: configv1.ConditionFalse},
-						{Type: configv1.OperatorDegraded, Status: configv1.ConditionTrue},
-					}), nil)
-			},
-			wantErr: "kube-apiserver is not healthy: kube-apiserver Available=True, Progressing=False, Degraded=True. Resize is not safe while the API server is degraded",
-		},
-		{
-			name: "kube-apiserver unavailable",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-					Return(fakeClusterOperatorJSON("kube-apiserver", []configv1.ClusterOperatorStatusCondition{
-						{Type: configv1.OperatorAvailable, Status: configv1.ConditionFalse},
-						{Type: configv1.OperatorProgressing, Status: configv1.ConditionTrue},
-						{Type: configv1.OperatorDegraded, Status: configv1.ConditionFalse},
-					}), nil)
-			},
-			wantErr: "kube-apiserver is not healthy: kube-apiserver Available=False, Progressing=True, Degraded=False. Resize is not safe while the API server is degraded",
-		},
-		{
-			name: "KubeGet returns error",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-					Return(nil, fmt.Errorf("connection refused"))
-			},
-			wantErr: "failed to retrieve kube-apiserver ClusterOperator: connection refused",
-		},
-		{
-			name: "KubeGet returns invalid JSON",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-					Return([]byte(`{invalid`), nil)
-			},
-			wantErr: "failed to parse kube-apiserver ClusterOperator: invalid character 'i' looking for beginning of object key string",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-
-			k := mock_adminactions.NewMockKubeActions(controller)
-			tt.mocks(k)
-			p := preResizeValidator{
-				k: k,
-			}
-			err := p.validateAPIServerHealth(ctx)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
-	}
-}
-
-func TestValidateAPIServerPods(t *testing.T) {
-	ctx := context.Background()
-
-	for _, tt := range []struct {
-		name    string
-		mocks   func(*mock_adminactions.MockKubeActions)
-		wantErr string
-	}{
-		{
-			name: "all kube-apiserver pods healthy",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-					Return(healthyKubeAPIServerPodsJSON(), nil)
-			},
-		},
-		{
-			name: "kube-apiserver pod count mismatch",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-					Return(fakePodListJSON(
-						fakeKubeAPIServerPod("kube-apiserver-master-0", corev1.PodRunning, true),
-						fakeKubeAPIServerPod("kube-apiserver-master-1", corev1.PodRunning, true),
-					), nil)
-			},
-			wantErr: "expected 3 kube-apiserver pods, found 2. Resize is not safe without full API server redundancy",
-		},
-		{
-			name: "kube-apiserver pod unhealthy phase",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-					Return(fakePodListJSON(
-						fakeKubeAPIServerPod("kube-apiserver-master-0", corev1.PodRunning, true),
-						fakeKubeAPIServerPod("kube-apiserver-master-1", corev1.PodPending, false),
-						fakeKubeAPIServerPod("kube-apiserver-master-2", corev1.PodRunning, true),
-					), nil)
-			},
-			wantErr: "unhealthy kube-apiserver pods: [kube-apiserver-master-1 (phase: Pending)]. Resize is not safe without full API server redundancy",
-		},
-		{
-			name: "kube-apiserver pod not ready",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-					Return(fakePodListJSON(
-						fakeKubeAPIServerPod("kube-apiserver-master-0", corev1.PodRunning, true),
-						fakeKubeAPIServerPod("kube-apiserver-master-1", corev1.PodRunning, false),
-						fakeKubeAPIServerPod("kube-apiserver-master-2", corev1.PodRunning, true),
-					), nil)
-			},
-			wantErr: "unhealthy kube-apiserver pods: [kube-apiserver-master-1 (not ready)]. Resize is not safe without full API server redundancy",
-		},
-		{
-			name: "uses server-side label selector filtering",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-					Return(fakePodListJSON(
-						fakeKubeAPIServerPod("kube-apiserver-master-0", corev1.PodRunning, true),
-						fakeKubeAPIServerPod("kube-apiserver-master-1", corev1.PodRunning, true),
-						fakeKubeAPIServerPod("kube-apiserver-master-2", corev1.PodRunning, true),
-					), nil)
-			},
-		},
-		{
-			name: "KubeList returns error",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-					Return(nil, fmt.Errorf("connection refused"))
-			},
-			wantErr: "failed to list pods in openshift-kube-apiserver namespace: connection refused",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-
-			k := mock_adminactions.NewMockKubeActions(controller)
-			tt.mocks(k)
-			p := preResizeValidator{
-				k: k,
-			}
-			err := p.validateAPIServerPods(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}

@@ -17,7 +17,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
-	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 
@@ -97,37 +96,31 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		return err
 	}
 
-	return f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize, log)
+	return f.preResizeControlPlaneVMsValidation(ctx, doc, k, a, desiredVMSize, log)
 }
 
 func (f *frontend) preResizeControlPlaneVMsValidation(
 	ctx context.Context,
 	doc *api.OpenShiftClusterDocument,
-	subscriptionDoc *api.SubscriptionDocument,
 	k adminactions.KubeActions,
 	a adminactions.AzureActions,
 	desiredVMSize string,
 	log *logrus.Entry,
 ) error {
 	preValidator := &preResizeValidator{
-		doc:             doc,
-		log:             log,
-		subscriptionDoc: subscriptionDoc,
-		k:               k,
-		a:               a,
-		desiredVMSize:   desiredVMSize,
+		doc:           doc,
+		log:           log,
+		k:             k,
+		a:             a,
+		desiredVMSize: desiredVMSize,
 	}
 	validationSteps := []steps.Step{
 		steps.Action(preValidator.validateAPIServerReadyz),
 		steps.Action(preValidator.validateVMSKU),
 		steps.Concurrent("preresize", []steps.Step{
-			steps.Action(preValidator.validateAPIServerHealth),
-			steps.Action(preValidator.validateAPIServerPods),
-			steps.Action(preValidator.validateEtcdHealth),
 			steps.Action(preValidator.validateClusterSP),
 			steps.Action(preValidator.validateCPMSNotActive),
 		}),
-		steps.Action(preValidator.validateResizeControlPlaneInventory),
 	}
 
 	_, err := steps.RunWithWrappedError(ctx, log, validationSteps)
@@ -140,20 +133,15 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 // only take context.Context as their single argument. This is needed so we can
 // use them as argument to steps.Action(...).
 type preResizeValidator struct {
-	doc             *api.OpenShiftClusterDocument
-	log             *logrus.Entry
-	subscriptionDoc *api.SubscriptionDocument
-	k               adminactions.KubeActions
-	a               adminactions.AzureActions
-	desiredVMSize   string
+	doc           *api.OpenShiftClusterDocument
+	log           *logrus.Entry
+	k             adminactions.KubeActions
+	a             adminactions.AzureActions
+	desiredVMSize string
 }
 
 func (v *preResizeValidator) validateAPIServerReadyz(ctx context.Context) error {
 	return v.k.CheckAPIServerReadyz(ctx)
-}
-
-func (v *preResizeValidator) validateResizeControlPlaneInventory(ctx context.Context) error {
-	return validateLiveControlPlaneInventory(v.log, ctx, v.k, v.a, v.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 }
 
 // checkResizeComputeQuota verifies that the subscription has enough remaining
@@ -264,80 +252,6 @@ func (v *preResizeValidator) validateCPMSNotActive(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// validateAPIServerHealth verifies that the kube-apiserver ClusterOperator is healthy
-// (Available=True, Progressing=False, Degraded=False).
-// Note: API server reachability is checked earlier via CheckAPIServerReadyz
-func (v *preResizeValidator) validateAPIServerHealth(ctx context.Context) error {
-	rawCO, err := v.k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "kube-apiserver")
-	if err != nil {
-		return fmt.Errorf("failed to retrieve kube-apiserver ClusterOperator: %w", err)
-	}
-
-	var co configv1.ClusterOperator
-	if err := json.Unmarshal(rawCO, &co); err != nil {
-		return fmt.Errorf("failed to parse kube-apiserver ClusterOperator: %w", err)
-	}
-
-	if !clusteroperators.IsOperatorAvailable(&co) {
-		return fmt.Errorf("kube-apiserver is not healthy: %s. Resize is not safe while the API server is degraded", clusteroperators.OperatorStatusText(&co))
-	}
-
-	return nil
-}
-
-func (v *preResizeValidator) validateAPIServerPods(ctx context.Context) error {
-	const (
-		kubeAPIServerNamespace     = "openshift-kube-apiserver"
-		kubeAPIServerLabelSelector = "app=openshift-kube-apiserver"
-	)
-
-	rawPods, err := v.k.KubeList(ctx, "Pod", kubeAPIServerNamespace, kubeAPIServerLabelSelector)
-	if err != nil {
-		return fmt.Errorf("failed to list pods in %s namespace: %w", kubeAPIServerNamespace, err)
-	}
-
-	var podList corev1.PodList
-	if err := json.Unmarshal(rawPods, &podList); err != nil {
-		return fmt.Errorf("failed to parse pod list: %w", err)
-	}
-
-	var unhealthyPods []string
-	for _, pod := range podList.Items {
-		if err := validatePodHealth(&pod); err != nil {
-			unhealthyPods = append(unhealthyPods, fmt.Sprintf("%s (%s)", pod.Name, err.Error()))
-		}
-	}
-
-	apiServerPodCount := len(podList.Items)
-
-	if apiServerPodCount != api.ControlPlaneNodeCount {
-		return fmt.Errorf("expected %d kube-apiserver pods, found %d. Resize is not safe without full API server redundancy", api.ControlPlaneNodeCount, apiServerPodCount)
-	}
-
-	if len(unhealthyPods) > 0 {
-		return fmt.Errorf("unhealthy kube-apiserver pods: %v. Resize is not safe without full API server redundancy", unhealthyPods)
-	}
-
-	return nil
-}
-
-func validatePodHealth(pod *corev1.Pod) error {
-	if pod.Status.Phase != corev1.PodRunning {
-		return fmt.Errorf("phase: %s", pod.Status.Phase)
-	}
-
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady {
-			if cond.Status != corev1.ConditionTrue {
-				return fmt.Errorf("not ready")
-			}
-			return nil
-		}
-	}
-
-	return fmt.Errorf("ready condition not found")
 }
 
 // validateEtcdHealth wraps the package level function so it can be used as a steps.actionFunc

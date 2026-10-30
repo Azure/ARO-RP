@@ -620,13 +620,6 @@ func TestAdminResizeControlPlane(t *testing.T) {
 					masterMachineWithZone("master-1", "Standard_D8s_v3", "2"),
 					masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
 				))
-				k.EXPECT().
-					KubeList(gomock.Any(), "Node", "").
-					Return(controlPlaneNodeListJSON(
-						controlPlaneNode("master-0", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
-						controlPlaneNode("master-1", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
-						controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
-					), nil)
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
 					Return(nodeJSON("master-2", true), nil).
 					AnyTimes()
@@ -659,7 +652,6 @@ func TestAdminResizeControlPlane(t *testing.T) {
 					"master-1": "Standard_D8s_v3",
 					"master-2": "Standard_D8s_v3",
 				})
-				healthyControlPlaneInventoryMock(nil, a, "test-cluster", "Standard_D8s_v3")
 			},
 			wantStatusCode: http.StatusOK,
 		},
