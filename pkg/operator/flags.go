@@ -20,6 +20,7 @@ const (
 	GenevaLoggingOTelWorkerProfile      = "aro.genevalogging.otel.worker.profile"
 	GenevaLoggingOTelEmitSourceFields   = "aro.genevalogging.otel.emitsourcefields"
 	GenevaLoggingOTelComponentHealth    = "aro.genevalogging.otel.componenthealth"
+	GenevaLoggingOTelGatewayInsecure    = "aro.genevalogging.otel.gateway.insecure"
 	GenevaLoggingOTelProfileMaxLogs     = "max-logs"
 	GenevaLoggingOTelProfileReducedLogs = "reduced-logs"
 	GenevaLoggingOTelProfileMinimalLogs = "minimal-logs"
@@ -94,6 +95,7 @@ func DefaultOperatorFlags() map[string]string {
 		GenevaLoggingEnabled:               FlagTrue,
 		GenevaLoggingOTelProfile:           GenevaLoggingOTelProfileMinimalLogs,
 		GenevaLoggingOTelComponentHealth:   FlagFalse,
+		GenevaLoggingOTelGatewayInsecure:   FlagFalse,
 		ImageConfigEnabled:                 FlagTrue,
 		IngressEnabled:                     FlagTrue,
 		MachineEnabled:                     FlagTrue,
