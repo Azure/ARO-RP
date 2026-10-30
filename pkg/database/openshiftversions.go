@@ -44,7 +44,7 @@ func NewOpenShiftVersionsWithProvidedClient(client cosmosdb.OpenShiftVersionDocu
 }
 
 func (c *openShiftVersions) ChangeFeed() cosmosdb.OpenShiftVersionDocumentIterator {
-	return c.c.ChangeFeed(nil)
+	return cosmosdb.NewResilientOpenShiftVersionDocumentChangeFeed(c.c, nil)
 }
 
 func (c *openShiftVersions) Create(ctx context.Context, doc *api.OpenShiftVersionDocument) (*api.OpenShiftVersionDocument, error) {
