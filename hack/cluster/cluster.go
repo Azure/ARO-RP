@@ -23,7 +23,7 @@ const (
 
 func run(ctx context.Context, log *logrus.Entry) error {
 	if len(os.Args) != 2 {
-		return fmt.Errorf("usage: CLUSTER=x %s {create,delete}", os.Args[0])
+		return fmt.Errorf("usage: CLUSTER=x %s {create,delete,kubeconfig}", os.Args[0])
 	}
 
 	conf, err := cluster.NewClusterConfigFromEnv()
@@ -36,12 +36,15 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	spew.Dump(c.Config)
 	switch strings.ToLower(os.Args[1]) {
 	case "create":
+		spew.Dump(c.Config)
 		return c.Create(ctx)
 	case "delete":
+		spew.Dump(c.Config)
 		return c.Delete(ctx, conf.VnetResourceGroup, conf.ClusterName)
+	case "kubeconfig":
+		return c.Kubeconfig(ctx)
 	default:
 		return fmt.Errorf("invalid command %s", os.Args[1])
 	}

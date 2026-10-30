@@ -153,15 +153,6 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 		return nil, fmt.Errorf("error parsing env vars: %w", err)
 	}
 
-	switch conf.Zones {
-	// Catch if the zones are empty, we have an explicit value for non-zonal
-	case "":
-		return nil, fmt.Errorf("zones must be set (use 'nonzonal' for non-zonal)")
-	case "nonzonal":
-		// No zones
-		conf.Zones = ""
-	}
-
 	if conf.ClusterName == "" {
 		return nil, fmt.Errorf("cluster Name must be set")
 	}
@@ -848,8 +839,17 @@ func (c *Cluster) Create(ctx context.Context) error {
 		}
 	}
 
-	// split the zones
-	zones := strings.Split(c.Config.Zones, ",")
+	var zones []string
+
+	switch c.Config.Zones {
+	case "nonzonal":
+		zones = []string{}
+	case "":
+		// empty so that it is 'nil' in the API (old default)
+	default:
+		// split the zones
+		zones = strings.Split(c.Config.Zones, ",")
+	}
 
 	// Don't install with FIPS in a local dev, non-CI environment
 	fipsMode := c.Config.IsCI || !c.Config.IsLocalDevelopmentMode()

@@ -23,6 +23,7 @@ type InternalClient interface {
 	Get(ctx context.Context, resourceGroupName string, resourceName string) (*api.OpenShiftCluster, error)
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters *api.OpenShiftCluster) error
 	DeleteAndWait(ctx context.Context, resourceGroupName string, resourceName string) error
+	ListAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string) (string, error)
 }
 
 type clientCluster interface {
@@ -37,6 +38,7 @@ type externalClient[ClientCluster clientCluster] interface {
 	Get(ctx context.Context, resourceGroupName string, resourceName string, options *armredhatopenshift.OpenShiftClustersClientGetOptions) (armredhatopenshift.OpenShiftClustersClientGetResponse, error)
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters ClientCluster) error
 	DeleteAndWait(ctx context.Context, resourceGroupName string, resourceName string) error
+	ListAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string, options *armredhatopenshift.OpenShiftClustersClientListAdminCredentialsOptions) (armredhatopenshift.OpenShiftClustersClientListAdminCredentialsResponse, error)
 }
 
 type internalClient[ClientCluster clientCluster, ApiCluster apiCluster] struct {
@@ -84,6 +86,15 @@ func (c *internalClient[ClientCluster, ApiCluster]) CreateOrUpdateAndWait(ctx co
 
 func (c *internalClient[ClientCluster, ApiCluster]) DeleteAndWait(ctx context.Context, resourceGroupName string, resourceName string) error {
 	return c.externalClient.DeleteAndWait(ctx, resourceGroupName, resourceName)
+}
+
+func (c *internalClient[ClientCluster, ApiCluster]) ListAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string) (string, error) {
+	creds, err := c.externalClient.ListAdminCredentials(ctx, resourceGroupName, resourceName, nil)
+	if err != nil {
+		return "", err
+	}
+
+	return *creds.Kubeconfig, nil
 }
 
 // We use JSON marshaling/unmarshaling to convert between our "external/versioned" cluster struct in pkg/api,
