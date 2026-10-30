@@ -3,28 +3,28 @@
 > [!IMPORTANT]
 > **Where did the `python/` directory go?**
 >
-> The `az aro` development and preview extension has been moved into the azure-cli-extensions repo. The primary benefit for doing this is we get automated builds and published artifacts of the extension in a preview capacity for any customers that may want it.
+> The `az aro` development and preview extension has been moved into the [azure-cli-extensions](https://github.com/Azure/azure-cli-extensions) repo. The primary benefit for doing this is we get automated builds and published artifacts of the extension in a preview capacity for any customers that may want it.
 >
-> Please read more below for an explanation of how to develop the `az aro` upstream extension and downstream command module.
+> Please read more below for an explanation of how to develop the `az aro` development and preview extension and downstream command module.
 
 There are two codebases for the `az aro` command:
 
-- the [upstream] `az aro` extension that lives in azure-cli-extensions, and
-- the [downstream] `az aro` module in azure-cli proper
+- the [upstream] `az aro` development and preview extension that lives in azure-cli-extensions, and
+- the [downstream] `az aro` command module in Azure CLI.
 
 [upstream]: https://github.com/Azure/azure-cli-extensions/tree/main/src/aro
 [downstream]: https://github.com/Azure/azure-cli/tree/dev/src/azure-cli/azure/cli/command_modules/aro
 
-The downstream `az aro` command module is distributed with Azure CLI and is present in the Azure cloud shell. Development/maintenance of this module within the Azure CLI is treated as a first-party Azure CLI module. Please see [downstream documentation] for more information on command module authoring and maintenance.
+The downstream `az aro` command module is distributed with Azure CLI and is present in the Azure Cloud Shell. Development/maintenance of this module within Azure CLI is treated as a first-party Azure CLI module. Please see [Azure CLI documentation] for more information on command module authoring and maintenance.
 
 [downstream documentation]: https://github.com/Azure/azure-cli/tree/dev/doc/authoring_command_modules
 
-The upstream extension may be installed by an end user to override the command module (for example: to use preview features). We use the extension for development and testing of new API versions. Customers are advised to use the downstream CLI module. You can read more about [how extensions are authored](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/authoring.md) and about some of the [differences between extensions and command modules](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/faq.md).
+The upstream extension may be installed by an end user to override the command module (for example: to use preview features). ARO SRE uses the extension for development and testing of new API versions. Customers are advised to use the downstream command module included with Azure CLI. You can read more about [how extensions are authored](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/authoring.md) and about some of the [differences between extensions and command modules](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/faq.md).
 
-We aim for the upstream and downstream codebases to be as synchronized as possible.
+ARO SRE aims for the upstream and downstream codebases to be as synchronized as possible.
 
 > [!NOTE]
-> On occasion, we may need to generate a new SDK client (i.e. - to add a new feature). See [API version documentation](api-versions.md) for more information on client generation.
+> On occasion, we may need to generate a new SDK client (i.e. - to add a new feature). See [API version documentation](api-versions.md) for more information on SDK client generation.
 
 ## Dev environment setup for the `az aro` **downstream command module**
 
@@ -40,7 +40,7 @@ azdev setup -c .
 
 The `az aro` command module is located in `src/azure-cli/azure/cli/command_modules/aro` with tests in the corresponding `tests` directory.
 
-## Dev environment setup for the `az aro` **upstream extension**
+## Dev environment setup for the `az aro` **upstream development and preview extension**
 <a href="#ext-dev"></a>
 
 ```sh
@@ -56,7 +56,7 @@ azdev setup -r . -e aro
 az extension list
 ```
 
-The `az aro` extension is located in `src/aro/azext_aro` with tests in the corresponding `tests` folder.
+The `az aro` development and preview extension is located in `src/aro/azext_aro` with tests in the corresponding `tests` folder.
 
 ## Upstream Azure CLI tests
 
@@ -71,8 +71,7 @@ azdev test azext_aro
 >
 > If you see the following error:
 > ```
-> +[__NSCFConstantString initialize] may have been in progress in another
-> thread when fork() was called.
+> +[__NSCFConstantString initialize] may have been in progress in another thread when fork() was called.
 > ```
 > Add this variable to your env or add it to your profile to make it permanent in `~/.bash_profile` or `~/.zshrc`: `export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
 
@@ -82,7 +81,6 @@ There are two main types of tests:
 - mocks
 
 The guide for writing and operating the tests is in the [azure-cli](https://github.com/Azure/azure-cli/blob/dev/doc/authoring_tests.md) repository.
-
 
 ### Live tests and recording
 
@@ -95,9 +93,9 @@ Before committing new recordings, sanitize them for UUIDs and email addresses.
 
 ## Contributing
 
-Merge, publish, and approve changes to the `az aro` [upstream] extension **before** contributing the same changes [downstream] to Azure CLI. This allows us to keep the upstream extension and downstream command module as synchronized as possible.
+Merge, publish, and approve changes to the `az aro` [upstream] development and preview extension **before** contributing the same changes the [downstream] command module. This allows us to keep the upstream extension and downstream command module as synchronized as possible.
 
-When porting changes to the `az aro` [downstream] command module, some imports will be different. When submitting pull requests, tests that include `azdev style`, `azdev linter`, and `azdev test azure-cli-aro` checks should pass to ensure that changes will not impact CI pipelines.
+When porting changes to the [downstream] command module, some imports will differ. When submitting pull requests, tests that include `azdev style`, `azdev linter`, and `azdev test azure-cli-aro` checks should pass to ensure that changes will not impact CI pipelines.
 
 Additional instructions for merging changes downstream are contained in internal documentation.
 
