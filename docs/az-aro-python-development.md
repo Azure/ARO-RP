@@ -15,9 +15,7 @@ There are two codebases for the `az aro` command:
 [upstream]: https://github.com/Azure/azure-cli-extensions/tree/main/src/aro
 [downstream]: https://github.com/Azure/azure-cli/tree/dev/src/azure-cli/azure/cli/command_modules/aro
 
-The downstream `az aro` command module is distributed with Azure CLI and is present in the Azure Cloud Shell. Development/maintenance of this module within Azure CLI is treated as a first-party Azure CLI module. Please see [Azure CLI documentation] for more information on command module authoring and maintenance.
-
-[downstream documentation]: https://github.com/Azure/azure-cli/tree/dev/doc/authoring_command_modules
+The downstream `az aro` command module is distributed with Azure CLI and is present in the Azure Cloud Shell. Development/maintenance of this module within Azure CLI is treated as a first-party Azure CLI module. Please see the [Azure CLI documentation](https://github.com/Azure/azure-cli/tree/dev/doc/authoring_command_modules) for more information on command module authoring and maintenance.
 
 The upstream extension may be installed by an end user to override the command module (for example: to use preview features). ARO SRE uses the extension for development and testing of new API versions. Customers are advised to use the downstream command module included with Azure CLI. You can read more about [how extensions are authored](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/authoring.md) and about some of the [differences between extensions and command modules](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/faq.md).
 
@@ -93,7 +91,7 @@ Before committing new recordings, sanitize them for UUIDs and email addresses.
 
 ## Contributing
 
-Merge, publish, and approve changes to the `az aro` [upstream] development and preview extension **before** contributing the same changes the [downstream] command module. This allows us to keep the upstream extension and downstream command module as synchronized as possible.
+Merge, publish, and approve changes to the `az aro` [upstream] development and preview extension **before** contributing the same changes to the [downstream] command module. This allows us to keep the upstream extension and downstream command module as synchronized as possible.
 
 When porting changes to the [downstream] command module, some imports will differ. When submitting pull requests, tests that include `azdev style`, `azdev linter`, and `azdev test azure-cli-aro` checks should pass to ensure that changes will not impact CI pipelines.
 
