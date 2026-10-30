@@ -7,7 +7,6 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -47,58 +46,8 @@ func (f *frontend) postAdminResizeControlPlane(w http.ResponseWriter, r *http.Re
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
 	err := f._postAdminResizeControlPlane(log, ctx, r)
-	err = normalizeResizeControlPlaneErrorForAdminReply(err)
 
 	adminReply(log, w, nil, nil, err)
-}
-
-func normalizeResizeControlPlaneErrorForAdminReply(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	var resizeErr *resizeControlPlaneError
-	var cloudErr *api.CloudError
-	if errors.As(err, &resizeErr) && errors.As(err, &cloudErr) {
-		code := api.CloudErrorCodeInternalServerError
-		target := ""
-		details := []api.CloudErrorBody(nil)
-		message := err.Error()
-		if cloudErr.CloudErrorBody != nil {
-			code = cloudErr.Code
-			target = cloudErr.Target
-			details = cloudErr.Details
-			message = formatResizeControlPlaneAdminReplyMessage(cloudErr.Message, resizeErr)
-		}
-
-		return &api.CloudError{
-			StatusCode: cloudErr.StatusCode,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code:    code,
-				Message: message,
-				Target:  target,
-				Details: details,
-			},
-		}
-	}
-
-	return err
-}
-
-func formatResizeControlPlaneAdminReplyMessage(baseMessage string, resizeErr *resizeControlPlaneError) string {
-	var b strings.Builder
-	b.WriteString(baseMessage)
-
-	if len(resizeErr.steps) > 0 {
-		b.WriteString(". Steps: ")
-		b.WriteString(strings.Join(resizeErr.steps, ", "))
-	}
-	if resizeErr.rollbackErr != nil {
-		b.WriteString(". Rollback errors: ")
-		b.WriteString(resizeErr.rollbackErr.Error())
-	}
-
-	return b.String()
 }
 
 func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.Context, r *http.Request) error {
@@ -191,21 +140,9 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 
 	operation := newResizeControlPlaneOperation(log, k, a, desiredVMSize, deallocateVM, clusterResourceGroupName)
 
-	triggerRollback := func(baseErr error) error {
-		rollbackErr := operation.rollbackAll(ctx)
-		return &resizeControlPlaneError{
-			baseErr:     baseErr,
-			steps:       operation.steps,
-			rollbackErr: rollbackErr,
-		}
-	}
-
 	for _, name := range sortedNames {
 		if err := ensureControlPlaneAndEtcdHealthy(ctx, k, sortedNames); err != nil {
-			if len(operation.nodes) == 0 {
-				return err
-			}
-			return triggerRollback(err)
+			return err
 		}
 
 		machine := machines[name]
@@ -214,19 +151,9 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 			continue
 		}
 
-		snapshot, err := operation.captureNodeSnapshot(ctx, name, machine)
-		if err != nil {
-			if len(operation.nodes) == 0 {
-				return err
-			}
-			return triggerRollback(err)
-		}
-		nodeState := &controlPlaneNodeProgress{snapshot: snapshot}
-		operation.nodes = append(operation.nodes, nodeState)
-
 		log.Infof("Resizing control plane node %s from %s to %s", name, machine.size, utillog.Sanitize(desiredVMSize))
-		if err := operation.resizeNode(ctx, nodeState); err != nil {
-			return triggerRollback(fmt.Errorf("failed to resize node %s: %w", name, err))
+		if err := operation.resizeNode(ctx, name); err != nil {
+			return fmt.Errorf("failed to resize node %s: %w", name, err)
 		}
 		log.Infof("Successfully resized node %s to %s", name, utillog.Sanitize(desiredVMSize))
 	}
@@ -353,7 +280,7 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 	return k.KubeCreateOrUpdate(ctx, &obj)
 }
 
-// Resize and rollback both update the stable and beta node labels together because validation rejects divergence.
+// Resize updates the stable and beta node labels together because validation rejects divergence.
 func setNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, vmSize string) error {
 	if vmSize == "" {
 		return fmt.Errorf("node instance type labels require a non-empty VM size")
