@@ -157,6 +157,10 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 		return nil, fmt.Errorf("cluster Name must be set")
 	}
 
+	if conf.Zones == "" {
+		return nil, fmt.Errorf("zones must be set")
+	}
+
 	if conf.UseWorkloadIdentity && conf.WorkloadIdentityRoles == "" {
 		return nil, fmt.Errorf("workload Identity Role Set must be set")
 	}
@@ -844,8 +848,6 @@ func (c *Cluster) Create(ctx context.Context) error {
 	switch c.Config.Zones {
 	case "nonzonal":
 		zones = []string{}
-	case "":
-		// empty so that it is 'nil' in the API (old default)
 	default:
 		// split the zones
 		zones = strings.Split(c.Config.Zones, ",")
