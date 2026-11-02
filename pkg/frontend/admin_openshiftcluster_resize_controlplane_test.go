@@ -20,7 +20,6 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
@@ -293,10 +292,6 @@ func TestResizeControlPlane(t *testing.T) {
 						Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 						Return(nodeJSON("master-0", true), nil),
-					a.EXPECT().GetVirtualMachine(gomock.Any(), clusterResourceGroupName, "master-2", mgmtcompute.InstanceView).
-						Return(virtualMachineWithSize("Standard_D8s_v3"), nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
-						Return(nodeJSON("master-2", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-2", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-2").Return(nil),
 					a.EXPECT().VMStopAndWait(gomock.Any(), "master-2", true).Return(nil),
