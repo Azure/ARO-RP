@@ -342,7 +342,7 @@ installer following these steps:
 1. Create a cluster with the version you updated.
 
    If you are using the hack script, you can specify the version with
-   `OS_CLUSTER_VERSION` env var.
+   `OCP_VERSION` env var.
 
 ## Automatically run local RP
 
