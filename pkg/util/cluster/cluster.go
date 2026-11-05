@@ -69,7 +69,7 @@ type ClusterConfig struct {
 	RpMode                string `mapstructure:"RP_MODE"`
 	VnetResourceGroup     string `mapstructure:"CLUSTER_RESOURCEGROUP"`
 	RPResourceGroup       string `mapstructure:"RESOURCEGROUP"`
-	OSClusterVersion      string `mapstructure:"OS_CLUSTER_VERSION"`
+	OCPVersion            string `mapstructure:"OCP_VERSION"`
 	FPServicePrincipalID  string `mapstructure:"AZURE_FP_SERVICE_PRINCIPAL_ID"`
 	IsPrivate             bool   `mapstructure:"PRIVATE_CLUSTER"`
 	NoInternet            bool   `mapstructure:"NO_INTERNET"`
@@ -178,8 +178,8 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 		return nil, fmt.Errorf("resource Group must be set")
 	}
 
-	if conf.OSClusterVersion == "" {
-		conf.OSClusterVersion = version.DefaultInstallStream.Version.String()
+	if conf.OCPVersion == "" {
+		conf.OCPVersion = version.DefaultInstallStream.Version.String()
 	}
 
 	if conf.AzureEnvironment == "" {
@@ -388,12 +388,12 @@ func (c *Cluster) GetPlatformWIRoles() ([]api.PlatformWorkloadIdentityRole, erro
 	}
 
 	for _, rs := range wiRoleSets {
-		if strings.HasPrefix(c.Config.OSClusterVersion, rs.OpenShiftVersion) {
+		if strings.HasPrefix(c.Config.OCPVersion, rs.OpenShiftVersion) {
 			return rs.PlatformWorkloadIdentityRoles, nil
 		}
 	}
 
-	return nil, fmt.Errorf("workload identity role sets for version %s not found", c.Config.OSClusterVersion)
+	return nil, fmt.Errorf("workload identity role sets for version %s not found", c.Config.OCPVersion)
 }
 
 func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup string, diskEncryptionSetID string, routeTableID string) error {
@@ -843,7 +843,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 	// Don't install with FIPS in a local dev, non-CI environment
 
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, c.Config.OSClusterVersion, fipsMode)
+	err = c.createCluster(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, c.Config.OCPVersion, fipsMode)
 	if err != nil {
 		return err
 	}
@@ -932,7 +932,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 		if !c.Config.IsCI {
 			x, y = 0, 2*rand.Intn(128)
 		} else {
-			x, y = rand.Intn((124))+3, 2*rand.Intn(128)
+			x, y = rand.Intn(124)+3, 2*rand.Intn(128)
 		}
 		c.log.Infof("Generate Subnet try: %d\n", i)
 		vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
@@ -1160,13 +1160,39 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			return err
 		}
 
-		err = c.ensureDefaultVersionInCosmosdb(ctx)
+		ver, err := version.ParseVersion(c.Config.OCPVersion)
 		if err != nil {
-			return err
+			return fmt.Errorf("while parsing OpenShift version: %w", err)
 		}
 
+		versionExists, err := isVersionInCosmosDB(ctx, c.Config.OCPVersion)
+		if err != nil {
+			return fmt.Errorf("while checking if version is in CosmosDB: %w", err)
+		}
+
+		if !versionExists {
+			var stream version.Stream
+
+			if c.Config.OCPVersion == version.DefaultInstallStream.Version.String() {
+				stream = version.DefaultInstallStream
+			} else {
+				c.log.Infof("fetching OpenShift version from release graph: %s", c.Config.OCPVersion)
+				stream, err = getStreamFromOpenShiftReleases(ctx, c.Config.OCPVersion)
+				if err != nil {
+					return fmt.Errorf("while fetching OpenShift version from release graph: %w", err)
+				}
+			}
+
+			err = c.putStreamInCosmosDB(ctx, stream)
+			if err != nil {
+				return fmt.Errorf("while putting Stream into CosmosDB: %w", err)
+			}
+		}
+
+		// We only need to ensure the default roleset if this version
+		// doesn't already exist
 		if c.Config.UseWorkloadIdentity {
-			err = c.ensureDefaultRoleSetInCosmosdb(ctx)
+			err = c.ensureDefaultRoleSetInCosmosdb(ctx, ver)
 			if err != nil {
 				return err
 			}
@@ -1266,6 +1292,21 @@ func (c *Cluster) registerSubscription() error {
 	return resp.Body.Close()
 }
 
+// isVersionInCosmosDB will check if the given version string has a registered
+// and enabled version in CosmosDB.
+func isVersionInCosmosDB(ctx context.Context, version string) (bool, error) {
+	versions, err := getVersionsInCosmosDB(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, ver := range versions {
+		if ver.Properties.Version == version && ver.Properties.Enabled {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // getVersionsInCosmosDB connects to the local RP endpoint and queries the
 // available OpenShiftVersions
 func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error) {
@@ -1318,33 +1359,16 @@ func getPlatformWIRoleSetsInCosmosDB(ctx context.Context) ([]*api.PlatformWorklo
 	return parsedResponse.Value, err
 }
 
-// ensureDefaultVersionInCosmosdb puts a default openshiftversion into the
-// cosmos DB IF it doesn't already contain an entry for the default version. It
-// is hardcoded to use the local-RP endpoint
-//
-// It returns without an error when a default version is already present or a
-// default version was successfully put into the db.
-func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
-	versionsInDB, err := getVersionsInCosmosDB(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't query versions in cosmosdb: %w", err)
-	}
-
-	for _, versionFromDB := range versionsInDB {
-		if versionFromDB.Properties.Version == version.DefaultInstallStream.Version.String() {
-			c.log.Debugf("Version %s already in DB. Not overwriting existing one.", version.DefaultInstallStream.Version.String())
-			return nil
-		}
-	}
-
-	defaultVersion := version.DefaultInstallStream
+// ensureStreamInCosmosDB puts a version.Stream into a CosmosDB
+// OpenShiftVersion.
+func (c *Cluster) putStreamInCosmosDB(ctx context.Context, ver version.Stream) error {
 	b, err := json.Marshal(&api.OpenShiftVersion{
 		Properties: api.OpenShiftVersionProperties{
-			Version:           defaultVersion.Version.String(),
-			OpenShiftPullspec: defaultVersion.PullSpec,
+			Version:           ver.Version.String(),
+			OpenShiftPullspec: ver.PullSpec,
 			// HACK: we hardcode this to the latest installer image in arointsvc
 			// if it is not overridden with ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC or LiveConfig
-			InstallerPullspec: fmt.Sprintf("arointsvc.azurecr.io/aro-installer:release-%s", version.DefaultInstallStream.Version.MinorVersion()),
+			InstallerPullspec: fmt.Sprintf("arointsvc.azurecr.io/aro-installer:release-%s", ver.Version.MinorVersion()),
 			Enabled:           true,
 		},
 	})
@@ -1352,7 +1376,7 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/admin/versions", bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, localDefaultURL+"/admin/versions", bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
@@ -1363,8 +1387,14 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
-	return resp.Body.Close()
+	// Wait 10s for the changefeed polling for OpenShiftVersions to update, as
+	// this is simpler than polling /admin/versions and only needs to happen
+	// when we create/update the version
+	time.Sleep(10 * time.Second)
+
+	return nil
 }
 
 // ensureDefaultRoleSetInCosmosdb puts a default PlatformWorkloadIdentityRoleSet
@@ -1372,28 +1402,26 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 // contain an entry for the default OpenShift version. It mirrors the behaviour
 // of ensureDefaultVersionInCosmosdb but targets the platformworkloadidentityrolesets
 // admin endpoint.
-func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
-	defaultVersion := version.DefaultInstallStream
-
+func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context, ver version.Version) error {
 	existingRoleSets, err := getPlatformWIRoleSetsInCosmosDB(ctx)
 	if err != nil {
 		c.log.Warnf("ensureDefaultRoleSetInCosmosdb: getPlatformWIRoleSetsInCosmosDB returned error: %v; will attempt to PUT default", err)
 	} else {
 		c.log.Infof("ensureDefaultRoleSetInCosmosdb: got %d existing platform WI role sets from local RP", len(existingRoleSets))
 		for i, rs := range existingRoleSets {
-			var ver string
+			var _ver string
 			if rs != nil {
-				ver = rs.Properties.OpenShiftVersion
+				_ver = rs.Properties.OpenShiftVersion
 			}
-			c.log.Debugf("ensureDefaultRoleSetInCosmosdb: existingRoleSets[%d].OpenShiftVersion=%s", i, ver)
-			if ver == defaultVersion.Version.MinorVersion() {
-				c.log.Infof("ensureDefaultRoleSetInCosmosdb: PlatformWorkloadIdentityRoleSet for version %s already in DB; skipping PUT", defaultVersion.Version.MinorVersion())
+			c.log.Debugf("ensureDefaultRoleSetInCosmosdb: existingRoleSets[%d].OpenShiftVersion=%s", i, _ver)
+			if _ver == ver.MinorVersion() {
+				c.log.Infof("ensureDefaultRoleSetInCosmosdb: PlatformWorkloadIdentityRoleSet for version %s already in DB; skipping PUT", ver.MinorVersion())
 				return nil
 			}
 		}
 	}
 
-	c.log.Infof("building default payload for OpenShift version %s", defaultVersion.Version.MinorVersion())
+	c.log.Infof("building default payload for OpenShift version %s", ver.MinorVersion())
 
 	var roleSets []api.PlatformWorkloadIdentityRoleSetProperties
 	if err := json.Unmarshal([]byte(c.Config.WorkloadIdentityRoles), &roleSets); err != nil {
@@ -1402,13 +1430,13 @@ func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
 
 	var defaultRoleSetProperties *api.PlatformWorkloadIdentityRoleSetProperties
 	for i := range roleSets {
-		if roleSets[i].OpenShiftVersion == defaultVersion.Version.MinorVersion() {
+		if roleSets[i].OpenShiftVersion == ver.MinorVersion() {
 			defaultRoleSetProperties = &roleSets[i]
 			break
 		}
 	}
 	if defaultRoleSetProperties == nil {
-		return fmt.Errorf("no platform workload identity role set for version %s found", defaultVersion.Version.MinorVersion())
+		return fmt.Errorf("no platform workload identity role set for version %s found", ver.MinorVersion())
 	}
 
 	defaultRoleSet := api.PlatformWorkloadIdentityRoleSet{
@@ -1420,7 +1448,7 @@ func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/admin/platformworkloadidentityrolesets", bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, localDefaultURL+"/admin/platformworkloadidentityrolesets", bytes.NewReader(b))
 	if err != nil {
 		return err
 	}

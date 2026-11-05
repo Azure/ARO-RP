@@ -322,7 +322,7 @@ running off of your local laptop.
         EOF
         ```
 
-### Use a custom installer
+### Use a custom installer (Hive)
 
 Sometimes you want to use a custom installer, for example, when you want to
 test a new OCP version's installer. You can create a cluster with the new
@@ -342,7 +342,14 @@ installer following these steps:
 1. Create a cluster with the version you updated.
 
    If you are using the hack script, you can specify the version with
-   `OS_CLUSTER_VERSION` env var.
+   `OCP_VERSION` env var.
+
+### Use a custom installer (Local Podman)
+
+1. Build the installer image and get the pull spec. It does not need to be pushed.
+1. Set the environment variables `ARO_PODMAN_PULL_POLICY=never` and `ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC=image` (replacing `image` with your built image)
+1. Source your `.env` file and run `make runlocal-rp`.
+1. Create a cluster with the version corresponding to the Installer you built. If using the hack script, set `OCP_VERSION` to a desired 4.y.z version -- it will take care of fetching the OpenShift version and updating it in CosmosDB for you.
 
 ## Automatically run local RP
 
