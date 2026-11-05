@@ -1376,7 +1376,7 @@ func (c *Cluster) putStreamInCosmosDB(ctx context.Context, ver version.Stream) e
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/admin/versions", bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, localDefaultURL+"/admin/versions", bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
@@ -1387,8 +1387,14 @@ func (c *Cluster) putStreamInCosmosDB(ctx context.Context, ver version.Stream) e
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
-	return resp.Body.Close()
+	// Wait 10s for the changefeed polling for OpenShiftVersions to update, as
+	// this is simpler than polling /admin/versions and only needs to happen
+	// when we create/update the version
+	time.Sleep(10 * time.Second)
+
+	return nil
 }
 
 // ensureDefaultRoleSetInCosmosdb puts a default PlatformWorkloadIdentityRoleSet
@@ -1442,7 +1448,7 @@ func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context, ver versio
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/admin/platformworkloadidentityrolesets", bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, localDefaultURL+"/admin/platformworkloadidentityrolesets", bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
