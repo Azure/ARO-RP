@@ -46,18 +46,12 @@ func portal(ctx context.Context, _log *logrus.Entry, auditLog *logrus.Entry) err
 	err = env.ValidateVars(
 		"AZURE_PORTAL_CLIENT_ID",
 		"AZURE_PORTAL_ACCESS_GROUP_IDS",
-		"AZURE_PORTAL_ELEVATED_GROUP_IDS",
 	)
 	if err != nil {
 		return err
 	}
 
 	groupIDs, err := parseGroupIDs(os.Getenv("AZURE_PORTAL_ACCESS_GROUP_IDS"))
-	if err != nil {
-		return err
-	}
-
-	elevatedGroupIDs, err := parseGroupIDs(os.Getenv("AZURE_PORTAL_ELEVATED_GROUP_IDS"))
 	if err != nil {
 		return err
 	}
@@ -169,15 +163,7 @@ func portal(ctx context.Context, _log *logrus.Entry, auditLog *logrus.Entry) err
 		return err
 	}
 
-	// In development the portal API is proxied by the frontend dev server which is
-	// hosted at localhost:3000, so the hostname needs to be set to that.
-	// Set the hostname to localhost:8444 if needing to test compiled portal locally without a frontend dev server
-	hostname := "localhost:3000"
-	_, noNpm := os.LookupEnv("NO_NPM")
-	if noNpm {
-		hostname = "localhost:8444"
-	}
-
+	hostname := "localhost:8444"
 	address := ":8444"
 	sshAddress := ":2222"
 	if !_env.IsLocalDevelopmentMode() {
@@ -211,7 +197,7 @@ func portal(ctx context.Context, _log *logrus.Entry, auditLog *logrus.Entry) err
 		return err
 	}
 
-	p := pkgportal.NewPortal(_env, auditLog, _env.LoggerForComponent("portal"), _env.LoggerForComponent("portal-access"), outelAuditClient, l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
+	p := pkgportal.NewPortal(_env, auditLog, _env.LoggerForComponent("portal"), _env.LoggerForComponent("portal-access"), outelAuditClient, l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, dbGroup, dialer, m)
 
 	return p.Run(ctx)
 }
