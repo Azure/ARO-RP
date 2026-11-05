@@ -17,7 +17,7 @@ import (
 var _ = Describe("[Admin API] Cluster admin update action", Serial, func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	It("must run cluster update operation on a cluster", func(ctx context.Context) {
+	DescribeTable("must run cluster update operation on a cluster", func(ctx context.Context, body json.RawMessage) {
 		oc := &admin.OpenShiftCluster{}
 
 		// Wait for the cluster to be in a succeeded state before continuing
@@ -27,7 +27,7 @@ var _ = Describe("[Admin API] Cluster admin update action", Serial, func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("triggering the update via RP admin API")
-		resp, err := adminRequest(ctx, http.MethodPatch, clusterResourceID, nil, true, json.RawMessage("{}"), oc)
+		resp, err := adminRequest(ctx, http.MethodPatch, clusterResourceID, nil, true, body, oc)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -42,5 +42,8 @@ var _ = Describe("[Admin API] Cluster admin update action", Serial, func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		Expect(oc.Properties.LastAdminUpdateError).To(Equal(""))
-	})
+	},
+		Entry("with the default maintenance task", json.RawMessage("{}")),
+		Entry("with the SyncPreconfiguredNSG maintenance task", json.RawMessage(`{"properties":{"maintenanceTask":"SyncPreconfiguredNSG"}}`)),
+	)
 })
