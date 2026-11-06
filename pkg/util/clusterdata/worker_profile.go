@@ -63,9 +63,15 @@ func (ce machineClientEnricher) Enrich(
 			Count: workerCount,
 		}
 
+		// A MachineSet with no ready replicas is unhealthy, but its desired ProviderSpec
+		// (and therefore its subnet) is still valid and must be reported. Bailing out here
+		// used to leave WorkerProfilesStatus with an empty SubnetID, which downstream
+		// consumers (notably the storage-account firewall rebuild in migrateStorageAccounts)
+		// would then drop, revoking the worker's storage/image-registry access once it
+		// recovered. Keep going so the configured subnet is always populated; only a
+		// genuinely unreadable ProviderSpec (handled below) leaves SubnetID empty.
 		if machineset.Status.ReadyReplicas == 0 {
-			log.Infof("no ready replicas in machine set %q", machineset.Name)
-			continue
+			log.Infof("no ready replicas in machine set %q; still reporting its configured subnet", machineset.Name)
 		}
 
 		if machineset.Spec.Template.Spec.ProviderSpec.Value == nil {
@@ -81,10 +87,15 @@ func (ce machineClientEnricher) Enrich(
 
 		workerProfiles[i].VMSize = api.VMSize(machineProviderSpec.VMSize)
 		workerProfiles[i].DiskSizeGB = int(machineProviderSpec.OSDisk.DiskSizeGB)
-		workerProfiles[i].SubnetID = fmt.Sprintf(
-			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",
-			r.SubscriptionID, machineProviderSpec.NetworkResourceGroup, machineProviderSpec.Vnet, machineProviderSpec.Subnet,
-		)
+		// Only assemble the SubnetID when every network field is present. A partial spec
+		// would otherwise yield a non-empty but malformed ID that slips past the empty-
+		// SubnetID guards in downstream consumers and hard-fails on parse/Get.
+		if machineProviderSpec.NetworkResourceGroup != "" && machineProviderSpec.Vnet != "" && machineProviderSpec.Subnet != "" {
+			workerProfiles[i].SubnetID = fmt.Sprintf(
+				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",
+				r.SubscriptionID, machineProviderSpec.NetworkResourceGroup, machineProviderSpec.Vnet, machineProviderSpec.Subnet,
+			)
+		}
 
 		encryptionAtHost := api.EncryptionAtHostDisabled
 		if machineProviderSpec.SecurityProfile != nil &&

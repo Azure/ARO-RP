@@ -5,16 +5,19 @@ package cluster
 
 import (
 	"context"
+	"net/http"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -44,6 +47,7 @@ var (
 func TestEnsureServiceEndpoints(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
+		isUpdate    bool
 		oc          *api.OpenShiftCluster
 		mock        func(subnets *mock_armnetwork.MockSubnetsClient)
 		expectedErr string
@@ -116,7 +120,7 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 			},
 		},
 		{
-			name: "It should return error when subnet ID is empty",
+			name: "It should return error when subnet ID is empty on create",
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
@@ -133,6 +137,106 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			expectedErr: "WorkerProfile 'workerProfile' has no SubnetID; check that the corresponding MachineSet is valid",
+		},
+		{
+			name:     "It should skip empty subnet ID on update",
+			isUpdate: true,
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							Name:     "emptyWorker",
+							SubnetID: "",
+						},
+					},
+				},
+			},
+			mock: func(subnets *mock_armnetwork.MockSubnetsClient) {
+				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: armnetwork.Subnet{
+					ID: new(subnetIdMaster),
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
+						ServiceEndpoints:  []*armnetwork.ServiceEndpointPropertiesFormat{},
+					},
+				}}, nil)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, gomock.Any(), nil).Times(1)
+			},
+		},
+		{
+			name:     "It should skip empty worker subnet but still update valid worker subnet on update",
+			isUpdate: true,
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							Name:     "emptyWorker",
+							SubnetID: "",
+						},
+						{
+							Name:     "validWorker",
+							SubnetID: subnetIdWorker,
+						},
+					},
+				},
+			},
+			mock: func(subnets *mock_armnetwork.MockSubnetsClient) {
+				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: armnetwork.Subnet{
+					ID: new(subnetIdMaster),
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
+						ServiceEndpoints:  []*armnetwork.ServiceEndpointPropertiesFormat{},
+					},
+				}}, nil)
+				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: armnetwork.Subnet{
+					ID: new(subnetIdWorker),
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
+						ServiceEndpoints:  []*armnetwork.ServiceEndpointPropertiesFormat{},
+					},
+				}}, nil)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, gomock.Any(), nil).Times(1)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, gomock.Any(), nil).Times(1)
+			},
+		},
+		{
+			name:     "It should skip a stale worker subnet that returns NotFound on update",
+			isUpdate: true,
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							Name:     "staleWorker",
+							SubnetID: subnetIdWorker,
+						},
+					},
+				},
+			},
+			mock: func(subnets *mock_armnetwork.MockSubnetsClient) {
+				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: armnetwork.Subnet{
+					ID: new(subnetIdMaster),
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
+						ServiceEndpoints:  []*armnetwork.ServiceEndpointPropertiesFormat{},
+					},
+				}}, nil)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, gomock.Any(), nil).Times(1)
+				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{}, &azcore.ResponseError{StatusCode: http.StatusNotFound})
+			},
+		},
+		{
+			name: "It should fail when the master subnet returns NotFound",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
+				},
+			},
+			mock: func(subnets *mock_armnetwork.MockSubnetsClient) {
+				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{}, &azcore.ResponseError{StatusCode: http.StatusNotFound})
+			},
+			expectedErr: (&azcore.ResponseError{StatusCode: http.StatusNotFound}).Error(),
 		},
 		{
 			name: "It should not update subnet when subnet already have service endpoints",
@@ -252,14 +356,16 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 			subnetsClient := mock_armnetwork.NewMockSubnetsClient(controller)
 			tt.mock(subnetsClient)
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
+				log:        log,
 				armSubnets: subnetsClient,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: tt.oc,
 				},
 			}
 
-			err := m.ensureServiceEndpoints(ctx)
+			err := m.ensureServiceEndpoints(ctx, tt.isUpdate)
 			if tt.expectedErr != "" {
 				assert.EqualError(t, err, tt.expectedErr)
 			} else {
