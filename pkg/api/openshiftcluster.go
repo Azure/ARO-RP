@@ -261,11 +261,12 @@ const (
 	// Maintenance tasks that perform work on the cluster
 	//
 
-	MaintenanceTaskEverything          MaintenanceTask = "Everything"
-	MaintenanceTaskOperator            MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts          MaintenanceTask = "CertificatesRenewal"
-	MaintenanceTaskSyncClusterObject   MaintenanceTask = "SyncClusterObject"
-	MaintenanceTaskMigrateLoadBalancer MaintenanceTask = "MigrateLoadBalancer"
+	MaintenanceTaskEverything           MaintenanceTask = "Everything"
+	MaintenanceTaskOperator             MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts           MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskSyncClusterObject    MaintenanceTask = "SyncClusterObject"
+	MaintenanceTaskMigrateLoadBalancer  MaintenanceTask = "MigrateLoadBalancer"
+	MaintenanceTaskSyncPreconfiguredNSG MaintenanceTask = "SyncPreconfiguredNSG"
 
 	//
 	// Maintenance tasks for updating customer maintenance signals
@@ -289,6 +290,7 @@ func (t MaintenanceTask) IsMaintenanceOngoingTask() bool {
 		(t == MaintenanceTaskRenewCerts) ||
 		(t == MaintenanceTaskSyncClusterObject) ||
 		(t == MaintenanceTaskMigrateLoadBalancer) ||
+		(t == MaintenanceTaskSyncPreconfiguredNSG) ||
 		(t == "")
 	return result
 }
