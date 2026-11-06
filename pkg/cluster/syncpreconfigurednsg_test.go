@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +16,9 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/operator"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -78,6 +81,9 @@ func TestSyncPreconfiguredNSG(t *testing.T) {
 								{SubnetID: subnetIdWorker},
 							},
 							NetworkProfile: api.NetworkProfile{PreconfiguredNSG: api.PreconfiguredNSGEnabled},
+							OperatorFlags: api.OperatorFlags{
+								operator.AzureSubnetsNsgManaged: operator.FlagFalse,
+							},
 						},
 					},
 				},
@@ -127,6 +133,133 @@ func TestSyncPreconfiguredNSG(t *testing.T) {
 				}
 			}
 			assert.Equal(t, api.PreconfiguredNSGEnabled, m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG)
+		})
+	}
+}
+
+func TestSyncPreconfiguredNSGManagementPolicy(t *testing.T) {
+	ctx := context.Background()
+	resourceID := "/subscriptions/" + subscriptionId + "/resourceGroups/cluster-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster"
+
+	for _, tt := range []struct {
+		name             string
+		stored           api.PreconfiguredNSG
+		nsgResourceGroup string
+		nsgManaged       string
+		expected         api.PreconfiguredNSG
+		expectedLog      string
+	}{
+		{
+			name:             "NSGs outside managed resource group enable PreconfiguredNSG",
+			stored:           api.PreconfiguredNSGDisabled,
+			nsgResourceGroup: vnetResourceGroup,
+			nsgManaged:       operator.FlagFalse,
+			expected:         api.PreconfiguredNSGEnabled,
+		},
+		{
+			name:             "NSGs in managed resource group disable PreconfiguredNSG",
+			stored:           api.PreconfiguredNSGEnabled,
+			nsgResourceGroup: "cluster-rg",
+			nsgManaged:       operator.FlagTrue,
+			expected:         api.PreconfiguredNSGDisabled,
+		},
+		{
+			name:             "managed policy rejects enabling PreconfiguredNSG",
+			stored:           api.PreconfiguredNSGDisabled,
+			nsgResourceGroup: vnetResourceGroup,
+			nsgManaged:       operator.FlagTrue,
+			expected:         api.PreconfiguredNSGDisabled,
+			expectedLog:      "inferred PreconfiguredNSG \"Enabled\" conflicts with",
+		},
+		{
+			name:             "unmanaged policy rejects disabling PreconfiguredNSG",
+			stored:           api.PreconfiguredNSGEnabled,
+			nsgResourceGroup: "cluster-rg",
+			nsgManaged:       operator.FlagFalse,
+			expected:         api.PreconfiguredNSGEnabled,
+			expectedLog:      "inferred PreconfiguredNSG \"Disabled\" conflicts with",
+		},
+		{
+			name:             "missing management flag prevents repair",
+			stored:           api.PreconfiguredNSGDisabled,
+			nsgResourceGroup: vnetResourceGroup,
+			expected:         api.PreconfiguredNSGDisabled,
+			expectedLog:      "management flag aro.azuresubnets.nsg.managed is missing or invalid",
+		},
+		{
+			name:             "invalid management flag prevents repair",
+			stored:           api.PreconfiguredNSGDisabled,
+			nsgResourceGroup: vnetResourceGroup,
+			nsgManaged:       "invalid",
+			expected:         api.PreconfiguredNSGDisabled,
+			expectedLog:      "management flag aro.azuresubnets.nsg.managed is missing or invalid",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			subnetsClient := mock_armnetwork.NewMockSubnetsClient(controller)
+			for _, subnetName := range []string{subnetNameMaster, subnetNameWorker} {
+				subnetsClient.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetName, nil).
+					Return(armnetwork.SubnetsClientGetResponse{
+						Subnet: armnetwork.Subnet{
+							Properties: &armnetwork.SubnetPropertiesFormat{
+								NetworkSecurityGroup: &armnetwork.SecurityGroup{
+									ID: new("/subscriptions/" + subscriptionId + "/resourceGroups/" + tt.nsgResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/nsg"),
+								},
+							},
+						},
+					}, nil)
+			}
+
+			flags := api.OperatorFlags{"unrelated": operator.FlagTrue}
+			if tt.nsgManaged != "" {
+				flags[operator.AzureSubnetsNsgManaged] = tt.nsgManaged
+			}
+			db, _ := testdatabase.NewFakeOpenShiftClusters()
+			fixture := testdatabase.NewFixture().WithOpenShiftClusters(db)
+			fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: resourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateAdminUpdating,
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/" + subscriptionId + "/resourceGroups/cluster-rg",
+						},
+						MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
+						WorkerProfiles: []api.WorkerProfile{
+							{SubnetID: subnetIdWorker},
+						},
+						NetworkProfile: api.NetworkProfile{PreconfiguredNSG: tt.stored},
+						OperatorFlags:  flags,
+					},
+				},
+			})
+			require.NoError(t, fixture.Create())
+			doc, err := db.Dequeue(ctx)
+			require.NoError(t, err)
+			require.NotNil(t, doc)
+
+			hook, log := testlog.LogForTesting(t)
+			m := &manager{
+				log:        log,
+				armSubnets: subnetsClient,
+				db:         db,
+				doc:        doc,
+			}
+			require.NoError(t, m.syncPreconfiguredNSG(ctx))
+
+			persisted, err := db.Get(ctx, strings.ToLower(resourceID))
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, persisted.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG)
+			assert.Equal(t, tt.expected, m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG)
+			assert.Equal(t, flags, persisted.OpenShiftCluster.Properties.OperatorFlags)
+			assert.Equal(t, flags, m.doc.OpenShiftCluster.Properties.OperatorFlags)
+			if tt.expectedLog != "" {
+				assert.Contains(t, hook.LastEntry().Message, tt.expectedLog)
+				assert.Equal(t, "warning", hook.LastEntry().Level.String())
+				assert.Equal(t, doc.ETag, persisted.ETag)
+			}
 		})
 	}
 }

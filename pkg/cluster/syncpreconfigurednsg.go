@@ -11,6 +11,7 @@ import (
 	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/operator"
 )
 
 func (m *manager) syncPreconfiguredNSG(ctx context.Context) error {
@@ -53,6 +54,22 @@ func (m *manager) syncPreconfiguredNSG(ctx context.Context) error {
 	var nsgID string
 	for k, v := range inferredValues {
 		inferred, nsgID = k, v
+	}
+
+	managed := m.doc.OpenShiftCluster.Properties.OperatorFlags[operator.AzureSubnetsNsgManaged]
+	var expected api.PreconfiguredNSG
+	switch managed {
+	case operator.FlagFalse:
+		expected = api.PreconfiguredNSGEnabled
+	case operator.FlagTrue:
+		expected = api.PreconfiguredNSGDisabled
+	default:
+		m.log.Warnf("syncPreconfiguredNSG: management flag %s is missing or invalid (%q); leaving stored value %q unchanged", operator.AzureSubnetsNsgManaged, managed, stored)
+		return nil
+	}
+	if inferred != expected {
+		m.log.Warnf("syncPreconfiguredNSG: inferred PreconfiguredNSG %q conflicts with management flag %s=%q (expected %q); leaving stored value %q unchanged", inferred, operator.AzureSubnetsNsgManaged, managed, expected, stored)
+		return nil
 	}
 
 	if inferred == stored {
