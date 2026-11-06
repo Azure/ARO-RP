@@ -26,13 +26,13 @@ func (m *manager) syncPreconfiguredNSG(ctx context.Context) error {
 	for _, subnetID := range subnetIDs {
 		inferred, nsgID, err := m.inferPreconfiguredNSGForSubnet(ctx, subnetID, managedResourceGroup)
 		if err != nil {
-			m.log.Warnf("syncPreconfiguredNSG: unable to inspect subnet %s: %v", subnetID, err)
-			continue
+			m.log.Warnf("syncPreconfiguredNSG: unable to inspect subnet %s; leaving stored value %q unchanged: %v", subnetID, stored, err)
+			return nil
 		}
 
 		if inferred == "" {
-			m.log.Warnf("syncPreconfiguredNSG: subnet %s has no attached NSG; cannot infer PreconfiguredNSG (stored value %q)", subnetID, stored)
-			continue
+			m.log.Warnf("syncPreconfiguredNSG: subnet %s has no attached NSG; cannot infer PreconfiguredNSG; leaving stored value %q unchanged", subnetID, stored)
+			return nil
 		}
 
 		inferredValues[inferred] = nsgID
