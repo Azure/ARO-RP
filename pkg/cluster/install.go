@@ -426,11 +426,11 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.setMasterSubnetPolicies),
 		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.deployBaseResourceTemplate, m.managedResourceGroupName()),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.waitForClusterGraphAccess, m.managedResourceGroupName()),
 	)
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
-			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.waitForStorageAccountRBAC, m.managedResourceGroupName()),
 			steps.AuthorizationRetryingAction(nil, m.federateIdentityCredentials, m.managedResourceGroupName()),
 		)
 	}
