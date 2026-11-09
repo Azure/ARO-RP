@@ -31,6 +31,7 @@ type SubscriptionProperties struct {
 	TenantID           string                     `json:"tenantId,omitempty"`
 	AccountOwner       *AccountOwnerProfile       `json:"accountOwner,omitempty"`
 	RegisteredFeatures []RegisteredFeatureProfile `json:"registeredFeatures,omitempty"`
+	AvailabilityZones  []AvailabilityZonesProfile `json:"availabilityZones,omitempty"`
 }
 
 // AccountOwnerProfile represents the subscription account owner information
@@ -46,4 +47,18 @@ type RegisteredFeatureProfile struct {
 
 	Name  string `json:"name,omitempty"`
 	State string `json:"state,omitempty"`
+}
+
+// AvailabilityZonesProfile represents a location and the Availability Zone
+// mappings in that location
+type AvailabilityZonesProfile struct {
+	Location     string                    `json:"location,omitempty"`
+	ZoneMappings []AvailabilityZoneMapping `json:"zoneMappings,omitempty"`
+}
+
+// AvailabilityZoneMapping represents the relation between a Logical
+// Availability Zone and a Physical Availability Zone
+type AvailabilityZoneMapping struct {
+	LogicalZone  string `json:"logicalZone,omitempty"`
+	PhysicalZone string `json:"physicalZone,omitempty"`
 }
