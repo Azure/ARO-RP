@@ -257,7 +257,8 @@ IPADDRESS='$ipaddress'
 ENVIRONMENT='$ENVIRONMENT'
 ROLE='${role,,}'
 ARO_LOG_LEVEL='$RPLOGLEVEL'
-MEM_LIMIT_MIB='$MEM_RP'"
+MEM_LIMIT_MIB='$MEM_RP'
+OVERRIDECLUSTERDEPLOYMENTZONESONOPTIN='$OVERRIDECLUSTERDEPLOYMENTZONESONOPTIN'"
 
     write_file aro_rp_conf_filename conf_file true
     write_file aro_rp_conf_filename add_conf_file false
@@ -311,6 +312,7 @@ ExecStart=/usr/bin/podman run \
   -e MISE_ADDRESS \
   -e ARO_LOG_LEVEL \
   -e ENVIRONMENT \
+  -e OVERRIDECLUSTERDEPLOYMENTZONESONOPTIN \
   -m ${MEM_LIMIT_MIB}m \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
@@ -1297,7 +1299,7 @@ else
 fi
 if [[ \$COMPONENT = \"gateway-otel\" ]]; then
   KEYVAULT_URI=\"https://$KEYVAULTPREFIX-otl.$KEYVAULTDNSSUFFIX/secrets/gateway-otel-tls\"
-else 
+else
   SECRET_NAME=\"$secret_prefix-\${COMPONENT}\"
   KEYVAULT_URI=\"https://$KEYVAULTPREFIX-$keyvault_suffix.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME\"
 fi
@@ -1322,15 +1324,15 @@ if [ -f \$NEW_CERT_FILE ]; then
     mkdir -p \"\$CURRENT_CERT_DIR\"
     NEW_CERT_TEMP=\"\$TEMP_DIR/tls-cert.pem\"
     NEW_KEY_TEMP=\"\$TEMP_DIR/tls-key.pem\"
-    
+
     # Extract certificate
     sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' \"\$NEW_CERT_FILE\" > \"\$NEW_CERT_TEMP\"
     # Extract private key
     sed -n '/BEGIN.*PRIVATE KEY/,/END.*PRIVATE KEY/p' \"\$NEW_CERT_FILE\" > \"\$NEW_KEY_TEMP\"
-    
+
     if [ -s \"\$NEW_CERT_TEMP\" ] && [ -s \"\$NEW_KEY_TEMP\" ]; then
       chmod 0600 \"\$NEW_CERT_TEMP\" \"\$NEW_KEY_TEMP\"
-      
+
       # Check if certificate changed
       if [ -f \"\$CURRENT_CERT_FILE\" ]; then
         new_cert_sn=\"\$(openssl x509 -in \"\$NEW_CERT_TEMP\" -noout -serial | awk -F= '{print \$2}')\"
