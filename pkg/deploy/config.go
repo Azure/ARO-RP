@@ -117,6 +117,9 @@ type Configuration struct {
 	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
 	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
 	AdoptByHive              *string `json:"clustersAdoptByHive,omitempty"`
+
+	// Zonal override (Single-zone or non-zonal)
+	OverrideClusterDeploymentZonesOnOptIn *string `json:"overrideClusterDeploymentZonesOnOptIn,omitempty"`
 }
 
 // Note: if this configuration block is provided, all throughputs must be present and valid
