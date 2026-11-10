@@ -723,6 +723,20 @@ func (mr *MockInterfaceMockRecorder) OtelAuditQueueSize() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OtelAuditQueueSize", reflect.TypeOf((*MockInterface)(nil).OtelAuditQueueSize))
 }
 
+// OverrideClusterDeploymentZonesOnOptIn mocks base method.
+func (m *MockInterface) OverrideClusterDeploymentZonesOnOptIn() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OverrideClusterDeploymentZonesOnOptIn")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// OverrideClusterDeploymentZonesOnOptIn indicates an expected call of OverrideClusterDeploymentZonesOnOptIn.
+func (mr *MockInterfaceMockRecorder) OverrideClusterDeploymentZonesOnOptIn() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OverrideClusterDeploymentZonesOnOptIn", reflect.TypeOf((*MockInterface)(nil).OverrideClusterDeploymentZonesOnOptIn))
+}
+
 // RPParentDomainName mocks base method.
 func (m *MockInterface) RPParentDomainName() string {
 	m.ctrl.T.Helper()
