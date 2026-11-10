@@ -70,7 +70,7 @@ func init() {
 type testInfra struct {
 	t *testing.T
 
-	env        env.Interface
+	env        *mock_env.MockInterface
 	controller *gomock.Controller
 	l          net.Listener
 	cli        *http.Client
