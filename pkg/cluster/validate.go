@@ -51,21 +51,32 @@ func (m *manager) validateZones(ctx context.Context) error {
 		return err
 	}
 
-	if len(m.doc.OpenShiftCluster.Properties.Zones) == 0 {
-		// We haven't requested availability zones, so don't check for them
+	// Set RP-level options for expanded AZs
+	zoneChecker := azurezones.NewManager(
+		m.env.FeatureIsSet(env.FeatureEnableClusterExpandedAvailabilityZones))
+
+	if m.doc.OpenShiftCluster.Properties.Zones == nil {
+		// If the document does not have the list of AZs (nil list) then
+		// determine it the old way (by looking at the SKUs)
+		_, _, originalZones, err := zoneChecker.DetermineAvailabilityZones(controlPlaneSKU, workerSKU)
+		if err != nil {
+			return err
+		}
+		updatedDoc, err := m.db.PatchWithLease(ctx, m.doc.Key, func(oscd *api.OpenShiftClusterDocument) error {
+			oscd.OpenShiftCluster.Properties.Zones = originalZones
+			return nil
+		})
+		m.doc = updatedDoc
+	} else if len(m.doc.OpenShiftCluster.Properties.Zones) == 0 {
+		// We haven't requested availability zones, so don't check for them (zero-length but allocated list)
 		return nil
 	} else {
-		// Set RP-level options for expanded AZs
-		zoneChecker := azurezones.NewManager(
-			m.env.FeatureIsSet(env.FeatureEnableClusterExpandedAvailabilityZones))
-
 		ok := zoneChecker.DesiredZonesAvailable(controlPlaneSKU, workerSKU, m.doc.OpenShiftCluster.Properties.Zones)
 		if !ok {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.Zones", "The selected zones are not available across both SKUs")
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.Zones", fmt.Sprintf("The selected zones (%v) are not available across both SKUs", m.doc.OpenShiftCluster.Properties.Zones))
 		}
-
-		return nil
 	}
+	return nil
 }
 
 // see pkg/frontend/sku_validation.go
