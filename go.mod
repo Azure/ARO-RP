@@ -1,6 +1,6 @@
 module github.com/Azure/ARO-RP
 
-go 1.26.6
+go 1.26.9
 
 require (
 	github.com/Azure/ARO-RP/pkg/api v0.0.0-00010101000000-000000000000
