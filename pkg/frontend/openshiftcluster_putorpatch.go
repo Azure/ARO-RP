@@ -19,11 +19,12 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
-	"github.com/Azure/ARO-RP/pkg/api/v20250725"
+	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -256,6 +257,25 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		if err != nil {
 			return nil, err
 		}
+
+		// If the subscription has the relevant feature flag and the zones are
+		// not set directly (e.g. via the API) overwrite the default cluster
+		// zones with the ones in the environment
+		if feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagOverrideClusterZones) &&
+			doc.OpenShiftCluster.Properties.Zones == nil {
+			overrideZones := f.env.OverrideClusterDeploymentZonesOnOptIn()
+			// if != nil we have an override set in the env
+			if overrideZones != nil {
+				log.Infof("feature '%s' set on subscription, overriding zones to %v", api.FeatureFlagOverrideClusterZones, overrideZones)
+
+				logicalZonesForSub, err := subscription.Subscription.Properties.MapPhysicalZonesToLogicalZonesForSubscription(f.env.Location(), overrideZones)
+				if err != nil {
+					return nil, err
+				}
+				doc.OpenShiftCluster.Properties.Zones = logicalZonesForSub
+			}
+		}
+
 		ext = putOrPatchClusterParameters.converter.ToExternal(doc.OpenShiftCluster)
 
 		err = f.ValidateNewCluster(ctx, subscription, doc.OpenShiftCluster, putOrPatchClusterParameters.staticValidator, ext, putOrPatchClusterParameters.path)
