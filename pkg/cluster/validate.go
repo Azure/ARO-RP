@@ -66,6 +66,9 @@ func (m *manager) validateZones(ctx context.Context) error {
 			oscd.OpenShiftCluster.Properties.Zones = originalZones
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 		m.doc = updatedDoc
 	} else if len(m.doc.OpenShiftCluster.Properties.Zones) == 0 {
 		// We haven't requested availability zones, so don't check for them (zero-length but allocated list)
