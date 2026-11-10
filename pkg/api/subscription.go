@@ -3,6 +3,8 @@ package api
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+import "fmt"
+
 // Subscription represents a subscription
 type Subscription struct {
 	MissingFields
@@ -32,6 +34,39 @@ type SubscriptionProperties struct {
 	AccountOwner       *AccountOwnerProfile       `json:"accountOwner,omitempty"`
 	RegisteredFeatures []RegisteredFeatureProfile `json:"registeredFeatures,omitempty"`
 	AvailabilityZones  []AvailabilityZonesProfile `json:"availabilityZones,omitempty"`
+}
+
+func (f *SubscriptionProperties) MapPhysicalZonesToLogicalZonesForSubscription(location string, physicalZones []string) ([]string, error) {
+	// zero-length (i.e. non-zonal) does not need mapping, exit early
+	if len(physicalZones) == 0 {
+		return []string{}, nil
+	}
+
+	for _, zoneProfile := range f.AvailabilityZones {
+		if zoneProfile.Location == location {
+			logicalZones := []string{}
+
+			for _, physicalZone := range physicalZones {
+				foundLogicalZone := false
+
+				for _, zoneMapping := range zoneProfile.ZoneMappings {
+					if physicalZone == zoneMapping.PhysicalZone {
+						logicalZones = append(logicalZones, zoneMapping.LogicalZone)
+						foundLogicalZone = true
+						break
+					}
+				}
+
+				if !foundLogicalZone {
+					return nil, fmt.Errorf("unable to map physical zone '%s' to logical zone", physicalZone)
+				}
+			}
+
+			return logicalZones, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to find location '%s' in subscription zone mappings", location)
 }
 
 // AccountOwnerProfile represents the subscription account owner information
