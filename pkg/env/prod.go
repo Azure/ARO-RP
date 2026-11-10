@@ -244,7 +244,7 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 
 	if strings.ToLower(overrideClusterDeploymentZonesEnv) == "nonzonal" {
 		p.overrideClusterDeploymentZonesOnOptIn = []string{}
-	} else {
+	} else if overrideClusterDeploymentZonesEnv != "" {
 		p.overrideClusterDeploymentZonesOnOptIn = []string{}
 		for zone := range strings.SplitSeq(overrideClusterDeploymentZonesEnv, ",") {
 			if slices.Contains([]string{"1", "2", "3", "4"}, zone) {
