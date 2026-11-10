@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -247,11 +246,7 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 	} else if overrideClusterDeploymentZonesEnv != "" {
 		p.overrideClusterDeploymentZonesOnOptIn = []string{}
 		for zone := range strings.SplitSeq(overrideClusterDeploymentZonesEnv, ",") {
-			if slices.Contains([]string{"1", "2", "3", "4"}, zone) {
-				p.overrideClusterDeploymentZonesOnOptIn = append(p.overrideClusterDeploymentZonesOnOptIn, zone)
-			} else {
-				return nil, fmt.Errorf("env var OVERRIDE_CLUSTER_DEPLOYMENT_ZONES_ON_OPTIN is incorrect, '%s' is not a zone through 1-4 or 'nonzonal'", zone)
-			}
+			p.overrideClusterDeploymentZonesOnOptIn = append(p.overrideClusterDeploymentZonesOnOptIn, zone)
 		}
 	}
 
