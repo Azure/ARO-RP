@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -78,6 +79,8 @@ type prod struct {
 	clusterGenevaLoggingConfigVersion string
 	clusterGenevaLoggingEnvironment   string
 	clusterGenevaLoggingNamespace     string
+
+	overrideClusterDeploymentZonesOnOptIn []string
 
 	rpParentDomainName string
 
@@ -234,6 +237,22 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 		}
 
 		p.gatewayDomains = append(p.gatewayDomains, p.acrDomain, acrDataDomain)
+	}
+
+	// Read the environment for the cluster zone deployment override information
+	overrideClusterDeploymentZonesEnv := os.Getenv("OVERRIDE_CLUSTER_DEPLOYMENT_ZONES_ON_OPTIN")
+
+	if strings.ToLower(overrideClusterDeploymentZonesEnv) == "nonzonal" {
+		p.overrideClusterDeploymentZonesOnOptIn = []string{}
+	} else {
+		p.overrideClusterDeploymentZonesOnOptIn = []string{}
+		for zone := range strings.SplitSeq(overrideClusterDeploymentZonesEnv, ",") {
+			if slices.Contains([]string{"1", "2", "3", "4"}, zone) {
+				p.overrideClusterDeploymentZonesOnOptIn = append(p.overrideClusterDeploymentZonesOnOptIn, zone)
+			} else {
+				return nil, fmt.Errorf("env var OVERRIDE_CLUSTER_DEPLOYMENT_ZONES_ON_OPTIN is incorrect, '%s' is not a zone through 1-4 or 'nonzonal'", zone)
+			}
+		}
 	}
 
 	p.ARMHelper, err = newARMHelper(ctx, log, p)
@@ -468,6 +487,10 @@ func (p *prod) ServiceKeyvault() azsecrets.Client {
 
 func (p *prod) LiveConfig() liveconfig.Manager {
 	return p.liveConfig
+}
+
+func (p *prod) OverrideClusterDeploymentZonesOnOptIn() []string {
+	return p.overrideClusterDeploymentZonesOnOptIn
 }
 
 func (p *prod) FPNewClientCertificateCredential(tenantID string, additionalTenants []string) (azcore.TokenCredential, error) {
