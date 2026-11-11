@@ -10,5 +10,5 @@ const (
 	// Otherwise cluster nodes will use the DHCP-provided MTU of 1500 bytes.
 	FeatureFlagMTU3900 = "Microsoft.RedHatOpenShift/MTU3900"
 
-	FeatureFlagOverrideClusterZones = "Microsoft.RedHatOpenShift/OverrideDeploymentClusterZones"
+	FeatureFlagOverrideClusterDeploymentZones = "Microsoft.RedHatOpenShift/OverrideClusterDeploymentZones"
 )
