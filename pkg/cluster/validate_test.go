@@ -246,7 +246,7 @@ func TestValidateZones(t *testing.T) {
 					Zones: []string{"4"},
 				},
 			},
-			wantErrs: []error{errors.New("400: InvalidParameter: properties.Zones: The selected zones ([4]) are not available across both SKUs")},
+			wantErrs: []error{errors.New("400: InvalidParameter: properties.zones: The selected zones ([4]) are not available across both SKUs")},
 		},
 		{
 			name:                 "non-zonal, available, set to non-zonal in doc",
