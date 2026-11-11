@@ -182,6 +182,10 @@
         "otelAuditQueueSize": {
             "type": "string"
         },
+        "overrideClusterDeploymentZonesOnOptIn": {
+            "type": "string",
+            "defaultValue": ""
+        },
         "portalAccessGroupIds": {
             "type": "string"
         },
