@@ -76,7 +76,7 @@ func (m *manager) validateZones(ctx context.Context) error {
 	} else {
 		ok := zoneChecker.DesiredZonesAvailable(controlPlaneSKU, workerSKU, m.doc.OpenShiftCluster.Properties.Zones)
 		if !ok {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.Zones", fmt.Sprintf("The selected zones (%v) are not available across both SKUs", m.doc.OpenShiftCluster.Properties.Zones))
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.zones", fmt.Sprintf("The selected zones (%v) are not available across both SKUs", m.doc.OpenShiftCluster.Properties.Zones))
 		}
 	}
 	return nil

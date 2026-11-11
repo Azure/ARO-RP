@@ -16,29 +16,27 @@ func TestSubscriptionZoneMapping(t *testing.T) {
 		inputZones     []string
 		wantZones      []string
 		wantError      error
-		mappingProfile []AvailabilityZonesProfile
+		mappingProfile *AvailabilityZonesProfile
 	}{
 		{
 			desc:       "happy case",
 			location:   "eastus2",
 			inputZones: []string{"1", "2", "3"},
 			wantZones:  []string{"2", "3", "1"},
-			mappingProfile: []AvailabilityZonesProfile{
-				{
-					Location: "eastus2",
-					ZoneMappings: []AvailabilityZoneMapping{
-						{
-							PhysicalZone: "1",
-							LogicalZone:  "2",
-						},
-						{
-							PhysicalZone: "2",
-							LogicalZone:  "3",
-						},
-						{
-							PhysicalZone: "3",
-							LogicalZone:  "1",
-						},
+			mappingProfile: &AvailabilityZonesProfile{
+				Location: "eastus2",
+				ZoneMappings: []AvailabilityZoneMapping{
+					{
+						PhysicalZone: "1",
+						LogicalZone:  "2",
+					},
+					{
+						PhysicalZone: "2",
+						LogicalZone:  "3",
+					},
+					{
+						PhysicalZone: "3",
+						LogicalZone:  "1",
 					},
 				},
 			},
@@ -48,22 +46,20 @@ func TestSubscriptionZoneMapping(t *testing.T) {
 			location:   "eastus2",
 			inputZones: []string{},
 			wantZones:  []string{},
-			mappingProfile: []AvailabilityZonesProfile{
-				{
-					Location: "eastus2",
-					ZoneMappings: []AvailabilityZoneMapping{
-						{
-							PhysicalZone: "1",
-							LogicalZone:  "2",
-						},
-						{
-							PhysicalZone: "2",
-							LogicalZone:  "3",
-						},
-						{
-							PhysicalZone: "3",
-							LogicalZone:  "1",
-						},
+			mappingProfile: &AvailabilityZonesProfile{
+				Location: "eastus2",
+				ZoneMappings: []AvailabilityZoneMapping{
+					{
+						PhysicalZone: "1",
+						LogicalZone:  "2",
+					},
+					{
+						PhysicalZone: "2",
+						LogicalZone:  "3",
+					},
+					{
+						PhysicalZone: "3",
+						LogicalZone:  "1",
 					},
 				},
 			},
@@ -72,22 +68,20 @@ func TestSubscriptionZoneMapping(t *testing.T) {
 			desc:       "no matching location",
 			location:   "eastus2",
 			inputZones: []string{"1", "2", "3"},
-			mappingProfile: []AvailabilityZonesProfile{
-				{
-					Location: "eastus",
-					ZoneMappings: []AvailabilityZoneMapping{
-						{
-							PhysicalZone: "1",
-							LogicalZone:  "2",
-						},
-						{
-							PhysicalZone: "2",
-							LogicalZone:  "3",
-						},
-						{
-							PhysicalZone: "3",
-							LogicalZone:  "1",
-						},
+			mappingProfile: &AvailabilityZonesProfile{
+				Location: "eastus",
+				ZoneMappings: []AvailabilityZoneMapping{
+					{
+						PhysicalZone: "1",
+						LogicalZone:  "2",
+					},
+					{
+						PhysicalZone: "2",
+						LogicalZone:  "3",
+					},
+					{
+						PhysicalZone: "3",
+						LogicalZone:  "1",
 					},
 				},
 			},
@@ -97,22 +91,20 @@ func TestSubscriptionZoneMapping(t *testing.T) {
 			desc:       "missing zone",
 			location:   "eastus2",
 			inputZones: []string{"1", "2", "3", "4"},
-			mappingProfile: []AvailabilityZonesProfile{
-				{
-					Location: "eastus2",
-					ZoneMappings: []AvailabilityZoneMapping{
-						{
-							PhysicalZone: "1",
-							LogicalZone:  "2",
-						},
-						{
-							PhysicalZone: "2",
-							LogicalZone:  "3",
-						},
-						{
-							PhysicalZone: "3",
-							LogicalZone:  "1",
-						},
+			mappingProfile: &AvailabilityZonesProfile{
+				Location: "eastus2",
+				ZoneMappings: []AvailabilityZoneMapping{
+					{
+						PhysicalZone: "1",
+						LogicalZone:  "2",
+					},
+					{
+						PhysicalZone: "2",
+						LogicalZone:  "3",
+					},
+					{
+						PhysicalZone: "3",
+						LogicalZone:  "1",
 					},
 				},
 			},

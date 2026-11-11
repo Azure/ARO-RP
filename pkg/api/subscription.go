@@ -33,7 +33,7 @@ type SubscriptionProperties struct {
 	TenantID           string                     `json:"tenantId,omitempty"`
 	AccountOwner       *AccountOwnerProfile       `json:"accountOwner,omitempty"`
 	RegisteredFeatures []RegisteredFeatureProfile `json:"registeredFeatures,omitempty"`
-	AvailabilityZones  []AvailabilityZonesProfile `json:"availabilityZones,omitempty"`
+	AvailabilityZones  *AvailabilityZonesProfile  `json:"availabilityZones,omitempty"`
 }
 
 func (f *SubscriptionProperties) MapPhysicalZonesToLogicalZonesForSubscription(location string, physicalZones []string) ([]string, error) {
@@ -42,29 +42,42 @@ func (f *SubscriptionProperties) MapPhysicalZonesToLogicalZonesForSubscription(l
 		return []string{}, nil
 	}
 
-	for _, zoneProfile := range f.AvailabilityZones {
-		if zoneProfile.Location == location {
-			logicalZones := []string{}
+	// No mapping, but non-zonal, just assume the regular zones -- 1..n for n
+	// zones (e.g. 1,2,3 for 3-zones)
+	if f.AvailabilityZones == nil {
+		logicalZones := []string{}
 
-			for _, physicalZone := range physicalZones {
-				foundLogicalZone := false
+		for zoneNum := range physicalZones {
+			logicalZones = append(logicalZones, fmt.Sprintf("%d", zoneNum+1))
+		}
 
-				for _, zoneMapping := range zoneProfile.ZoneMappings {
-					if physicalZone == zoneMapping.PhysicalZone {
-						logicalZones = append(logicalZones, zoneMapping.LogicalZone)
-						foundLogicalZone = true
-						break
-					}
-				}
+		return logicalZones, nil
+	}
 
-				if !foundLogicalZone {
-					return nil, fmt.Errorf("unable to map physical zone '%s' to logical zone", physicalZone)
-				}
+	// for _, zoneProfile := range f.AvailabilityZones {
+	// 	if zoneProfile.Location == location {
+	logicalZones := []string{}
+
+	for _, physicalZone := range physicalZones {
+		foundLogicalZone := false
+
+		// for _, zoneMapping := range zoneProfile.ZoneMappings {
+		for _, zoneMapping := range f.AvailabilityZones.ZoneMappings {
+			if physicalZone == zoneMapping.PhysicalZone {
+				logicalZones = append(logicalZones, zoneMapping.LogicalZone)
+				foundLogicalZone = true
+				break
 			}
+		}
 
-			return logicalZones, nil
+		if !foundLogicalZone {
+			return nil, fmt.Errorf("unable to map physical zone '%s' to logical zone", physicalZone)
 		}
 	}
+
+	return logicalZones, nil
+	// 	}
+	// }
 
 	return nil, fmt.Errorf("unable to find location '%s' in subscription zone mappings", location)
 }

@@ -97,6 +97,9 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clustersInstallViaHive",
 			"clusterDefaultInstallerPullspec",
 			"clustersAdoptByHive",
+
+			// Zone override in region option
+			"overrideClusterDeploymentZonesOnOptIn",
 		)
 	}
 
