@@ -78,8 +78,6 @@ func (f *SubscriptionProperties) MapPhysicalZonesToLogicalZonesForSubscription(l
 	return logicalZones, nil
 	// 	}
 	// }
-
-	return nil, fmt.Errorf("unable to find location '%s' in subscription zone mappings", location)
 }
 
 // AccountOwnerProfile represents the subscription account owner information
