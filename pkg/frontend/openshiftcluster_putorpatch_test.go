@@ -714,10 +714,10 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 			fixture: func(f *testdatabase.Fixture) {
 				sub := newMockSubscriptionDocument()
 				sub.Subscription.Properties.RegisteredFeatures = append(sub.Subscription.Properties.RegisteredFeatures, api.RegisteredFeatureProfile{
-					Name:  api.FeatureFlagOverrideClusterZones,
+					Name:  api.FeatureFlagOverrideClusterDeploymentZones,
 					State: "Registered",
 				})
-				sub.Subscription.Properties.AvailabilityZones = append(sub.Subscription.Properties.AvailabilityZones, api.AvailabilityZonesProfile{
+				sub.Subscription.Properties.AvailabilityZones = &api.AvailabilityZonesProfile{
 					Location: "eastus",
 					ZoneMappings: []api.AvailabilityZoneMapping{
 						{
@@ -733,7 +733,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 							LogicalZone:  "1",
 						},
 					},
-				})
+				}
 
 				f.AddSubscriptionDocuments(sub)
 			},
@@ -762,10 +762,10 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 			fixture: func(f *testdatabase.Fixture) {
 				sub := newMockSubscriptionDocument()
 				sub.Subscription.Properties.RegisteredFeatures = append(sub.Subscription.Properties.RegisteredFeatures, api.RegisteredFeatureProfile{
-					Name:  api.FeatureFlagOverrideClusterZones,
+					Name:  api.FeatureFlagOverrideClusterDeploymentZones,
 					State: "Registered",
 				})
-				sub.Subscription.Properties.AvailabilityZones = append(sub.Subscription.Properties.AvailabilityZones, api.AvailabilityZonesProfile{
+				sub.Subscription.Properties.AvailabilityZones = &api.AvailabilityZonesProfile{
 					Location: "eastus",
 					ZoneMappings: []api.AvailabilityZoneMapping{
 						{
@@ -781,7 +781,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 							LogicalZone:  "1",
 						},
 					},
-				})
+				}
 
 				f.AddSubscriptionDocuments(sub)
 			},
@@ -806,7 +806,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 			fixture: func(f *testdatabase.Fixture) {
 				sub := newMockSubscriptionDocument()
 				sub.Subscription.Properties.RegisteredFeatures = append(sub.Subscription.Properties.RegisteredFeatures, api.RegisteredFeatureProfile{
-					Name:  api.FeatureFlagOverrideClusterZones,
+					Name:  api.FeatureFlagOverrideClusterDeploymentZones,
 					State: "Registered",
 				})
 
