@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -69,15 +70,8 @@ var (
 	// mockCurrentTime is a mock current time used in tests.
 	mockCurrentTime = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 	// mockSubscriptionDocument is a mock subscription document used in tests.
-	mockSubscriptionDocument = &api.SubscriptionDocument{
-		ID: mockGuid,
-		Subscription: &api.Subscription{
-			State: api.SubscriptionStateRegistered,
-			Properties: &api.SubscriptionProperties{
-				TenantID: mockGuid,
-			},
-		},
-	}
+	mockSubscriptionDocument = newMockSubscriptionDocument()
+
 	unexpectedWorkloadIdentitiesError = fmt.Sprintf(`400: PlatformWorkloadIdentityMismatch: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[aro-operator cloud-controller-manager cloud-network-config disk-csi-driver file-csi-driver image-registry ingress machine-api]'`, defaultMinorVersion)
 	mockSystemDataAPI                 = api.SystemData{
 		CreatedBy:          "ExampleUser",
@@ -96,6 +90,18 @@ var (
 		LastModifiedByType: new(generated.CreatedByTypeApplication),
 	}
 )
+
+func newMockSubscriptionDocument() *api.SubscriptionDocument {
+	return &api.SubscriptionDocument{
+		ID: mockGuid,
+		Subscription: &api.Subscription{
+			State: api.SubscriptionStateRegistered,
+			Properties: &api.SubscriptionProperties{
+				TenantID: mockGuid,
+			},
+		},
+	}
+}
 
 func getPlatformWorkloadIdentityProfile() map[string]*generated.PlatformWorkloadIdentity {
 	return map[string]*generated.PlatformWorkloadIdentity{
@@ -469,6 +475,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 		name                    string
 		request                 func() *v20250725.OpenShiftCluster
 		fixture                 func(*testdatabase.Fixture)
+		mocks                   func(*mock_env.MockInterface)
 		quotaValidatorError     error
 		skuValidatorError       error
 		providersValidatorError error
@@ -695,6 +702,120 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 			wantStatusCode:         http.StatusBadRequest,
 			wantError:              fmt.Sprintf("400: DuplicateClientID: : The provided user assigned identity '%s' is already in use by a cluster.", mockMiResourceId),
 		},
+		{
+			name: "create a new OpenShift Service Principal cluster - overridden zones",
+			request: func() *v20250725.OpenShiftCluster {
+				return getServicePrincipalOpenShiftClusterRequest()
+			},
+			mocks: func(mi *mock_env.MockInterface) {
+				// set in the env during runtime
+				mi.EXPECT().OverrideClusterDeploymentZonesOnOptIn().Return([]string{"1", "2", "3"})
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				sub := newMockSubscriptionDocument()
+				sub.Subscription.Properties.RegisteredFeatures = append(sub.Subscription.Properties.RegisteredFeatures, api.RegisteredFeatureProfile{
+					Name:  api.FeatureFlagOverrideClusterDeploymentZones,
+					State: "Registered",
+				})
+				sub.Subscription.Properties.AvailabilityZones = &api.AvailabilityZonesProfile{
+					Location: "eastus",
+					ZoneMappings: []api.AvailabilityZoneMapping{
+						{
+							PhysicalZone: "1",
+							LogicalZone:  "2",
+						},
+						{
+							PhysicalZone: "2",
+							LogicalZone:  "3",
+						},
+						{
+							PhysicalZone: "3",
+							LogicalZone:  "1",
+						},
+					},
+				}
+
+				f.AddSubscriptionDocuments(sub)
+			},
+			wantAsync:              true,
+			wantSystemDataEnriched: true,
+			wantDocuments: func(checker *testdatabase.Checker) {
+				checker.AddAsyncOperationDocuments(getAsynchronousOperationDocument(api.ProvisioningStateCreating, api.ProvisioningStateCreating))
+
+				doc := getServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateCreating, "", "")
+				doc.OpenShiftCluster.Properties.Zones = []string{"2", "3", "1"}
+
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			wantStatusCode: http.StatusCreated,
+			wantResponse:   getNewServicePrincipalOpenShiftClusterResponse(),
+		},
+		{
+			name: "create a new OpenShift Service Principal cluster - overridden zones, but zones are not set in env",
+			request: func() *v20250725.OpenShiftCluster {
+				return getServicePrincipalOpenShiftClusterRequest()
+			},
+			mocks: func(mi *mock_env.MockInterface) {
+				// set in the env during runtime
+				mi.EXPECT().OverrideClusterDeploymentZonesOnOptIn().Return(nil)
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				sub := newMockSubscriptionDocument()
+				sub.Subscription.Properties.RegisteredFeatures = append(sub.Subscription.Properties.RegisteredFeatures, api.RegisteredFeatureProfile{
+					Name:  api.FeatureFlagOverrideClusterDeploymentZones,
+					State: "Registered",
+				})
+				sub.Subscription.Properties.AvailabilityZones = &api.AvailabilityZonesProfile{
+					Location: "eastus",
+					ZoneMappings: []api.AvailabilityZoneMapping{
+						{
+							PhysicalZone: "1",
+							LogicalZone:  "2",
+						},
+						{
+							PhysicalZone: "2",
+							LogicalZone:  "3",
+						},
+						{
+							PhysicalZone: "3",
+							LogicalZone:  "1",
+						},
+					},
+				}
+
+				f.AddSubscriptionDocuments(sub)
+			},
+			wantAsync:              true,
+			wantSystemDataEnriched: true,
+			wantDocuments: func(checker *testdatabase.Checker) {
+				checker.AddAsyncOperationDocuments(getAsynchronousOperationDocument(api.ProvisioningStateCreating, api.ProvisioningStateCreating))
+				checker.AddOpenShiftClusterDocuments(getServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateCreating, "", ""))
+			},
+			wantStatusCode: http.StatusCreated,
+			wantResponse:   getNewServicePrincipalOpenShiftClusterResponse(),
+		},
+		{
+			name: "create a new OpenShift Service Principal cluster - overridden zones but mapping failure",
+			request: func() *v20250725.OpenShiftCluster {
+				return getServicePrincipalOpenShiftClusterRequest()
+			},
+			mocks: func(mi *mock_env.MockInterface) {
+				// set in the env during runtime
+				mi.EXPECT().OverrideClusterDeploymentZonesOnOptIn().Return([]string{"1", "2", "3"})
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				sub := newMockSubscriptionDocument()
+				sub.Subscription.Properties.RegisteredFeatures = append(sub.Subscription.Properties.RegisteredFeatures, api.RegisteredFeatureProfile{
+					Name:  api.FeatureFlagOverrideClusterDeploymentZones,
+					State: "Registered",
+				})
+
+				f.AddSubscriptionDocuments(sub)
+			},
+			// do we want to expose this to the user?
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      "500: InternalServerError: : Internal server error.",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).
@@ -720,6 +841,10 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			if tt.mocks != nil {
+				tt.mocks(ti.env)
+			}
+
 			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, ti.enricher)
 			if err != nil {
 				t.Fatal(err)
@@ -736,7 +861,9 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 				systemDataClusterDocEnricherCalled = true
 			}
 
-			go f.Run(ctx, nil, nil)
+			stop := make(chan struct{})
+			defer close(stop)
+			go f.Run(ctx, stop, nil)
 			f.ocpVersionsMu.Lock()
 			f.enabledOcpVersions = getOCPVersionsChangeFeed()
 			for key, doc := range getOCPVersionsChangeFeed() {
