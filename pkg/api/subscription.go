@@ -42,16 +42,9 @@ func (f *SubscriptionProperties) MapPhysicalZonesToLogicalZonesForSubscription(l
 		return []string{}, nil
 	}
 
-	// No mapping, but non-zonal, just assume the regular zones -- 1..n for n
-	// zones (e.g. 1,2,3 for 3-zones)
+	// No mapping available -- exit
 	if f.AvailabilityZones == nil {
-		logicalZones := []string{}
-
-		for zoneNum := range physicalZones {
-			logicalZones = append(logicalZones, fmt.Sprintf("%d", zoneNum+1))
-		}
-
-		return logicalZones, nil
+		return nil, fmt.Errorf("unable to map physical zones, subscription has no zone mapping")
 	}
 
 	// for _, zoneProfile := range f.AvailabilityZones {

@@ -65,27 +65,11 @@ func TestSubscriptionZoneMapping(t *testing.T) {
 			},
 		},
 		{
-			desc:       "no matching location",
-			location:   "eastus2",
-			inputZones: []string{"1", "2", "3"},
-			mappingProfile: &AvailabilityZonesProfile{
-				Location: "eastus",
-				ZoneMappings: []AvailabilityZoneMapping{
-					{
-						PhysicalZone: "1",
-						LogicalZone:  "2",
-					},
-					{
-						PhysicalZone: "2",
-						LogicalZone:  "3",
-					},
-					{
-						PhysicalZone: "3",
-						LogicalZone:  "1",
-					},
-				},
-			},
-			wantError: errors.New("unable to find location 'eastus2' in subscription zone mappings"),
+			desc:           "no matching location",
+			location:       "eastus2",
+			inputZones:     []string{"1", "2", "3"},
+			mappingProfile: nil,
+			wantError:      errors.New("unable to map physical zones, subscription has no zone mapping"),
 		},
 		{
 			desc:       "missing zone",
