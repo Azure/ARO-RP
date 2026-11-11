@@ -1742,7 +1742,7 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string)
 func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 	c.log.Info("ensuring testing mutation policy")
 	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/17d1049b-9a84-46fb-8f53-869881c3d3ab"
-	policyName, assignmentName, scope := c.getPolicyConfig(TestingPolicyPrefix)
+	policyName, assignmentName, scope := c.getPolicyConfig(TestingPolicyPrefix, c.Config.Location)
 	policyRule := map[string]any{
 		"if": map[string]any{
 			"allOf": []map[string]any{
@@ -1808,14 +1808,14 @@ const (
 	TestingPolicyTriggerVal = "trigger-policy"
 )
 
-func PolicyNames(prefix string) (policyName, assignmentName string) {
+func PolicyNames(prefix string, region string) (policyName, assignmentName string) {
 	policyName = prefix
-	assignmentName = fmt.Sprintf("%s-assign", policyName)
+	assignmentName = fmt.Sprintf("%s-assign-%s", policyName, region)
 	return
 }
 
-func (c *Cluster) getPolicyConfig(prefix string) (policyName, assignmentName, scope string) {
-	policyName, assignmentName = PolicyNames(prefix)
+func (c *Cluster) getPolicyConfig(prefix string, region string) (policyName, assignmentName, scope string) {
+	policyName, assignmentName = PolicyNames(prefix, region)
 	scope = fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
 	return
 }

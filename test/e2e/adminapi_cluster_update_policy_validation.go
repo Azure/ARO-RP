@@ -50,7 +50,7 @@ var _ = Describe("[Admin API] Cluster admin update with policy validation", Seri
 			g.Expect(oc.Properties.FailedProvisioningState).To(Equal(admin.ProvisioningStateAdminUpdating))
 			g.Expect(oc.Properties.LastAdminUpdateError).To(ContainSubstring("Unexpected property mutations detected"))
 
-			expectedPolicyName, _ := cluster.PolicyNames(cluster.TestingPolicyPrefix)
+			expectedPolicyName, _ := cluster.PolicyNames(cluster.TestingPolicyPrefix, _env.Location())
 			g.Expect(oc.Properties.LastAdminUpdateError).To(ContainSubstring(expectedPolicyName))
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
