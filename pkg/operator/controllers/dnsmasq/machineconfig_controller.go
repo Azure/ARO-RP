@@ -66,7 +66,7 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	allowReconcile, err := r.AllowRebootCausingReconciliation(ctx, instance)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
@@ -80,12 +80,11 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	mcp := &mcv1.MachineConfigPool{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: role}, mcp)
 	if kerrors.IsNotFound(err) {
-		r.ClearDegraded(ctx)
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, r.ClearDegraded(ctx)
 	}
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 	if mcp.GetDeletionTimestamp() != nil {
@@ -95,12 +94,11 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	err = reconcileMachineConfigs(ctx, instance, r.ch, r.Client, allowReconcile, instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsmasqEnabled), *mcp)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
-	r.ClearConditions(ctx)
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.ClearConditions(ctx)
 }
 
 // SetupWithManager setup our mananger

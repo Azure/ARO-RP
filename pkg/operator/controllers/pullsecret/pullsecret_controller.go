@@ -22,6 +22,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -125,18 +126,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// reconcile cluster status
 	// update the following information:
 	// - list of Red Hat pull-secret keys in status.
-	instance.Status.RedHatKeysPresent, err = r.parseRedHatKeys(userSecret)
+	redHatKeysPresent, err := r.parseRedHatKeys(userSecret)
 	if err != nil {
 		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
 
-	err = r.Client.Status().Update(ctx, instance)
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		cluster, err := r.GetCluster(ctx)
+		if err != nil {
+			return err
+		}
+		cluster.Status.RedHatKeysPresent = redHatKeysPresent
+		return r.Client.Status().Update(ctx, cluster)
+	})
 	if err == nil {
-		r.ClearConditions(ctx)
-	} else {
-		r.SetDegraded(ctx, err)
+		return reconcile.Result{}, r.ClearConditions(ctx)
 	}
+	r.SetDegraded(ctx, err)
 	return reconcile.Result{}, err
 }
 

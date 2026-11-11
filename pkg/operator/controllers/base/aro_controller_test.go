@@ -56,63 +56,63 @@ func TestConditions(t *testing.T) {
 	for _, tt := range []struct {
 		name   string
 		start  []operatorv1.OperatorCondition
-		action func(c AROController)
+		action func(c AROController) error
 		want   []operatorv1.OperatorCondition
 	}{
 		{
 			name:  "SetConditions - sets all provided conditions",
 			start: []operatorv1.OperatorCondition{internetReachable},
-			action: func(c AROController) {
-				c.SetConditions(ctx, &defaultAvailable, &defaultProgressing, &defaultDegraded)
+			action: func(c AROController) error {
+				return c.SetConditions(ctx, &defaultAvailable, &defaultProgressing, &defaultDegraded)
 			},
 			want: []operatorv1.OperatorCondition{internetReachable, defaultAvailable, defaultProgressing, defaultDegraded},
 		},
 		{
 			name:  "SetConditions - if condition exists and status matches, does not update",
 			start: []operatorv1.OperatorCondition{internetReachable, defaultAvailableInPast},
-			action: func(c AROController) {
-				c.SetConditions(ctx, &defaultAvailable, &defaultProgressing, &defaultDegraded)
+			action: func(c AROController) error {
+				return c.SetConditions(ctx, &defaultAvailable, &defaultProgressing, &defaultDegraded)
 			},
 			want: []operatorv1.OperatorCondition{internetReachable, defaultAvailableInPast, defaultProgressing, defaultDegraded},
 		},
 		{
 			name:  "SetConditions - if condition exists and status does not match, updates",
 			start: []operatorv1.OperatorCondition{internetReachable, defaultAvailableInPast},
-			action: func(c AROController) {
-				c.SetConditions(ctx, &unavailable, &defaultProgressing, &defaultDegraded)
+			action: func(c AROController) error {
+				return c.SetConditions(ctx, &unavailable, &defaultProgressing, &defaultDegraded)
 			},
 			want: []operatorv1.OperatorCondition{internetReachable, unavailable, defaultProgressing, defaultDegraded},
 		},
 		{
 			name:  "SetProgressing - sets Progressing to true with message",
 			start: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
-			action: func(c AROController) {
-				c.SetProgressing(ctx, isProgressing.Message)
+			action: func(c AROController) error {
+				return c.SetProgressing(ctx, isProgressing.Message)
 			},
 			want: []operatorv1.OperatorCondition{defaultAvailable, isProgressing, defaultDegraded},
 		},
 		{
 			name:  "ClearProgressing - sets Progressing to false and clears message",
 			start: []operatorv1.OperatorCondition{defaultAvailable, isProgressing, defaultDegraded},
-			action: func(c AROController) {
-				c.ClearProgressing(ctx)
+			action: func(c AROController) error {
+				return c.ClearProgressing(ctx)
 			},
 			want: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
 		},
 		{
 			name:  "SetDegraded - sets Degraded to true with message",
 			start: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
-			action: func(c AROController) {
+			action: func(c AROController) error {
 				err := errors.New(isDegraded.Message)
-				c.SetDegraded(ctx, err)
+				return c.SetDegraded(ctx, err)
 			},
 			want: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, isDegraded},
 		},
 		{
 			name:  "ClearDegraded - sets Degraded to false and clears message",
 			start: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, isDegraded},
-			action: func(c AROController) {
-				c.ClearDegraded(ctx)
+			action: func(c AROController) error {
+				return c.ClearDegraded(ctx)
 			},
 			want: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
 		},
@@ -137,7 +137,9 @@ func TestConditions(t *testing.T) {
 				Name:   controllerName,
 			}
 
-			tt.action(controller)
+			if err := tt.action(controller); err != nil {
+				t.Fatalf("unexpected error from action: %v", err)
+			}
 			utilconditions.AssertControllerConditions(t, ctx, client, tt.want)
 		})
 	}

@@ -11,6 +11,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -29,54 +30,53 @@ type AROController struct {
 	Name   string
 }
 
-func (c *AROController) SetConditions(ctx context.Context, cnds ...*operatorv1.OperatorCondition) {
-	cluster, err := c.GetCluster(ctx)
-	if err != nil {
-		c.Log.Warn("Failed to retrieve ARO cluster resource")
-		return
-	}
+func (c *AROController) SetConditions(ctx context.Context, cnds ...*operatorv1.OperatorCondition) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		cluster, err := c.GetCluster(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve ARO cluster resource: %w", err)
+		}
 
-	newConditions := cluster.Status.DeepCopy().Conditions
-	for _, cnd := range cnds {
-		v1helpers.SetOperatorCondition(&newConditions, *cnd)
-	}
+		newConditions := cluster.Status.DeepCopy().Conditions
+		for _, cnd := range cnds {
+			v1helpers.SetOperatorCondition(&newConditions, *cnd)
+		}
 
-	if equality.Semantic.DeepEqual(cluster.Status.Conditions, newConditions) {
-		return
-	}
+		if equality.Semantic.DeepEqual(cluster.Status.Conditions, newConditions) {
+			return nil
+		}
 
-	cluster.Status.Conditions = newConditions
-	if err := c.Client.Status().Update(ctx, cluster); err != nil {
-		c.Log.Error("error updating controller conditions", err)
-	}
+		cluster.Status.Conditions = newConditions
+		return c.Client.Status().Update(ctx, cluster)
+	})
 }
 
-func (c *AROController) SetProgressing(ctx context.Context, message string) {
+func (c *AROController) SetProgressing(ctx context.Context, message string) error {
 	cnd := c.defaultProgressing()
 	cnd.Status = operatorv1.ConditionTrue
 	cnd.Message = message
 
-	c.SetConditions(ctx, cnd)
+	return c.SetConditions(ctx, cnd)
 }
 
-func (c *AROController) ClearProgressing(ctx context.Context) {
-	c.SetConditions(ctx, c.defaultProgressing())
+func (c *AROController) ClearProgressing(ctx context.Context) error {
+	return c.SetConditions(ctx, c.defaultProgressing())
 }
 
-func (c *AROController) SetDegraded(ctx context.Context, err error) {
+func (c *AROController) SetDegraded(ctx context.Context, err error) error {
 	cnd := c.defaultDegraded()
 	cnd.Status = operatorv1.ConditionTrue
 	cnd.Message = err.Error()
 
-	c.SetConditions(ctx, cnd)
+	return c.SetConditions(ctx, cnd)
 }
 
-func (c *AROController) ClearDegraded(ctx context.Context) {
-	c.SetConditions(ctx, c.defaultDegraded())
+func (c *AROController) ClearDegraded(ctx context.Context) error {
+	return c.SetConditions(ctx, c.defaultDegraded())
 }
 
-func (c *AROController) ClearConditions(ctx context.Context) {
-	c.SetConditions(ctx, c.defaultAvailable(), c.defaultProgressing(), c.defaultDegraded())
+func (c *AROController) ClearConditions(ctx context.Context) error {
+	return c.SetConditions(ctx, c.defaultAvailable(), c.defaultProgressing(), c.defaultDegraded())
 }
 
 func (c *AROController) GetCluster(ctx context.Context) (*arov1alpha1.Cluster, error) {

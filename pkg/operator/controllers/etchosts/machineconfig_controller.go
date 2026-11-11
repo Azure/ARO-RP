@@ -71,13 +71,12 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 	allowReconcile, err := r.AllowRebootCausingReconciliation(ctx, instance)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
 	if !allowReconcile {
-		r.ClearConditions(ctx)
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, r.ClearConditions(ctx)
 	}
 
 	// EtchostsManaged = true, reconcile machine configs
@@ -93,12 +92,11 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 	r.Log.Debugf("reconcile object openshift-machine-api/%s", request.Name)
 	err = r.Client.Get(ctx, types.NamespacedName{Name: role}, mcp)
 	if kerrors.IsNotFound(err) {
-		r.ClearDegraded(ctx)
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, r.ClearDegraded(ctx)
 	}
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 	if mcp.GetDeletionTimestamp() != nil {
@@ -108,12 +106,11 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 	err = reconcileMachineConfigs(ctx, instance, r.ch, allowReconcile, *mcp)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
-	r.ClearConditions(ctx)
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.ClearConditions(ctx)
 }
 
 // SetupWithManager setup our manager to watch for changes to MachineConfig objects
