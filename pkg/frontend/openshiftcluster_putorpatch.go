@@ -261,12 +261,12 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		// If the subscription has the relevant feature flag and the zones are
 		// not set directly (e.g. via the API) overwrite the default cluster
 		// zones with the ones in the environment
-		if feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagOverrideClusterZones) &&
+		if feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagOverrideClusterDeploymentZones) &&
 			doc.OpenShiftCluster.Properties.Zones == nil {
 			overrideZones := f.env.OverrideClusterDeploymentZonesOnOptIn()
 			// if != nil we have an override set in the env
 			if overrideZones != nil {
-				log.Infof("feature '%s' set on subscription, overriding zones to %v", api.FeatureFlagOverrideClusterZones, overrideZones)
+				log.Infof("feature '%s' set on subscription, overriding zones to %v", api.FeatureFlagOverrideClusterDeploymentZones, overrideZones)
 
 				logicalZonesForSub, err := subscription.Subscription.Properties.MapPhysicalZonesToLogicalZonesForSubscription(f.env.Location(), overrideZones)
 				if err != nil {
