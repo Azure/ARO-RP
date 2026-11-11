@@ -119,7 +119,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	deadline := t.Add(gracePeriod)
 	now := time.Now()
 	if deadline.After(now) {
-		_ = r.SetProgressing(ctx, fmt.Sprintf("Draining node %s", request.Name))
+		if err := r.SetProgressing(ctx, fmt.Sprintf("Draining node %s", request.Name)); err != nil {
+			return reconcile.Result{}, err
+		}
 
 		return reconcile.Result{RequeueAfter: deadline.Sub(now)}, nil
 	}
