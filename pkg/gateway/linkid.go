@@ -27,9 +27,9 @@ const (
 // header injected on the front of the TCP stream by PLS.  It uses this to do a
 // lookup of the gateway collection record in the in-memory cache (this is
 // populated by the Cosmos DB change feed).  It then makes a decision about
-// whether to allow the connection based on a static allow list and the
-// additional hostnames in the gateway record. It returns the cluster ID and
-// deny/allow decision.
+// whether to allow the connection based on a static allow list (exact host or
+// subdomain) and the additional hostnames in the gateway record. It returns
+// the cluster ID and deny/allow decision.
 func (g *gateway) isAllowed(conn *proxyproto.Conn, host string) (string, bool, error) {
 	linkID, err := LinkID(conn)
 	if err != nil {
@@ -59,14 +59,40 @@ func (g *gateway) gatewayVerification(host, linkID string) (string, bool, error)
 		})
 	}
 
-	if _, found := g.allowList[strings.ToLower(host)]; found {
+	if g.isHostAllowed(host) {
 		return gateway.ID, true, nil
 	}
 
 	return gateway.ID,
-		strings.EqualFold(host, gateway.ImageRegistryStorageAccountName+".blob."+g.env.Environment().StorageEndpointSuffix) ||
-			strings.EqualFold(host, "cluster"+gateway.StorageSuffix+".blob."+g.env.Environment().StorageEndpointSuffix),
+		isHostOrSubdomain(host, gateway.ImageRegistryStorageAccountName+".blob."+g.env.Environment().StorageEndpointSuffix) ||
+			isHostOrSubdomain(host, "cluster"+gateway.StorageSuffix+".blob."+g.env.Environment().StorageEndpointSuffix),
 		nil
+}
+
+// isHostAllowed reports whether host matches an allow-listed domain or any of
+// its subdomains. This mirrors dnsmasq address=/domain/ip behaviour, which
+// matches the domain and all subdomains (e.g. usgovvirginia.login.microsoftonline.us
+// when login.microsoftonline.us is listed).
+func (g *gateway) isHostAllowed(host string) bool {
+	host = strings.ToLower(host)
+	for host != "" {
+		if _, found := g.allowList[host]; found {
+			return true
+		}
+		i := strings.IndexByte(host, '.')
+		if i < 0 {
+			return false
+		}
+		host = host[i+1:]
+	}
+	return false
+}
+
+// isHostOrSubdomain reports whether host equals domain or is a subdomain of it.
+func isHostOrSubdomain(host, domain string) bool {
+	host = strings.ToLower(host)
+	domain = strings.ToLower(domain)
+	return host == domain || strings.HasSuffix(host, "."+domain)
 }
 
 // LinkID retrieves the private endpoint link ID from the haproxy binary
