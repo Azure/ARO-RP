@@ -124,7 +124,7 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 	stepsThatDontNeedAPIServer := []steps.Step{
 		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.ensureResourceGroup, m.managedResourceGroupName()), // re-create RP RBAC if needed after tenant migration
 		steps.Action(m.createOrUpdateDenyAssignment),
-		steps.Action(m.ensureServiceEndpoints),
+		steps.Action(m.ensureServiceEndpointsForUpdate),
 		steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
 		steps.Action(m.migrateStorageAccounts),
 		steps.Action(m.fixSSH),
@@ -423,7 +423,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.createDNS),
 		steps.Action(m.createOIDC),
 		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.ensureResourceGroup, m.managedResourceGroupName()),
-		steps.Action(m.ensureServiceEndpoints),
+		steps.Action(m.ensureServiceEndpointsForCreate),
 		steps.Action(m.setMasterSubnetPolicies),
 		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.deployBaseResourceTemplate, m.managedResourceGroupName()),
 		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.waitForClusterGraphAccess, m.managedResourceGroupName()),

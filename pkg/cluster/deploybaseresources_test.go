@@ -650,6 +650,77 @@ func TestAttachNSGs(t *testing.T) {
 				}).Times(1)
 			},
 		},
+		{
+			name: "Success - first worker has empty SubnetID, uses second",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								Name:     "emptyWorker",
+								SubnetID: "",
+							},
+							{
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "master-vnet", "master-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
+							ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}, nil).Return(nil)
+				subnet.EXPECT().Get(ctx, "subscription-rg", "worker-vnet", "worker-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "worker-vnet", "worker-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
+							ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}, nil).Return(nil)
+			},
+		},
+		{
+			name: "Failure - all worker SubnetIDs empty",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{Name: "emptyWorker1", SubnetID: ""},
+							{Name: "emptyWorker2", SubnetID: ""},
+						},
+					},
+				},
+			},
+			mocks:   func(subnet *mock_armnetwork.MockSubnetsClient) {},
+			wantErr: "no valid worker subnet found: all worker profiles have empty subnetId; set properties.workerProfiles[].subnetId",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
@@ -1033,11 +1104,12 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 	location := "eastus"
 
 	for _, tt := range []struct {
-		name          string
-		mocks         func(subnet *mock_armnetwork.MockSubnetsClient)
-		workerSubnets []string
-		wantSubnets   []string
-		wantErr       string
+		name                string
+		mocks               func(subnet *mock_armnetwork.MockSubnetsClient)
+		workerSubnets       []string
+		workerStatusSubnets []string
+		wantSubnets         []string
+		wantErr             string
 	}{
 		{
 			name: "no service endpoints set returns empty string slice",
@@ -1099,6 +1171,71 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
 			},
 			wantSubnets: []string{masterSubnet},
+		},
+		{
+			// Worker subnets now come from the enriched WorkerProfilesStatus (populated by
+			// the enricher from the MachineSet spec regardless of readiness). A resolved
+			// enriched worker subnet with the service endpoint must appear in the result.
+			name: "enriched worker subnet from WorkerProfilesStatus is included",
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{
+						Properties: &sdknetwork.SubnetPropertiesFormat{
+							ServiceEndpoints: []*sdknetwork.ServiceEndpointPropertiesFormat{
+								{Service: &serviceEndpoint, Locations: []*string{&location}},
+							},
+						},
+					},
+				}, nil)
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "worker-subnet-001", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{
+						Properties: &sdknetwork.SubnetPropertiesFormat{
+							ServiceEndpoints: []*sdknetwork.ServiceEndpointPropertiesFormat{
+								{Service: &serviceEndpoint, Locations: []*string{&location}},
+							},
+						},
+					},
+				}, nil)
+			},
+			workerStatusSubnets: []string{
+				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
+			},
+			wantSubnets: []string{
+				masterSubnet,
+				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
+			},
+		},
+		{
+			// A worker subnet reported by the enricher can be stale (unhealthy MachineSet's
+			// subnet since deleted). A NotFound on a worker subnet must be skipped, not fail
+			// the whole firewall rebuild; the master subnet is still included.
+			name: "stale worker subnet returning NotFound is skipped",
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{
+						Properties: &sdknetwork.SubnetPropertiesFormat{
+							ServiceEndpoints: []*sdknetwork.ServiceEndpointPropertiesFormat{
+								{Service: &serviceEndpoint, Locations: []*string{&location}},
+							},
+						},
+					},
+				}, nil)
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "worker-subnet-001", nil).Return(sdknetwork.SubnetsClientGetResponse{}, &azcore.ResponseError{StatusCode: http.StatusNotFound})
+			},
+			workerStatusSubnets: []string{
+				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
+			},
+			wantSubnets: []string{masterSubnet},
+		},
+		{
+			// The master subnet must NOT get the worker 404-skip treatment: a NotFound on
+			// the master subnet still hard-fails. (Guards against regressing the
+			// !EqualFold(master) term in the skip condition.)
+			name: "master subnet returning NotFound fails (not skipped)",
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{}, &azcore.ResponseError{StatusCode: http.StatusNotFound})
+			},
+			wantErr: (&azcore.ResponseError{StatusCode: http.StatusNotFound}).Error(),
 		},
 		{
 			name: "master subnet has service endpoint with all location",
@@ -1217,7 +1354,19 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 				}
 			}
 
+			var workerProfilesStatus []api.WorkerProfile
+			if tt.workerStatusSubnets != nil {
+				workerProfilesStatus = []api.WorkerProfile{}
+				for _, subnet := range tt.workerStatusSubnets {
+					workerProfilesStatus = append(workerProfilesStatus, api.WorkerProfile{
+						SubnetID: subnet,
+					})
+				}
+			}
+
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
 
@@ -1230,7 +1379,8 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								SubnetID: masterSubnet,
 							},
-							WorkerProfiles: workerProfiles,
+							WorkerProfiles:       workerProfiles,
+							WorkerProfilesStatus: workerProfilesStatus,
 						},
 					},
 				},
