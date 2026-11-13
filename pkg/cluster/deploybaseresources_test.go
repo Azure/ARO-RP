@@ -2676,9 +2676,14 @@ func (s *subnetPoliciesMatcher) String() string {
 	return "subnet with PrivateLinkServiceNetworkPolicies set to Disabled"
 }
 
-func TestWaitForStorageAccountRBAC(t *testing.T) {
+func TestWaitForClusterGraphAccess(t *testing.T) {
 	ctx := context.Background()
 	errForbidden := errors.New("403 AuthorizationPermissionMismatch")
+	errThrottled := api.NewCloudError(http.StatusTooManyRequests, api.CloudErrorCodeThrottlingLimitExceeded, "", "Storage account throttled.")
+	originalBackoff := arm.TransientBackoff
+	t.Cleanup(func() { arm.TransientBackoff = originalBackoff })
+	arm.TransientBackoff.Duration = time.Millisecond
+	arm.TransientBackoff.Jitter = 0
 
 	miwiProfile := &api.PlatformWorkloadIdentityProfile{}
 
@@ -2690,8 +2695,11 @@ func TestWaitForStorageAccountRBAC(t *testing.T) {
 		wantErr    string
 	}{
 		{
-			name:      "service principal cluster skips the check",
+			name:      "service principal, graph exists",
 			spProfile: &api.ServicePrincipalProfile{},
+			mockExists: func(g *mock_graph.MockManager) {
+				g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(true, nil)
+			},
 		},
 		{
 			name:    "workload identity, graph exists",
@@ -2701,14 +2709,45 @@ func TestWaitForStorageAccountRBAC(t *testing.T) {
 			},
 		},
 		{
-			name:    "workload identity, graph not found is success",
+			name:    "graph not found is success",
 			profile: miwiProfile,
 			mockExists: func(g *mock_graph.MockManager) {
 				g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(false, nil)
 			},
 		},
 		{
-			name:    "workload identity, error is returned",
+			name:      "service principal retries throttling",
+			spProfile: &api.ServicePrincipalProfile{},
+			mockExists: func(g *mock_graph.MockManager) {
+				gomock.InOrder(
+					g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(false, errThrottled),
+					g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(false, nil),
+				)
+			},
+		},
+		{
+			name:    "retries transient conflict",
+			profile: miwiProfile,
+			mockExists: func(g *mock_graph.MockManager) {
+				gomock.InOrder(
+					g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(false, &azcore.ResponseError{
+						StatusCode: http.StatusConflict,
+						ErrorCode:  "RetryableError",
+					}),
+					g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(true, nil),
+				)
+			},
+		},
+		{
+			name:      "persistent throttling returns error",
+			spProfile: &api.ServicePrincipalProfile{},
+			mockExists: func(g *mock_graph.MockManager) {
+				g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(false, errThrottled).Times(originalBackoff.Steps)
+			},
+			wantErr: errThrottled.Error(),
+		},
+		{
+			name:    "error is returned",
 			profile: miwiProfile,
 			mockExists: func(g *mock_graph.MockManager) {
 				g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(false, errForbidden)
@@ -2724,8 +2763,10 @@ func TestWaitForStorageAccountRBAC(t *testing.T) {
 				tt.mockExists(g)
 			}
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
 				graph: g,
+				log:   log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -2740,7 +2781,7 @@ func TestWaitForStorageAccountRBAC(t *testing.T) {
 				},
 			}
 
-			err := m.waitForStorageAccountRBAC(ctx)
+			err := m.waitForClusterGraphAccess(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
