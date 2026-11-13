@@ -6,6 +6,7 @@ package pullsecret
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -14,7 +15,7 @@ import (
 )
 
 func TestSetRegistryProfiles(t *testing.T) {
-	original := `{"auths":{"arosvc.azurecr.io":{"auth":"x"},"registry.redhat.io":{"auth":"y"}}}`
+	original := `{"auths":{"arosvc.azurecr.io":{"auth":"eDp5"},"registry.redhat.io":{"auth":"eTp6"}}}`
 
 	for _, tt := range []struct {
 		name        string
@@ -22,6 +23,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 		rps         []*api.RegistryProfile
 		want        *pullSecret
 		wantChanged bool
+		wantErr     string
 	}{
 		{
 			name: "add and replace",
@@ -44,7 +46,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 						"auth": "ZnJlZDplbnRlcg==",
 					},
 					"registry.redhat.io": {
-						"auth": "y",
+						"auth": "eTp6",
 					},
 					"arointsvc.azurecr.io": {
 						"auth": "ZnJlZDplbnRlcg==",
@@ -73,7 +75,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 		},
 		{
 			name: "no change",
-			ps:   `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"arointsvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"y"}}}`,
+			ps:   `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"arointsvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"eTp6"}}}`,
 			rps: []*api.RegistryProfile{
 				{
 					Name:     "arosvc.azurecr.io",
@@ -92,7 +94,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 						"auth": "ZnJlZDplbnRlcg==",
 					},
 					"registry.redhat.io": {
-						"auth": "y",
+						"auth": "eTp6",
 					},
 					"arointsvc.azurecr.io": {
 						"auth": "ZnJlZDplbnRlcg==",
@@ -107,31 +109,93 @@ func TestSetRegistryProfiles(t *testing.T) {
 			want: &pullSecret{
 				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
-						"auth": "x",
+						"auth": "eDp5",
 					},
 					"registry.redhat.io": {
-						"auth": "y",
+						"auth": "eTp6",
 					},
 				},
 			},
 		},
+		{
+			name:        "invalid base64 in preserved entry",
+			ps:          `{"auths":{"byo.example":{"auth":"` + strings.Repeat("A", 236) + `!"}}}`,
+			rps:         []*api.RegistryProfile{{Name: "rp.example", Username: "user", Password: "password"}},
+			wantChanged: true,
+			wantErr:     "invalid pull secret: malformed auth token for key byo.example: invalid Base64",
+		},
+		{
+			name:    "decoded auth without separator",
+			ps:      `{"auths":{"byo.example":{"auth":"dXNlcg=="}}}`,
+			wantErr: "invalid pull secret: malformed auth token for key byo.example: not in expected user and secret format",
+		},
+		{
+			name:    "non-string auth",
+			ps:      `{"auths":{"byo.example":{"auth":123}}}`,
+			wantErr: "invalid pull secret: malformed pullsecret (auth must be a string) for key byo.example",
+		},
+		{
+			name:    "null auth",
+			ps:      `{"auths":{"byo.example":{"auth":null}}}`,
+			wantErr: "invalid pull secret: malformed pullsecret (auth must be a string) for key byo.example",
+		},
+		{
+			name:    "missing auth",
+			ps:      `{"auths":{"byo.example":{"email":"user@example.com"}}}`,
+			wantErr: "invalid pull secret: malformed pullsecret (no auth key) for key byo.example",
+		},
+		{
+			name:    "null entry",
+			ps:      `{"auths":{"byo.example":null}}`,
+			wantErr: "invalid pull secret: malformed pullsecret (no auth key) for key byo.example",
+		},
+		{
+			name:    "null secret",
+			ps:      `null`,
+			wantErr: "invalid pull secret: expected a JSON object",
+		},
+		{
+			name: "overwritten invalid entry",
+			ps:   `{"auths":{"rp.example":{"auth":"!"}}}`,
+			rps:  []*api.RegistryProfile{{Name: "rp.example", Username: "user", Password: "password"}},
+			want: &pullSecret{
+				Auths: map[string]map[string]any{
+					"rp.example": {"auth": "dXNlcjpwYXNzd29yZA=="},
+				},
+			},
+			wantChanged: true,
+		},
+		{
+			name:    "credential store without inline auth",
+			ps:      `{"auths":{"byo.example":{"credsStore":"helper"}}}`,
+			wantErr: "invalid pull secret: malformed pullsecret (no auth key) for key byo.example",
+		},
+		{
+			name: "empty secret without profiles",
+			want: &pullSecret{},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ps, changed, err := SetRegistryProfiles(tt.ps, tt.rps...)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			if changed != tt.wantChanged {
-				t.Error(changed)
+				t.Errorf("got changed %v, want %v", changed, tt.wantChanged)
 			}
-
-			var got *pullSecret
-			err = json.Unmarshal([]byte(ps), &got)
+			if tt.wantErr != "" {
+				if err == nil || err.Error() != tt.wantErr {
+					t.Fatalf("got error %v, want %q", err, tt.wantErr)
+				}
+				if ps != "" {
+					t.Fatalf("got output %q on error", ps)
+				}
+				return
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
-
+			var got *pullSecret
+			if err := json.Unmarshal([]byte(ps), &got); err != nil {
+				t.Fatal(err)
+			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Error(ps)
 			}
