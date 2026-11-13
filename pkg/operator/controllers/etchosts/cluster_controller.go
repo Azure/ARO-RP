@@ -64,7 +64,7 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 	allowReconcile, err := r.AllowRebootCausingReconciliation(ctx, instance)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
@@ -78,8 +78,7 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 	// upgrades) if this is changed.
 	if !allowReconcile {
 		r.Log.Debug("reboot-causing reconciliation not allowed right now")
-		r.ClearConditions(ctx)
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, r.ClearConditions(ctx)
 	}
 
 	// EtchostsManaged = false, remove machine configs
@@ -92,7 +91,7 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 			err := r.ch.List(ctx, mcs, client.Continue(continueToken))
 			if err != nil {
 				r.Log.Error(err)
-				r.SetDegraded(ctx, err)
+				_ = r.SetDegraded(ctx, err)
 				return reconcile.Result{}, err
 			}
 
@@ -102,7 +101,7 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 					err = r.ch.Delete(ctx, &mc)
 					if err != nil && !kerrors.IsNotFound(err) {
 						r.Log.Error(err)
-						r.SetDegraded(ctx, err)
+						_ = r.SetDegraded(ctx, err)
 						return reconcile.Result{}, err
 					}
 				}
@@ -114,7 +113,9 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 			}
 		}
 
-		r.ClearConditions(ctx)
+		if err := r.ClearConditions(ctx); err != nil {
+			return reconcile.Result{}, err
+		}
 		r.Log.Debug("etchosts managed is false, machine configs removed")
 		return reconcile.Result{}, nil
 	}
@@ -126,7 +127,7 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 	err = r.ch.List(ctx, pools)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
@@ -137,12 +138,11 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 	err = reconcileMachineConfigs(ctx, instance, r.ch, allowReconcile, pools.Items...)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
-	r.ClearConditions(ctx)
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.ClearConditions(ctx)
 }
 
 // SetupWithManager setup our manager to watch for changes to the ARO Cluster

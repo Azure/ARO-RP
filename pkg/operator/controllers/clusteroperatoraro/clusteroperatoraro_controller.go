@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/clock"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -61,28 +62,33 @@ func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.log.Debug("running")
-	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
 
-	co, err := r.getOrCreateClusterOperator(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		instance := &arov1alpha1.Cluster{}
+		err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+		if err != nil {
+			return err
+		}
 
-	err = controllerutil.SetControllerReference(instance, co, scheme.Scheme)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+		co, err := r.getOrCreateClusterOperator(ctx)
+		if err != nil {
+			return err
+		}
 
-	err = r.client.Update(ctx, co)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+		err = controllerutil.SetControllerReference(instance, co, scheme.Scheme)
+		if err != nil {
+			return err
+		}
 
-	return reconcile.Result{}, r.setClusterOperatorStatus(ctx, co, instance)
+		err = r.client.Update(ctx, co)
+		if err != nil {
+			return err
+		}
+
+		return r.setClusterOperatorStatus(ctx, co, instance)
+	})
+
+	return reconcile.Result{}, err
 }
 
 func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, originalClusterOperatorObj *configv1.ClusterOperator, cluster *arov1alpha1.Cluster) error {

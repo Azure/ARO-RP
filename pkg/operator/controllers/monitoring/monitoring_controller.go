@@ -93,13 +93,12 @@ func (r *MonitoringReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 		result, err := f(ctx)
 		if err != nil {
 			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
+			_ = r.SetDegraded(ctx, err)
 			return result, err
 		}
 	}
 
-	r.ClearConditions(ctx)
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.ClearConditions(ctx)
 }
 
 func (r *MonitoringReconciler) reconcilePVC(ctx context.Context) (ctrl.Result, error) {

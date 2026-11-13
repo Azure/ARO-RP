@@ -60,7 +60,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name, Namespace: machineSetsNamespace}, modifiedMachineset)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 
 		return reconcile.Result{}, err
 	}
@@ -73,7 +73,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	})
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 
 		return reconcile.Result{}, err
 	}
@@ -83,9 +83,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	for _, machineset := range machinesets.Items {
 		// If there are any custom machinesets in the list, bail and don't requeue
 		if !strings.Contains(machineset.Name, instance.Spec.InfraID) {
-			r.ClearDegraded(ctx)
-
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, r.ClearDegraded(ctx)
 		}
 		if machineset.Spec.Replicas != nil {
 			replicaCount += int(*machineset.Spec.Replicas)
@@ -99,14 +97,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		err := r.Client.Update(ctx, modifiedMachineset)
 		if err != nil {
 			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
+			_ = r.SetDegraded(ctx, err)
 
 			return reconcile.Result{}, err
 		}
 	}
 
-	r.ClearConditions(ctx)
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.ClearConditions(ctx)
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {

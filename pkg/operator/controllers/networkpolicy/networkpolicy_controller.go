@@ -65,7 +65,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	lt417, err := r.clusterVersionLessThan(ctx, "4.17.0")
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 	if lt417 {
@@ -78,19 +78,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	uns, err := dynamichelper.DecodeUnstructured(adminNetworkPolicyYaml)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
 	err = r.dh.Ensure(ctx, uns)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
-	r.ClearConditions(ctx)
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.ClearConditions(ctx)
 }
 
 func (r *Reconciler) clusterVersionLessThan(ctx context.Context, target string) (bool, error) {
