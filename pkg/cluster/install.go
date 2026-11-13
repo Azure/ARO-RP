@@ -76,6 +76,8 @@ func (m *manager) adminUpdate() []steps.Step {
 		stepsToRun = append(stepsToRun, m.getSyncClusterObjectSteps()...)
 	case api.MaintenanceTaskMigrateLoadBalancer:
 		stepsToRun = append(stepsToRun, m.getMigrateLoadBalancerSteps()...)
+	case api.MaintenanceTaskSyncPreconfiguredNSG:
+		stepsToRun = append(stepsToRun, m.getSyncPreconfiguredNSGSteps()...)
 	}
 
 	return stepsToRun
@@ -206,6 +208,12 @@ func (m *manager) getMigrateLoadBalancerSteps() []steps.Step {
 		steps.Action(m.fixSSH),
 	}
 	return steps
+}
+
+func (m *manager) getSyncPreconfiguredNSGSteps() []steps.Step {
+	return []steps.Step{
+		steps.Action(m.syncPreconfiguredNSG),
+	}
 }
 
 func (m *manager) getHiveAdoptionAndReconciliationSteps() []steps.Step {

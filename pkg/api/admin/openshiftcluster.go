@@ -108,11 +108,12 @@ const (
 	// Maintenance tasks that perform work on the cluster
 	//
 
-	MaintenanceTaskEverything          MaintenanceTask = "Everything"
-	MaintenanceTaskOperator            MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts          MaintenanceTask = "CertificatesRenewal"
-	MaintenanceTaskSyncClusterObject   MaintenanceTask = "SyncClusterObject"
-	MaintenanceTaskMigrateLoadBalancer MaintenanceTask = "MigrateLoadBalancer"
+	MaintenanceTaskEverything           MaintenanceTask = "Everything"
+	MaintenanceTaskOperator             MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts           MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskSyncClusterObject    MaintenanceTask = "SyncClusterObject"
+	MaintenanceTaskMigrateLoadBalancer  MaintenanceTask = "MigrateLoadBalancer"
+	MaintenanceTaskSyncPreconfiguredNSG MaintenanceTask = "SyncPreconfiguredNSG"
 
 	//
 	// Maintenance tasks for updating customer maintenance signals
@@ -135,6 +136,7 @@ var validMaintenanceTasks = []MaintenanceTask{
 	MaintenanceTaskRenewCerts,
 	MaintenanceTaskSyncClusterObject,
 	MaintenanceTaskMigrateLoadBalancer,
+	MaintenanceTaskSyncPreconfiguredNSG,
 	// internal maintenance state signals
 	MaintenanceTaskPending,
 	MaintenanceTaskNone,
