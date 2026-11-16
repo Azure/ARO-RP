@@ -862,8 +862,17 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 			}
 
 			stop := make(chan struct{})
-			defer close(stop)
-			go f.Run(ctx, stop, nil)
+			done := make(chan struct{})
+			defer func() {
+				close(stop)
+
+				select {
+				case <-done:
+				case <-time.After(10 * time.Second):
+					t.Fatal("frontend failed to stop after 10s")
+				}
+			}()
+			go f.Run(ctx, stop, done)
 			f.ocpVersionsMu.Lock()
 			f.enabledOcpVersions = getOCPVersionsChangeFeed()
 			for key, doc := range getOCPVersionsChangeFeed() {
