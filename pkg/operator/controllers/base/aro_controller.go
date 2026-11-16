@@ -31,7 +31,7 @@ type AROController struct {
 }
 
 func (c *AROController) SetConditions(ctx context.Context, cnds ...*operatorv1.OperatorCondition) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		cluster, err := c.GetCluster(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve ARO cluster resource: %w", err)
@@ -49,6 +49,10 @@ func (c *AROController) SetConditions(ctx context.Context, cnds ...*operatorv1.O
 		cluster.Status.Conditions = newConditions
 		return c.Client.Status().Update(ctx, cluster)
 	})
+	if err != nil {
+		c.Log.Error("error updating controller conditions", err)
+	}
+	return err
 }
 
 func (c *AROController) SetProgressing(ctx context.Context, message string) error {
