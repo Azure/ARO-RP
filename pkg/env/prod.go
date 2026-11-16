@@ -239,15 +239,9 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 	}
 
 	// Read the environment for the cluster zone deployment override information
-	overrideClusterDeploymentZonesEnv := os.Getenv("OVERRIDE_CLUSTER_DEPLOYMENT_ZONES_ON_OPTIN")
-
-	if strings.ToLower(overrideClusterDeploymentZonesEnv) == "nonzonal" {
-		p.overrideClusterDeploymentZonesOnOptIn = []string{}
-	} else if overrideClusterDeploymentZonesEnv != "" {
-		p.overrideClusterDeploymentZonesOnOptIn = []string{}
-		for zone := range strings.SplitSeq(overrideClusterDeploymentZonesEnv, ",") {
-			p.overrideClusterDeploymentZonesOnOptIn = append(p.overrideClusterDeploymentZonesOnOptIn, zone)
-		}
+	p.overrideClusterDeploymentZonesOnOptIn, err = parseOverrideClusterDeploymentZones(os.Getenv("OVERRIDE_CLUSTER_DEPLOYMENT_ZONES_ON_OPTIN"))
+	if err != nil {
+		return nil, err
 	}
 
 	p.ARMHelper, err = newARMHelper(ctx, log, p)
@@ -486,6 +480,51 @@ func (p *prod) LiveConfig() liveconfig.Manager {
 
 func (p *prod) OverrideClusterDeploymentZonesOnOptIn() []string {
 	return p.overrideClusterDeploymentZonesOnOptIn
+}
+
+// parseOverrideClusterDeploymentZones parses the
+// OVERRIDE_CLUSTER_DEPLOYMENT_ZONES_ON_OPTIN environment variable.
+//
+// Return values:
+//   - unset/blank  -> nil (no override; the feature is a no-op)
+//   - "nonzonal"   -> [] (explicit non-zonal placement)
+//   - "1,2,3" etc. -> the validated list of zones
+//
+// Zones must be 1-3, with no duplicates or blanks. Only 1 or 3 zones are
+// supported, so any other count is rejected here at startup rather than
+// failing later at install.
+func parseOverrideClusterDeploymentZones(raw string) ([]string, error) {
+	if strings.EqualFold(strings.TrimSpace(raw), "nonzonal") {
+		return []string{}, nil
+	}
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+
+	validZones := map[string]struct{}{"1": {}, "2": {}, "3": {}}
+	seen := map[string]struct{}{}
+	zones := []string{}
+	for _, part := range strings.Split(raw, ",") {
+		zone := strings.TrimSpace(part)
+		if zone == "" {
+			return nil, fmt.Errorf("env var OVERRIDE_CLUSTER_DEPLOYMENT_ZONES_ON_OPTIN contains an empty zone entry")
+		}
+		if _, ok := validZones[zone]; !ok {
+			return nil, fmt.Errorf("env var OVERRIDE_CLUSTER_DEPLOYMENT_ZONES_ON_OPTIN is incorrect, '%s' is not a zone 1-3 or 'nonzonal'", zone)
+		}
+		if _, ok := seen[zone]; ok {
+			return nil, fmt.Errorf("env var OVERRIDE_CLUSTER_DEPLOYMENT_ZONES_ON_OPTIN contains duplicate zone '%s'", zone)
+		}
+		seen[zone] = struct{}{}
+		zones = append(zones, zone)
+	}
+
+	switch len(zones) {
+	case 1, 3:
+		return zones, nil
+	default:
+		return nil, fmt.Errorf("env var OVERRIDE_CLUSTER_DEPLOYMENT_ZONES_ON_OPTIN has an unsupported number of zones (%d); use 1 or 3 zones, or 'nonzonal'", len(zones))
+	}
 }
 
 func (p *prod) FPNewClientCertificateCredential(tenantID string, additionalTenants []string) (azcore.TokenCredential, error) {
