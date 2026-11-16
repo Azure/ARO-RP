@@ -55,6 +55,18 @@ var _ = Describe("Extract()", func() {
 		_, err := Extract(pullSecret)
 		Expect(err).To(MatchError("malformed pullsecret (no auth key) for key example.com"))
 	})
+
+	It("rejects credential stores without inline auth", func() {
+		_, err := Extract(`{"auths":{"example.com":{"credsStore":"helper"}}}`)
+		Expect(err).To(MatchError("malformed pullsecret (no auth key) for key example.com"))
+	})
+
+	It("errors instead of panicking when auth is not a string", func() {
+		for _, auth := range []string{"123", "null", "true", "{}", "[]"} {
+			_, err := Extract(`{"auths":{"example.com":{"auth":` + auth + `}}}`)
+			Expect(err).To(MatchError("malformed pullsecret (auth must be a string) for key example.com"))
+		}
+	})
 })
 
 func TestPullSecret(t *testing.T) {

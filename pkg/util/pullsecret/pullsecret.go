@@ -6,6 +6,7 @@ package pullsecret
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"reflect"
 
@@ -60,6 +61,10 @@ func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, bool,
 		return "", false, err
 	}
 
+	if ps == nil {
+		return "", false, fmt.Errorf("invalid pull secret: expected a JSON object")
+	}
+
 	if ps.Auths == nil {
 		ps.Auths = map[string]map[string]any{}
 	}
@@ -78,7 +83,13 @@ func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, bool,
 	}
 
 	b, err := json.Marshal(ps)
-	return string(b), changed, err
+	if err != nil {
+		return "", changed, err
+	}
+	if _, err := Extract(string(b)); err != nil {
+		return "", changed, fmt.Errorf("invalid pull secret: %w", err)
+	}
+	return string(b), changed, nil
 }
 
 // Merge returns _ps over _base.  If both _ps and _base have a given key, the

@@ -49,7 +49,12 @@ func Extract(rawPullSecret string) (map[string]*UserPass, error) {
 			return nil, fmt.Errorf("malformed pullsecret (no auth key) for key %s", key)
 		}
 
-		pullSecretMap[key], err = userPassFromBase64(token.(string))
+		encoded, ok := token.(string)
+		if !ok {
+			return nil, fmt.Errorf("malformed pullsecret (auth must be a string) for key %s", key)
+		}
+
+		pullSecretMap[key], err = userPassFromBase64(encoded)
 		if err != nil {
 			return nil, fmt.Errorf("malformed auth token for key %s: %s", key, err)
 		}
