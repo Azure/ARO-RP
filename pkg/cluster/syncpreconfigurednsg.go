@@ -14,6 +14,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 )
 
+// syncPreconfiguredNSG ensures that the PreconfiguredNSG value in the cluster document is consistent with the actual NSGs attached to the subnets.
+// Returns early and silently if it cannot determine a consistent PreconfiguredNSG value.
 func (m *manager) syncPreconfiguredNSG(ctx context.Context) error {
 	managedResourceGroup := m.managedResourceGroupName()
 	stored := m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG
@@ -91,6 +93,8 @@ func (m *manager) syncPreconfiguredNSG(ctx context.Context) error {
 	return nil
 }
 
+// inferPreconfiguredNSGForSubnet determines the expected PreconfiguredNSG value for a given subnet based on its attached NSG and the managed resource group.
+// Returns PreconfiguredNSGDisabled if NSG is inside managed resource group.
 func (m *manager) inferPreconfiguredNSGForSubnet(ctx context.Context, subnetID, managedResourceGroup string) (api.PreconfiguredNSG, string, error) {
 	r, err := armsdk.ParseResourceID(subnetID)
 	if err != nil {
@@ -119,6 +123,7 @@ func (m *manager) inferPreconfiguredNSGForSubnet(ctx context.Context, subnetID, 
 	return api.PreconfiguredNSGEnabled, nsgID, nil
 }
 
+// inferredNSGValues returns a slice of PreconfiguredNSG values from the given map.
 func inferredNSGValues(m map[api.PreconfiguredNSG]string) []api.PreconfiguredNSG {
 	values := make([]api.PreconfiguredNSG, 0, len(m))
 	for k := range m {
