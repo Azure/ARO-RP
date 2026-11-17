@@ -72,23 +72,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, nil
 		}
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
 	// don't interfere with masters, don't want to trample etcd-quorum-guard.
 	if node.Labels != nil {
 		if _, ok := node.Labels["node-role.kubernetes.io/master"]; ok {
-			r.ClearConditions(ctx)
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, r.ClearConditions(ctx)
 		}
 	}
 
 	if !isDraining(node) {
 		// we're not draining: ensure our annotation is not set and return
 		if getAnnotation(&node.ObjectMeta, annotationDrainStartTime) == "" {
-			r.ClearConditions(ctx)
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, r.ClearConditions(ctx)
 		}
 
 		delete(node.Annotations, annotationDrainStartTime)
@@ -96,7 +94,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		err = r.Client.Update(ctx, node)
 		if err != nil {
 			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
+			_ = r.SetDegraded(ctx, err)
 		}
 
 		return reconcile.Result{}, err
@@ -111,7 +109,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		err = r.Client.Update(ctx, node)
 		if err != nil {
 			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
+			_ = r.SetDegraded(ctx, err)
 
 			return reconcile.Result{}, err
 		}
@@ -121,7 +119,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	deadline := t.Add(gracePeriod)
 	now := time.Now()
 	if deadline.After(now) {
-		r.SetProgressing(ctx, fmt.Sprintf("Draining node %s", request.Name))
+		if err := r.SetProgressing(ctx, fmt.Sprintf("Draining node %s", request.Name)); err != nil {
+			return reconcile.Result{}, err
+		}
 
 		return reconcile.Result{RequeueAfter: deadline.Sub(now)}, nil
 	}
@@ -143,7 +143,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}, request.Name)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 
 		return reconcile.Result{}, err
 	}
@@ -154,13 +154,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	err = r.Client.Update(ctx, node)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 
 		return reconcile.Result{}, err
 	}
 
-	r.ClearConditions(ctx)
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.ClearConditions(ctx)
 }
 
 // SetupWithManager setup our mananger

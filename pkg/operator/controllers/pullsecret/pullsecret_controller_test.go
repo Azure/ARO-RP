@@ -14,7 +14,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -918,5 +920,172 @@ func TestEnsureGlobalPullSecretErrorMetric(t *testing.T) {
 		// Metric values will never be in decimals but we are using `testutil.ToFloat64` to extract the metric value
 		// because it's most convenient way to extract the metric value. Else, we may have to use something like `CollectAndCompare`.
 		assert.Equal(t, 1, int(testutil.ToFloat64(pullSecretRemediation.WithLabelValues("error"))))
+	})
+}
+
+// testStatusWriter wraps a StatusWriter to intercept Update calls.
+type testStatusWriter struct {
+	client.StatusWriter
+	updateFunc func(ctx context.Context, obj client.Object, opts ...client.SubResourceUpdateOption) error
+}
+
+func (w *testStatusWriter) Update(ctx context.Context, obj client.Object, opts ...client.SubResourceUpdateOption) error {
+	if w.updateFunc != nil {
+		return w.updateFunc(ctx, obj, opts...)
+	}
+	return w.StatusWriter.Update(ctx, obj, opts...)
+}
+
+// testClient wraps a client.Client and overrides Status() to return a custom StatusWriter.
+type testClient struct {
+	client.Client
+	statusWriter client.StatusWriter
+}
+
+func (c *testClient) Status() client.StatusWriter {
+	return c.statusWriter
+}
+
+func TestReconcileRetryOnConflict(t *testing.T) {
+	t.Run("conflict during status update preserves concurrent condition changes", func(t *testing.T) {
+		_, log := testlog.LogForTesting(t)
+
+		ctx := context.Background()
+
+		instance := &arov1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+			Spec: arov1alpha1.ClusterSpec{
+				OperatorFlags: arov1alpha1.OperatorFlags{
+					operator.PullSecretEnabled: operator.FlagTrue,
+					operator.PullSecretManaged: operator.FlagFalse, // skip pull secret management
+				},
+			},
+		}
+		secrets := []client.Object{
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
+				},
+				Type: corev1.SecretTypeDockerConfigJson,
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			},
+		}
+
+		fakeClient := testclienthelper.NewAROFakeClientBuilder(instance).WithObjects(secrets...).Build()
+
+		concurrentCondition := operatorv1.OperatorCondition{
+			Type:   "AnotherControllerDegraded",
+			Status: operatorv1.ConditionTrue,
+		}
+
+		calls := 0
+		realStatus := fakeClient.Status()
+		sw := &testStatusWriter{
+			StatusWriter: realStatus,
+			updateFunc: func(ctx context.Context, obj client.Object, opts ...client.SubResourceUpdateOption) error {
+				calls++
+				if calls == 1 {
+					// Simulate another controller adding a condition before our write
+					cluster := &arov1alpha1.Cluster{}
+					if err := fakeClient.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster); err != nil {
+						t.Fatalf("onConflict Get failed: %v", err)
+					}
+					cluster.Status.Conditions = append(cluster.Status.Conditions, concurrentCondition)
+					if err := realStatus.Update(ctx, cluster); err != nil {
+						t.Fatalf("onConflict Status Update failed: %v", err)
+					}
+					return kerrors.NewConflict(
+						schema.GroupResource{Group: "aro.openshift.io", Resource: "clusters"},
+						arov1alpha1.SingletonClusterName,
+						errors.New("the object has been modified"),
+					)
+				}
+				return realStatus.Update(ctx, obj, opts...)
+			},
+		}
+
+		wrapper := &testClient{Client: fakeClient, statusWriter: sw}
+		r := NewReconciler(log, wrapper)
+
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: pullSecretName})
+		if err != nil {
+			t.Fatalf("Reconcile returned unexpected error: %v", err)
+		}
+
+		// Verify RedHatKeysPresent was persisted
+		cluster := &arov1alpha1.Cluster{}
+		if err := fakeClient.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster); err != nil {
+			t.Fatalf("failed to get cluster: %v", err)
+		}
+		if len(cluster.Status.RedHatKeysPresent) == 0 {
+			t.Error("expected RedHatKeysPresent to be set")
+		}
+
+		// Verify the concurrent condition from another controller is preserved
+		found := false
+		for _, c := range cluster.Status.Conditions {
+			if c.Type == concurrentCondition.Type {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("concurrent condition %q was not preserved after retry", concurrentCondition.Type)
+		}
+	})
+
+	t.Run("persistent conflicts are returned by Reconcile", func(t *testing.T) {
+		_, log := testlog.LogForTesting(t)
+
+		ctx := context.Background()
+
+		instance := &arov1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+			Spec: arov1alpha1.ClusterSpec{
+				OperatorFlags: arov1alpha1.OperatorFlags{
+					operator.PullSecretEnabled: operator.FlagTrue,
+					operator.PullSecretManaged: operator.FlagFalse,
+				},
+			},
+		}
+		secrets := []client.Object{
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
+				},
+				Type: corev1.SecretTypeDockerConfigJson,
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			},
+		}
+
+		fakeClient := testclienthelper.NewAROFakeClientBuilder(instance).WithObjects(secrets...).Build()
+
+		sw := &testStatusWriter{
+			StatusWriter: fakeClient.Status(),
+			updateFunc: func(ctx context.Context, obj client.Object, opts ...client.SubResourceUpdateOption) error {
+				return kerrors.NewConflict(
+					schema.GroupResource{Group: "aro.openshift.io", Resource: "clusters"},
+					arov1alpha1.SingletonClusterName,
+					errors.New("the object has been modified"),
+				)
+			},
+		}
+
+		wrapper := &testClient{Client: fakeClient, statusWriter: sw}
+		r := NewReconciler(log, wrapper)
+
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: pullSecretName})
+		if err == nil {
+			t.Fatal("expected error from persistent conflicts, got nil")
+		}
+		if !kerrors.IsConflict(err) {
+			t.Fatalf("expected conflict error, got: %v", err)
+		}
 	})
 }

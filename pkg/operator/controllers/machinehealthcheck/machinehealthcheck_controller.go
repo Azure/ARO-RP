@@ -118,13 +118,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		})
 		if err != nil {
 			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
+			_ = r.SetDegraded(ctx, err)
 
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
 
-		r.ClearConditions(ctx)
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, r.ClearConditions(ctx)
 	}
 
 	err = r.deleteIfExists(ctx, "PrometheusRule", &monitoringv1.PrometheusRule{
@@ -132,7 +131,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	})
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 
 		return reconcile.Result{RequeueAfter: time.Hour}, err
 	}
@@ -142,7 +141,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	isUpgrading, err := r.IsClusterUpgrading(ctx)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 
 		return reconcile.Result{}, err
 	}
@@ -157,20 +156,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	err = controllerutil.SetControllerReference(instance, desired, scheme.Scheme)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
 	err = r.ensureMachineHealthCheck(ctx, desired, isUpgrading)
 	if err != nil {
 		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		_ = r.SetDegraded(ctx, err)
 
 		return reconcile.Result{}, err
 	}
 
-	r.ClearConditions(ctx)
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.ClearConditions(ctx)
 }
 
 func (r *Reconciler) ensureMachineHealthCheck(ctx context.Context, desired *machinev1beta1.MachineHealthCheck, isUpgrading bool) error {
