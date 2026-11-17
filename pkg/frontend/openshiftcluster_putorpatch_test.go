@@ -812,9 +812,8 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 
 				f.AddSubscriptionDocuments(sub)
 			},
-			// do we want to expose this to the user?
 			wantStatusCode: http.StatusInternalServerError,
-			wantError:      "500: InternalServerError: : Internal server error.",
+			wantError:      fmt.Sprintf("500: InternalServerError: : Could not apply the availability zone override in location '%s'", testLocation),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

@@ -270,7 +270,15 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 				logicalZonesForSub, err := subscription.Subscription.Properties.MapPhysicalZonesToLogicalZonesForSubscription(f.env.Location(), overrideZones)
 				if err != nil {
-					return nil, err
+					// when the subscription has no zone mapping for this region
+					// it is not 500, so use a specific CloudError
+					log.Warnf("failed to map override zones for feature '%s' in location '%s': %s", api.FeatureFlagOverrideClusterDeploymentZones, f.env.Location(), err)
+					return nil, api.NewCloudError(
+						http.StatusInternalServerError,
+						api.CloudErrorCodeInternalServerError,
+						"",
+						fmt.Sprintf("Could not apply the availability zone override in location '%s'", f.env.Location()),
+					)
 				}
 				doc.OpenShiftCluster.Properties.Zones = logicalZonesForSub
 			}

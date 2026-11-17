@@ -42,6 +42,8 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
+const testLocation = "eastus"
+
 var (
 	serverkey, clientkey     *rsa.PrivateKey
 	serverPki                []byte
@@ -125,7 +127,7 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 	_env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
-	_env.EXPECT().Location().AnyTimes().Return("eastus")
+	_env.EXPECT().Location().AnyTimes().Return(testLocation)
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ACRDomain().AnyTimes().Return("arosvc.azurecr.io")
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
