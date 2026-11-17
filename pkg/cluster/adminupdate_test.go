@@ -111,6 +111,10 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action fixSSH]",
 	}
 
+	syncPreconfiguredNSGSteps := []string{
+		"[Action syncPreconfiguredNSG]",
+	}
+
 	hiveSteps := []string{
 		"[Action hiveCreateNamespace]",
 		"[Action hiveEnsureResources]",
@@ -238,6 +242,16 @@ func TestAdminUpdateSteps(t *testing.T) {
 				return doc, true
 			},
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothStepsServicePrincipal, migrateLoadBalancerSteps),
+		},
+		{
+			name: "SyncPreconfiguredNSG steps",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskSyncPreconfiguredNSG
+				return doc, true
+			},
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothStepsServicePrincipal, syncPreconfiguredNSGSteps),
 		},
 		{
 			name: "adminUpdate() does not adopt Hive-created clusters",
