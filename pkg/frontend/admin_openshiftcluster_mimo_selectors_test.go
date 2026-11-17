@@ -138,6 +138,60 @@ func TestGetMIMOSelectors(t *testing.T) {
 				return r
 			},
 		},
+		{
+			name:       "short-form managed domain",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+							NetworkProfile: api.NetworkProfile{
+								OutboundType: api.OutboundTypeLoadbalancer,
+							},
+							ClusterProfile: api.ClusterProfile{
+								Domain:          "mycluster",
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPublic,
+							},
+						},
+					},
+				})
+
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
+			wantStatusCode: http.StatusOK,
+			wantResponse: func() []byte {
+				r, err := json.Marshal(map[string]string{
+					"subscriptionState":   "Registered",
+					"APIServerVisibility": "Public",
+					"architectureVersion": "0",
+					"bucketID":            "0",
+					"authenticationType":  "ServicePrincipal",
+					"isManagedDomain":     "true",
+					"outboundType":        "Loadbalancer",
+					"provisioningState":   "Succeeded",
+					"resourceID":          "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
+					"subscriptionID":      "00000000-0000-0000-0000-000000000000",
+				})
+				if err != nil {
+					panic(err)
+				}
+				return r
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
