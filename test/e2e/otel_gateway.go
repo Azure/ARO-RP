@@ -42,6 +42,7 @@ const (
 	otelE2EImageEnv            = "TELEMETRY_COLLECTOR_IMAGE"
 	otelE2ERegistryUserEnv     = "TELEMETRY_COLLECTOR_REGISTRY_USER"
 	otelE2ERegistryPasswordEnv = "TELEMETRY_COLLECTOR_REGISTRY_PASSWORD"
+	otelE2ETrustedRegistry     = "arosvcdev.azurecr.io"
 	otelE2ELoggingNS           = "openshift-azure-logging"
 	otelE2EOTLPPort            = int32(4317)
 )
@@ -253,14 +254,18 @@ func deployOTelCollectorInCluster(ctx context.Context, image, collectorConfig st
 }
 
 func maybeCreateOTelPullSecret(ctx context.Context, image string) (string, error) {
-	user := firstNonEmpty(os.Getenv(otelE2ERegistryUserEnv), os.Getenv("AZURE_CLIENT_ID"))
-	pass := firstNonEmpty(os.Getenv(otelE2ERegistryPasswordEnv), os.Getenv("AZURE_CLIENT_SECRET"))
-	if user == "" || pass == "" {
-		return "", nil
-	}
 	server, err := registryServerFromImage(image)
 	if err != nil {
 		return "", err
+	}
+	user := os.Getenv(otelE2ERegistryUserEnv)
+	pass := os.Getenv(otelE2ERegistryPasswordEnv)
+	if user == "" && pass == "" && server == otelE2ETrustedRegistry {
+		user = os.Getenv("AZURE_CLIENT_ID")
+		pass = os.Getenv("AZURE_CLIENT_SECRET")
+	}
+	if user == "" || pass == "" {
+		return "", nil
 	}
 	dockerConfig, err := json.Marshal(map[string]any{
 		"auths": map[string]any{
@@ -320,15 +325,6 @@ func registryServerFromImage(image string) (string, error) {
 		return "", fmt.Errorf("cannot derive registry server from image %q", image)
 	}
 	return parts[0], nil
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, v := range values {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
 }
 
 func waitForOTelConfigInsecure(ctx context.Context) {
