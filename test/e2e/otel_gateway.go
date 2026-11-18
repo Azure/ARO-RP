@@ -99,9 +99,9 @@ var _ = Describe("OTEL gateway integration", func() {
 		By("deploying in-cluster synthetic telemetrycollector")
 		collectorConfig, err := staticResources.ReadFile("static_resources/otel-collector.yaml")
 		Expect(err).NotTo(HaveOccurred())
+		collectorCreated = true
 		collectorClusterIP, err = deployOTelCollectorInCluster(ctx, image, string(collectorConfig))
 		Expect(err).NotTo(HaveOccurred())
-		collectorCreated = true
 		Expect(net.ParseIP(collectorClusterIP)).NotTo(BeNil())
 		log.Infof("in-cluster collector Service ClusterIP: %s", collectorClusterIP)
 
