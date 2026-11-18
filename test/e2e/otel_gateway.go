@@ -85,8 +85,7 @@ var _ = Describe("OTEL gateway integration", func() {
 
 		if collectorCreated {
 			By("deleting in-cluster OTEL collector namespace")
-			err := clients.Kubernetes.CoreV1().Namespaces().Delete(ctx, otelE2ECollectorNS, metav1.DeleteOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			CleanupK8sResource[*corev1.Namespace](ctx, clients.Kubernetes.CoreV1().Namespaces(), otelE2ECollectorNS)
 		}
 	})
 
