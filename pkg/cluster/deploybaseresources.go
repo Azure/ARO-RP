@@ -581,7 +581,7 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 					},
 					&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},
 				)
-				return e
+				return m.refreshClusterMsiCredentialOnAuthorizationError(e)
 			}, m.log, "creating federated identity credential "+federatedIdentityCredentialResourceName)
 			if err != nil {
 				return err

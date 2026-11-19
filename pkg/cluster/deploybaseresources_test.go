@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -22,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	azstorage "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
@@ -33,14 +35,20 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	utilazcore "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
+	mock_armmsi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armmsi"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_azblob "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azblob"
+	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_blob "github.com/Azure/ARO-RP/pkg/util/mocks/blob"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_graph "github.com/Azure/ARO-RP/pkg/util/mocks/graph"
+	mock_platformworkloadidentity "github.com/Azure/ARO-RP/pkg/util/mocks/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
+	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -2651,6 +2659,156 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 
 			err := m.federateIdentityCredentials(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestFederateIdentityCredentialsRefresh(t *testing.T) {
+	forbiddenErr := autorest.DetailedError{
+		StatusCode: http.StatusForbidden,
+		Original: &azure.ServiceError{
+			Code:    "AuthorizationFailed",
+			Message: "The client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write'",
+		},
+	}
+	rebuildErr := errors.New("cannot rebuild cluster MSI credential")
+	otherErr := errors.New("invalid federated identity credential")
+
+	for _, tt := range []struct {
+		name          string
+		errors        []error
+		rebuildErr    error
+		wantRebuilds  int
+		repeatLastErr bool
+		wantErr       error
+		wantErrorCode string
+	}{
+		{
+			name:         "forbidden retries with rebuilt credential",
+			errors:       []error{forbiddenErr, nil},
+			wantRebuilds: 1,
+		},
+		{
+			name:         "authorization error code refreshes without HTTP 403",
+			errors:       []error{&azcore.ResponseError{StatusCode: http.StatusBadRequest, ErrorCode: "AuthorizationFailed"}, nil},
+			wantRebuilds: 1,
+		},
+		{
+			name:         "linked authorization error refreshes through wrapping",
+			errors:       []error{fmt.Errorf("updating identity: %w", &azcore.ResponseError{StatusCode: http.StatusBadRequest, ErrorCode: "LinkedAuthorizationFailed"}), nil},
+			wantRebuilds: 1,
+		},
+		{
+			name:         "unauthorized client message refreshes credential",
+			errors:       []error{errors.New("AADSTS700016: application not found"), nil},
+			wantRebuilds: 1,
+		},
+		{
+			name:         "invalid secret refreshes before inner ARM retry",
+			errors:       []error{errors.New("AADSTS7000215: invalid client secret"), nil},
+			wantRebuilds: 1,
+		},
+		{
+			name:          "persistent forbidden retains cluster MSI error classification",
+			errors:        []error{forbiddenErr},
+			repeatLastErr: true,
+			wantErrorCode: api.CloudErrorCodeInvalidClusterMSIPermissions,
+		},
+		{
+			name:         "rebuild failure is surfaced",
+			errors:       []error{forbiddenErr},
+			rebuildErr:   rebuildErr,
+			wantRebuilds: 1,
+			wantErr:      rebuildErr,
+		},
+		{
+			name:    "non-authorization error does not refresh or retry",
+			errors:  []error{otherErr},
+			wantErr: otherErr,
+		},
+		{
+			name:   "throttling retries without refreshing credential",
+			errors: []error{&azcore.ResponseError{StatusCode: http.StatusTooManyRequests}, nil},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				controller := gomock.NewController(t)
+				credential := mock_azcore.NewMockTokenCredential(controller)
+				builds := 0
+				refreshableCredential, err := refreshable.NewTokenCredential(func() (utilazcore.TokenCredential, error) {
+					builds++
+					if builds > 1 && tt.rebuildErr != nil {
+						return nil, tt.rebuildErr
+					}
+					return credential, nil
+				})
+				require.NoError(t, err)
+
+				calls := 0
+				federatedCredentials := mock_armmsi.NewMockFederatedIdentityCredentialsClient(controller)
+				federatedCredentials.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(context.Context, string, string, string, sdkmsi.FederatedIdentityCredential, *sdkmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions) (sdkmsi.FederatedIdentityCredentialsClientCreateOrUpdateResponse, error) {
+						index := calls
+						if tt.repeatLastErr {
+							index = min(index, len(tt.errors)-1)
+						}
+						require.Less(t, index, len(tt.errors))
+						if calls > 0 && tt.wantRebuilds > 0 {
+							assert.Equal(t, calls+1, builds)
+						}
+						calls++
+						return sdkmsi.FederatedIdentityCredentialsClientCreateOrUpdateResponse{}, tt.errors[index]
+					}).AnyTimes()
+
+				roles := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
+				roles.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().Return(map[string][]api.PlatformWorkloadIdentityRole{
+					"CloudControllerManager": {{ServiceAccounts: []string{"openshift-cloud-controller-manager:cloud-controller-manager"}}},
+				}).AnyTimes()
+
+				_, log := testlog.LogForTesting(t)
+				m := &manager{
+					log: log,
+					doc: &api.OpenShiftClusterDocument{
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID: "/subscriptions/sub/resourceGroups/cluster-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster",
+							Properties: api.OpenShiftClusterProperties{
+								ClusterProfile: api.ClusterProfile{OIDCIssuer: new(api.OIDCIssuer("https://issuer.example.com"))},
+								PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+									PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+										"CloudControllerManager": {
+											ResourceID: "/subscriptions/sub/resourceGroups/identity-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/ccm",
+										},
+									},
+								},
+							},
+						},
+					},
+					clusterMsiCredential:                   refreshableCredential,
+					clusterMsiFederatedIdentityCredentials: federatedCredentials,
+					platformWorkloadIdentityRolesByVersion: roles,
+				}
+				_, err = steps.Run(context.Background(), log, time.Second, []steps.Step{
+					steps.AuthorizationRetryingAction(nil, m.federateIdentityCredentials, ""),
+				}, nil, "")
+
+				if tt.wantErrorCode != "" {
+					var cloudErr *api.CloudError
+					require.ErrorAs(t, err, &cloudErr)
+					assert.Equal(t, tt.wantErrorCode, cloudErr.Code)
+				} else if tt.wantErr != nil {
+					require.ErrorIs(t, err, tt.wantErr)
+				} else {
+					require.NoError(t, err)
+				}
+				if tt.repeatLastErr {
+					assert.Greater(t, calls, 1)
+					assert.Equal(t, calls, builds-1)
+				} else {
+					assert.Equal(t, len(tt.errors), calls)
+					assert.Equal(t, tt.wantRebuilds, builds-1)
+				}
+			})
 		})
 	}
 }

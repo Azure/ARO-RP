@@ -84,17 +84,9 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		// timeoutCtx's timeout has fired.
 		err = s.f(ctx)
 
-		// If we haven't timed out and there is an error that is either an
-		// unauthorized client (AADSTS700016), HTTP 403, or
-		// "AuthorizationFailed" (likely role propagation delay) then retry.
+		// Retry authorization errors while propagation may still be in progress.
 		if timeoutCtx.Err() == nil && err != nil &&
-			(azureerrors.IsUnauthorizedClientError(err) ||
-				azureerrors.IsStatusForbiddenError(err) ||
-				azureerrors.HasAuthorizationFailedError(err) ||
-				azureerrors.HasLinkedAuthorizationFailedError(err) ||
-				azureerrors.IsInvalidSecretError(err) ||
-				azureerrors.IsDeploymentMissingPermissionsError(err) ||
-				err == ErrWantRefresh) {
+			(azureerrors.IsAuthorizationError(err) || err == ErrWantRefresh) {
 			log.Printf("auth error, retrying: %v", err)
 			if s.auth != nil {
 				rebuildErr := s.auth.Rebuild()
