@@ -117,7 +117,7 @@ func TestCluster_GetPlatformWIRoles(t *testing.T) {
 			c := &cluster.Cluster{
 				Config: &cluster.ClusterConfig{
 					WorkloadIdentityRoles: tt.roleSetsRaw,
-					OSClusterVersion:      tt.clusterVersion,
+					OCPVersion:            tt.clusterVersion,
 				},
 			}
 
