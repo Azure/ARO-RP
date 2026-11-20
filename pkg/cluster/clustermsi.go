@@ -11,10 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	utilarm "github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
@@ -41,11 +44,11 @@ const (
 // certificate is empty or the certificate is for a different identity, this
 // function will request and persist a new certificate.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
-	_, err := EnsureClusterMsiCertificateWithParams(ctx, m.doc.ID, m.doc.OpenShiftCluster, m.env.Now, m.clusterMsiKeyVaultStore, m.msiDataplane)
+	_, err := EnsureClusterMsiCertificateWithParams(ctx, m.doc.ID, m.doc.OpenShiftCluster, m.env.Now, m.clusterMsiKeyVaultStore, m.msiDataplane, m.msiDataplaneCredential, m.log)
 	return err
 }
 
-func EnsureClusterMsiCertificateWithParams(ctx context.Context, clusterDocID string, cluster *api.OpenShiftCluster, nowFunc func() time.Time, kvStore MsiKeyVaultStore, msiDataplane dataplane.ClientFactory) (MsiCertificateRefreshResult, error) {
+func EnsureClusterMsiCertificateWithParams(ctx context.Context, clusterDocID string, cluster *api.OpenShiftCluster, nowFunc func() time.Time, kvStore MsiKeyVaultStore, msiDataplane dataplane.ClientFactory, credential refreshable.Rebuilder, log *logrus.Entry) (MsiCertificateRefreshResult, error) {
 	secretName := dataplane.IdentifierForManagedIdentityCredentials(clusterDocID)
 
 	existingMsiCertificate, err := kvStore.GetSecret(ctx, secretName, "", nil)
@@ -83,7 +86,26 @@ func EnsureClusterMsiCertificateWithParams(ctx context.Context, clusterDocID str
 		return MsiCertificateRefreshResultUnchanged, err
 	}
 
-	msiCredObj, err := client.GetUserAssignedIdentitiesCredentials(ctx, uaMsiRequest)
+	var msiCredObj *dataplane.ManagedIdentityCredentials
+	var fetchErr error
+	rebuildFailed := false
+	err = utilarm.RetryableWith(ctx, func(err error) bool {
+		// Mock factories have no credential; real clients have already handled the initial bearer challenge.
+		return credential != nil && (rebuildFailed || azureerrors.IsAuthorizationError(err) || azureerrors.IsStatusUnauthorizedError(err))
+	}, func() error {
+		rebuildFailed = false
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if fetchErr != nil {
+			if err := credential.Rebuild(); err != nil {
+				rebuildFailed = true
+				return fmt.Errorf("rebuilding MSI dataplane credential: %w", err)
+			}
+		}
+		msiCredObj, fetchErr = client.GetUserAssignedIdentitiesCredentials(ctx, uaMsiRequest)
+		return fetchErr
+	}, log, "fetching cluster MSI credentials", nil)
 	if err != nil {
 		return MsiCertificateRefreshResultUnchanged, err
 	}
