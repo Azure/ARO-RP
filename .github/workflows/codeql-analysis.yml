@@ -45,7 +45,7 @@ jobs:
         go mod download
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@5049b573e2cbf31c2dbde702a60c24fe476f0766 # v4
+      uses: github/codeql-action/init@0911ee96d2d6c8def97122c36c5cadd93829a4b4 # v4
       with:
         languages: ${{ matrix.language }}
         config-file: ./.github/codeql/codeql-config-${{matrix.language}}.yml
