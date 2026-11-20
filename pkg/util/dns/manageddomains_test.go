@@ -23,14 +23,34 @@ func TestIsManagedDomain(t *testing.T) {
 			want:     false,
 		},
 		{
-			testName: "Public Cloud Managed Domain",
+			testName: "Public Cloud Managed Domain FQDN",
 			domain:   "foo.location.aroapp.io",
 			want:     true,
 		},
 		{
-			testName: "US Gov Cloud Managed Domain",
+			testName: "US Gov Cloud Managed Domain FQDN",
 			domain:   "foo.aroapp.azure.us",
 			want:     true,
+		},
+		{
+			testName: "Short-form managed domain as stored in cluster document",
+			domain:   "foo",
+			want:     true,
+		},
+		{
+			testName: "Empty domain",
+			domain:   "",
+			want:     false,
+		},
+		{
+			testName: "Invalid leading dot",
+			domain:   ".foo",
+			want:     false,
+		},
+		{
+			testName: "Invalid trailing dot",
+			domain:   "foo.",
+			want:     false,
 		},
 	}
 
