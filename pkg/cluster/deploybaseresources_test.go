@@ -2752,6 +2752,7 @@ func TestFederateIdentityCredentialsRefresh(t *testing.T) {
 				})
 				require.NoError(t, err)
 
+				// Counts CreateOrUpdate attempts, including retries.
 				calls := 0
 				federatedCredentials := mock_armmsi.NewMockFederatedIdentityCredentialsClient(controller)
 				// Each inner ARM or outer authorization retry invokes this callback again.
