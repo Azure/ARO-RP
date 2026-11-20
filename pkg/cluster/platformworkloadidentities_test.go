@@ -249,14 +249,34 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 			wantErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fooTarget, tooManyRequestsErr.Error()).Error(),
 		},
 		{
-			name: "error - credential rebuild failure is surfaced",
-			doc:  validWIClusterDoc,
+			name: "error - failed rebuilds preserve identity error after retry exhaustion",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterId,
+				Key: clusterId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								identityFooName: {ResourceID: identityFooResourceId},
+							},
+						},
+					},
+				},
+			},
 			userAssignedIdentitiesClientMocks: func(mock *mock_armmsi.MockUserAssignedIdentitiesClient) {
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(utilarm.RBACPropagationRetrySteps).
 					Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, forbiddenErr)
 			},
-			wantRebuilds: 1,
+			wantRebuilds: utilarm.RBACPropagationRetrySteps,
 			rebuildErr:   errors.New("cannot rebuild cluster MSI credential"),
+			wantErr:      api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fooTarget, forbiddenErr.Error()).Error(),
+		},
+		{
+			name:               "success - failed credential rebuild does not stop identity retries",
+			doc:                validWIClusterDoc,
+			wantRebuilds:       1,
+			rebuildErr:         errors.New("cannot rebuild cluster MSI credential"),
+			transientLookupErr: forbiddenErr,
 		},
 		{
 			name:               "success - transient forbidden error retried then succeeds",
@@ -472,11 +492,7 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 			}
 
 			err = m.platformWorkloadIdentityIDs(ctx)
-			if tt.rebuildErr != nil {
-				require.ErrorIs(t, err, tt.rebuildErr)
-			} else {
-				utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			assert.Equal(t, tt.wantRebuilds, builds-1)
 
 			if err == nil {

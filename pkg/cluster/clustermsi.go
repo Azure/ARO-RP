@@ -232,8 +232,11 @@ func (m *manager) refreshClusterMsiCredentialOnAuthorizationError(err error) err
 		return err
 	}
 
-	if rebuildErr := m.clusterMsiCredential.Rebuild(); rebuildErr != nil {
-		return fmt.Errorf("failed to rebuild cluster MSI credential: %w", rebuildErr)
+	rebuildErr := m.clusterMsiCredential.Rebuild()
+	if rebuildErr != nil {
+		// Preserve the ARM error so authorization retries continue. Returning the
+		// rebuild error would require broader changes to retry handling.
+		m.log.Printf("cluster MSI credential rebuild failed: %v", rebuildErr)
 	}
 
 	return err

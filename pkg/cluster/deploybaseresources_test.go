@@ -2715,11 +2715,17 @@ func TestFederateIdentityCredentialsRefresh(t *testing.T) {
 			wantErrorCode: api.CloudErrorCodeInvalidClusterMSIPermissions,
 		},
 		{
-			name:         "rebuild failure is surfaced",
-			errors:       []error{forbiddenErr},
+			name:         "rebuild failure does not stop federation retries",
+			errors:       []error{forbiddenErr, nil},
 			rebuildErr:   rebuildErr,
 			wantRebuilds: 1,
-			wantErr:      rebuildErr,
+		},
+		{
+			name:          "failed rebuilds preserve cluster MSI error after retry exhaustion",
+			errors:        []error{forbiddenErr},
+			rebuildErr:    rebuildErr,
+			repeatLastErr: true,
+			wantErrorCode: api.CloudErrorCodeInvalidClusterMSIPermissions,
 		},
 		{
 			name:    "non-authorization error does not refresh or retry",
@@ -2736,6 +2742,7 @@ func TestFederateIdentityCredentialsRefresh(t *testing.T) {
 				controller := gomock.NewController(t)
 				credential := mock_azcore.NewMockTokenCredential(controller)
 				builds := 0
+				// The factory runs once during construction and again on every Rebuild.
 				refreshableCredential, err := refreshable.NewTokenCredential(func() (utilazcore.TokenCredential, error) {
 					builds++
 					if builds > 1 && tt.rebuildErr != nil {
@@ -2747,6 +2754,7 @@ func TestFederateIdentityCredentialsRefresh(t *testing.T) {
 
 				calls := 0
 				federatedCredentials := mock_armmsi.NewMockFederatedIdentityCredentialsClient(controller)
+				// Each inner ARM or outer authorization retry invokes this callback again.
 				federatedCredentials.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					DoAndReturn(func(context.Context, string, string, string, sdkmsi.FederatedIdentityCredential, *sdkmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions) (sdkmsi.FederatedIdentityCredentialsClientCreateOrUpdateResponse, error) {
 						index := calls
