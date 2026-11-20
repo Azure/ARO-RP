@@ -86,6 +86,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 				"westus",
 				"japanwest",
 				"uaecentral",
+				"taiwannorth",
 			}
 		case "gatewayLogLevel":
 			p.DefaultValue = "info"
