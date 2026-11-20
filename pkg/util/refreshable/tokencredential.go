@@ -10,6 +10,7 @@ import (
 
 	sdkazcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
@@ -21,9 +22,7 @@ type TokenCredential interface {
 }
 
 type tokenCredential struct {
-	env               env.Interface
-	tenantID          string
-	additionalTenants []string
+	newCredential func() (azcore.TokenCredential, error)
 
 	m    sync.RWMutex
 	cred azcore.TokenCredential
@@ -45,7 +44,7 @@ func (c *tokenCredential) GetToken(ctx context.Context, options policy.TokenRequ
 }
 
 func (c *tokenCredential) Rebuild() error {
-	cred, err := c.env.FPNewClientCertificateCredential(c.tenantID, c.additionalTenants)
+	cred, err := c.newCredential()
 	if err != nil {
 		return err
 	}
@@ -58,10 +57,20 @@ func (c *tokenCredential) Rebuild() error {
 }
 
 func NewFPTokenCredential(_env env.Interface, tenantID string, additionalTenants []string) (TokenCredential, error) {
+	return NewTokenCredential(func() (azcore.TokenCredential, error) {
+		return _env.FPNewClientCertificateCredential(tenantID, additionalTenants)
+	})
+}
+
+func NewClusterMSICredential(_env env.Interface, identity dataplane.UserAssignedIdentityCredentials) (TokenCredential, error) {
+	return NewTokenCredential(func() (azcore.TokenCredential, error) {
+		return dataplane.GetCredential(_env.Environment().AzureClientOptions(), identity)
+	})
+}
+
+func NewTokenCredential(newCredential func() (azcore.TokenCredential, error)) (TokenCredential, error) {
 	c := &tokenCredential{
-		env:               _env,
-		tenantID:          tenantID,
-		additionalTenants: additionalTenants,
+		newCredential: newCredential,
 	}
 
 	err := c.Rebuild()

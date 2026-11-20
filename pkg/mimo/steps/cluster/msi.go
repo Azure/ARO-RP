@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	asazsecrets "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 func EnsureClusterMsiCertificate(ctx context.Context) error {
@@ -46,6 +47,7 @@ func EnsureClusterMsiCertificate(ctx context.Context) error {
 	}
 
 	var msiDataplane dataplane.ClientFactory
+	var msiDataplaneCredential refreshable.TokenCredential
 	if taskEnv.FeatureIsSet(env.FeatureUseMockMsiRp) {
 		clusterMsiResourceId, err := oc.OpenShiftCluster.ClusterMsiResourceId()
 		if err != nil {
@@ -59,15 +61,16 @@ func EnsureClusterMsiCertificate(ctx context.Context) error {
 		}
 
 		// MSI dataplane client receives tenant from the bearer challenge, so we can't limit the allowed tenants in the credential
-		fpMSICred, err := taskEnv.FPNewClientCertificateCredential(taskEnv.TenantID(), []string{"*"})
+		fpMSICred, err := refreshable.NewFPTokenCredential(taskEnv, taskEnv.TenantID(), []string{"*"})
 		if err != nil {
 			return mimo.TerminalError(fmt.Errorf("failed to create FP credential for MSI dataplane: %w", err))
 		}
 
 		msiDataplane = dataplane.NewClientFactory(fpMSICred, taskEnv.MsiRpEndpoint(), msiDataplaneClientOptions)
+		msiDataplaneCredential = fpMSICred
 	}
 
-	result, err := cluster.EnsureClusterMsiCertificateWithParams(ctx, oc.ID, oc.OpenShiftCluster, taskEnv.Now, kvStore, msiDataplane)
+	result, err := cluster.EnsureClusterMsiCertificateWithParams(ctx, oc.ID, oc.OpenShiftCluster, taskEnv.Now, kvStore, msiDataplane, msiDataplaneCredential, th.Log())
 	if err != nil {
 		return mimo.TransientError(fmt.Errorf("failed to ensure cluster MSI certificate: %w", err))
 	}
