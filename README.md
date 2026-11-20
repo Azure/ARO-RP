@@ -156,7 +156,7 @@ For non‑urgent questions or suggestions, you may open an issue in this reposit
 
     * previewfeature: Allows toggling certain features that are not yet enabled by default.
 
-  * pkg/portal: Portal for running promql queries against a cluster or requesting a kubeconfig for a cluster.
+  * pkg/portal: Portal for running promql queries against a cluster.
 
   * pkg/proxy: Proxy service for portal kubeconfig cluster access.
 
