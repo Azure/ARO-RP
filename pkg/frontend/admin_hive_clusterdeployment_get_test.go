@@ -16,7 +16,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 )
 
@@ -84,14 +83,13 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_env := ti.env.(*mock_env.MockInterface)
 			var f *frontend
 			if tt.hiveEnabled {
 				clusterManager := mock_hive.NewMockClusterManager(controller)
 				clusterManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Any()).Return(&clusterDeployment, nil).Times(tt.expectedGetClusterDeploymentCallCount)
-				f, err = NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, clusterManager, nil, nil, nil, nil, nil)
+				f, err = NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, clusterManager, nil, nil, nil, nil, nil)
 			} else {
-				f, err = NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
+				f, err = NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
 			}
 
 			if err != nil {

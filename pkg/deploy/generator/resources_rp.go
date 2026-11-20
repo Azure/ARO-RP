@@ -410,6 +410,9 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"clustersInstallViaHive",
 		"clustersAdoptByHive",
 		"clusterDefaultInstallerPullspec",
+
+		// Zone overrides for cluster deployments
+		"overrideClusterDeploymentZonesOnOptIn",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
