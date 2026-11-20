@@ -156,6 +156,7 @@ func (g *generator) rpTemplate() *arm.Template {
 				"westus",
 				"japanwest",
 				"uaecentral",
+				"taiwannorth",
 			}
 		case "rpLogLevel", "portalLogLevel", "monitorLogLevel", "mimoActuatorLogLevel", "mimoSchedulerLogLevel":
 			p.DefaultValue = "info"
