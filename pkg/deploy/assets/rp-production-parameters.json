@@ -145,7 +145,8 @@
                 "uaenorth",
                 "westus",
                 "japanwest",
-                "uaecentral"
+                "uaecentral",
+                "taiwannorth"
             ]
         },
         "oidcStorageAccountName": {
