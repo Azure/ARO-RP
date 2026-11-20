@@ -89,15 +89,15 @@ func TestSelectOTelConfig(t *testing.T) {
 	// All profiles render without error for both control plane and worker nodes.
 	for _, profile := range []otelProfile{otelProfileMaxLogs, otelProfileReducedLogs, otelProfileMinimalLogs} {
 		for _, isControlPlane := range []bool{true, false} {
-			if _, err := renderOTelConfig(profile, isControlPlane); err != nil {
+			if _, err := renderOTelConfig(profile, isControlPlane, false); err != nil {
 				t.Errorf("renderOTelConfig(%q, isControlPlane=%v): %v", profile, isControlPlane, err)
 			}
 		}
 	}
 
 	// Control plane gets the audit pipeline; workers do not.
-	cp, _ := renderOTelConfig(otelProfileMaxLogs, true)
-	worker, _ := renderOTelConfig(otelProfileMaxLogs, false)
+	cp, _ := renderOTelConfig(otelProfileMaxLogs, true, false)
+	worker, _ := renderOTelConfig(otelProfileMaxLogs, false, false)
 	if !strings.Contains(cp, "logs/audit:") {
 		t.Fatal("control plane config missing audit pipeline")
 	}
@@ -106,13 +106,28 @@ func TestSelectOTelConfig(t *testing.T) {
 	}
 
 	// SyncLoop is a control-plane-only pattern gated by the isControlPlane template conditional.
-	cpMin, _ := renderOTelConfig(otelProfileMinimalLogs, true)
-	workerMin, _ := renderOTelConfig(otelProfileMinimalLogs, false)
+	cpMin, _ := renderOTelConfig(otelProfileMinimalLogs, true, false)
+	workerMin, _ := renderOTelConfig(otelProfileMinimalLogs, false, false)
 	if !strings.Contains(cpMin, "SyncLoop") {
 		t.Fatal("control plane minimal-logs config missing SyncLoop pattern")
 	}
 	if strings.Contains(workerMin, "SyncLoop") {
 		t.Fatal("worker minimal-logs config must not contain SyncLoop")
+	}
+
+	insecure, err := renderOTelConfig(otelProfileMinimalLogs, false, true)
+	if err != nil {
+		t.Fatalf("renderOTelConfig with gatewayTLSInsecure: %v", err)
+	}
+	if !strings.Contains(insecure, "insecure: true") {
+		t.Fatal("gatewayTLSInsecure=true config missing tls.insecure")
+	}
+	secure, err := renderOTelConfig(otelProfileMinimalLogs, false, false)
+	if err != nil {
+		t.Fatalf("renderOTelConfig without gatewayTLSInsecure: %v", err)
+	}
+	if strings.Contains(secure, "insecure: true") {
+		t.Fatal("gatewayTLSInsecure=false config must not set tls.insecure")
 	}
 }
 
@@ -120,7 +135,7 @@ func TestOTelConfigOTTLExpressionsAreBalanced(t *testing.T) {
 	for _, profile := range []otelProfile{otelProfileMaxLogs, otelProfileReducedLogs, otelProfileMinimalLogs} {
 		for _, isControlPlane := range []bool{true, false} {
 			t.Run(fmt.Sprintf("%s/cp=%v", profile, isControlPlane), func(t *testing.T) {
-				rendered, err := renderOTelConfig(profile, isControlPlane)
+				rendered, err := renderOTelConfig(profile, isControlPlane, false)
 				if err != nil {
 					t.Fatalf("renderOTelConfig(%q, %v): %v", profile, isControlPlane, err)
 				}
@@ -244,14 +259,14 @@ func checkOTTLParenBalance(expr string) error {
 
 func TestSelectOTelConfigFailsIfPrimaryAndFallbackRenderFail(t *testing.T) {
 	originalRender := renderOTelConfigFn
-	renderOTelConfigFn = func(otelProfile, bool) (string, error) {
+	renderOTelConfigFn = func(otelProfile, bool, bool) (string, error) {
 		return "", errors.New("render failure")
 	}
 	defer func() {
 		renderOTelConfigFn = originalRender
 	}()
 
-	_, err := selectOTelConfig(otelProfileMaxLogs, true)
+	_, err := selectOTelConfig(otelProfileMaxLogs, true, false)
 	if err == nil {
 		t.Fatal("expected selectOTelConfig to return an error")
 	}
@@ -260,7 +275,7 @@ func TestSelectOTelConfigFailsIfPrimaryAndFallbackRenderFail(t *testing.T) {
 func TestSelectOTelConfigFallsBackToMinimalLogs(t *testing.T) {
 	originalRender := renderOTelConfigFn
 	var calledProfiles []otelProfile
-	renderOTelConfigFn = func(profile otelProfile, _ bool) (string, error) {
+	renderOTelConfigFn = func(profile otelProfile, _ bool, _ bool) (string, error) {
 		calledProfiles = append(calledProfiles, profile)
 		if profile == otelProfileMinimalLogs {
 			return "minimal-config", nil
@@ -271,7 +286,7 @@ func TestSelectOTelConfigFallsBackToMinimalLogs(t *testing.T) {
 		renderOTelConfigFn = originalRender
 	}()
 
-	cfg, err := selectOTelConfig(otelProfileMaxLogs, true)
+	cfg, err := selectOTelConfig(otelProfileMaxLogs, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -700,7 +715,7 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 
 func TestGenevaLoggingResourcesReturnsErrorWhenOTelConfigRenderFails(t *testing.T) {
 	originalRender := renderOTelConfigFn
-	renderOTelConfigFn = func(otelProfile, bool) (string, error) {
+	renderOTelConfigFn = func(otelProfile, bool, bool) (string, error) {
 		return "", errors.New("render failure")
 	}
 	defer func() {
