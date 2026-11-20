@@ -11,13 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 var errClusterMsiNotPresentInResponse = errors.New("cluster msi not present in msi credentials response")
@@ -194,11 +194,11 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 		return err
 	}
 
-	var azureCred azcore.TokenCredential
+	var azureCred refreshable.TokenCredential
 	for _, identity := range kvSecret.ExplicitIdentities {
 		if identity.ResourceID != nil && strings.EqualFold(*identity.ResourceID, msiResourceId.String()) {
 			var err error
-			azureCred, err = dataplane.GetCredential(m.env.Environment().AzureClientOptions(), identity)
+			azureCred, err = refreshable.NewClusterMSICredential(m.env, identity)
 			if err != nil {
 				return fmt.Errorf("failed to get credential for msi identity %q: %v", msiResourceId, err)
 			}
@@ -223,7 +223,23 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 
 	m.clusterMsiFederatedIdentityCredentials = clusterMsiFederatedIdentityCredentials
 	m.userAssignedIdentities = userAssignedIdentities
+	m.clusterMsiCredential = azureCred
 	return nil
+}
+
+func (m *manager) refreshClusterMsiCredentialOnAuthorizationError(err error) error {
+	if !azureerrors.IsAuthorizationError(err) {
+		return err
+	}
+
+	rebuildErr := m.clusterMsiCredential.Rebuild()
+	if rebuildErr != nil {
+		// Preserve the ARM error so authorization retries continue. Returning the
+		// rebuild error would require broader changes to retry handling.
+		m.log.Printf("cluster MSI credential rebuild failed: %v", rebuildErr)
+	}
+
+	return err
 }
 
 func (m *manager) clusterIdentityIDs(ctx context.Context) error {

@@ -5,6 +5,7 @@ package azureerrors
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -22,6 +23,75 @@ import (
 // transcribed using github.com/shurcooL/go-goon.  Consider these errors
 // immutable, but feel free to add additional examples.  Rationale: it is really
 // easy to introduce regressions here.
+
+func TestIsAuthorizationError(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "nil"},
+		{name: "unrelated error", err: errors.New("operation failed")},
+		{name: "forbidden message without SDK status", err: errors.New("403 Forbidden")},
+		{name: "bare unauthorized status", err: &azcore.ResponseError{StatusCode: http.StatusUnauthorized}},
+		{name: "throttling", err: &azcore.ResponseError{StatusCode: http.StatusTooManyRequests}},
+		{
+			name: "track2 forbidden with arbitrary code",
+			err:  &azcore.ResponseError{StatusCode: http.StatusForbidden, ErrorCode: "SomePermissionError"},
+			want: true,
+		},
+		{
+			name: "wrapped track1 forbidden",
+			err:  fmt.Errorf("reading identity: %w", autorest.DetailedError{StatusCode: http.StatusForbidden}),
+			want: true,
+		},
+		{
+			name: "authorization code without forbidden status",
+			err:  &azcore.ResponseError{StatusCode: http.StatusBadRequest, ErrorCode: CODE_AUTHFAILED},
+			want: true,
+		},
+		{
+			name: "wrapped linked authorization code",
+			err:  fmt.Errorf("updating identity: %w", &azcore.ResponseError{StatusCode: http.StatusBadRequest, ErrorCode: CODE_LINKEDAUTHFAILED}),
+			want: true,
+		},
+		{
+			name: "nested deployment authorization failure",
+			err: &azure.ServiceError{
+				Code: CODE_DEPLOYFAILED,
+				Details: []map[string]any{{
+					"code":    CODE_FORBIDDEN,
+					"message": `{"error":{"code":"AuthorizationFailed"}}`,
+				}},
+			},
+			want: true,
+		},
+		{
+			name: "unauthorized client message",
+			err:  errors.New("AADSTS700016: application not found"),
+			want: true,
+		},
+		{
+			name: "invalid secret message",
+			err:  errors.New("AADSTS7000215: invalid client secret"),
+			want: true,
+		},
+		{
+			name: "deployment preflight missing permissions",
+			err: autorest.DetailedError{Original: &azure.ServiceError{
+				Code:    CODE_INVALIDTEMPL,
+				Message: "Authorization failed for template resource 'identity'",
+			}},
+			want: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsAuthorizationError(tt.err); got != tt.want {
+				t.Errorf("IsAuthorizationError(%v) = %v, want %v", tt.err, got, tt.want)
+			}
+		})
+	}
+}
 
 func TestHasAuthorizationFailedError(t *testing.T) {
 	for _, tt := range []struct {

@@ -45,14 +45,14 @@ func (m *manager) platformWorkloadIdentityIDs(ctx context.Context) error {
 
 		var identityDetails armmsi.UserAssignedIdentitiesClientGetResponse
 		err = utilarm.RetryableWith(ctx, func(err error) bool {
-			return azureerrors.IsStatusForbiddenError(err) || azureerrors.IsRetryableError(err)
+			return azureerrors.IsAuthorizationError(err) || azureerrors.IsRetryableError(err)
 		}, func() error {
 			var getErr error
 			identityDetails, getErr = m.userAssignedIdentities.Get(ctx, resourceId.ResourceGroupName, resourceId.Name, &armmsi.UserAssignedIdentitiesClientGetOptions{})
-			return getErr
+			return m.refreshClusterMsiCredentialOnAuthorizationError(getErr)
 		}, m.log, fmt.Sprintf("fetching platform workload identity '%s'", operatorName), &utilarm.RetryOptions{Steps: utilarm.RBACPropagationRetrySteps})
 		if err != nil {
-			if azureerrors.IsStatusUnauthorizedError(err) || azureerrors.IsStatusForbiddenError(err) || azureerrors.IsStatusNotFoundError(err) || azureerrors.IsRetryableError(err) {
+			if azureerrors.IsStatusUnauthorizedError(err) || azureerrors.IsAuthorizationError(err) || azureerrors.IsStatusNotFoundError(err) || azureerrors.IsRetryableError(err) {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fmt.Sprintf(`.properties.platformWorkloadIdentityProfile.platformWorkloadIdentities["%s"]`, operatorName), err.Error())
 			}
 			return fmt.Errorf("error occurred when retrieving platform workload identity '%s' details: %w", operatorName, err)
