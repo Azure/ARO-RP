@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,10 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
-	"k8s.io/client-go/util/retry"
 
-	"github.com/Azure/ARO-RP/pkg/operator"
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"sigs.k8s.io/yaml"
+
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
@@ -37,7 +37,6 @@ const (
 	otelE2ECollectorNS         = "aro-e2e-otel"
 	otelE2ECollectorName       = "otel-e2e-collector"
 	otelE2ECollectorContainer  = "collector"
-	otelE2ETelemetryDomain     = "telemetry.e2e.aro.local"
 	otelE2ECollectorMarker     = "[ARO-E2E-OTEL]"
 	otelE2EImageEnv            = "TELEMETRY_COLLECTOR_IMAGE"
 	otelE2ERegistryUserEnv     = "TELEMETRY_COLLECTOR_REGISTRY_USER"
@@ -45,42 +44,40 @@ const (
 	otelE2ETrustedRegistry     = "arosvcdev.azurecr.io"
 	otelE2ELoggingNS           = "openshift-azure-logging"
 	otelE2EOTLPPort            = int32(4317)
+
+	otelE2EExporterMaster     = "aro-e2e-otel-exporter-master"
+	otelE2EExporterWorker     = "aro-e2e-otel-exporter-worker"
+	otelE2EExporterConfigMap  = "aro-e2e-otel-exporter-config"
+	otelE2EOTelConfigMap      = "otel-config"
+	otelE2EMasterConfigKey    = "master-config.yaml"
+	otelE2EWorkerConfigKey    = "worker-config.yaml"
+	otelE2EGatewayExporterID  = "otlp_grpc/gateway"
+	otelE2EGatewayEndpointEnv = "GENEVA_GATEWAY_ENDPOINT"
+	otelE2EProdFileStorage    = "/var/lib/otelcol/file_storage"
 )
+
+var otelE2EExporterClones = []struct {
+	src       string
+	name      string
+	configKey string
+}{
+	{genevalogging.MasterDaemonsetName, otelE2EExporterMaster, otelE2EMasterConfigKey},
+	{genevalogging.WorkerDaemonsetName, otelE2EExporterWorker, otelE2EWorkerConfigKey},
+}
 
 var _ = Describe("OTEL gateway integration", func() {
 	var (
-		collectorClusterIP string
-		originalGatewayIP  string
-		originalGatewayDom string
-		originalInsecure   string
-		hadInsecureFlag    bool
-		collectorCreated   bool
-		clusterPatched     bool
+		collectorCreated bool
+		exporterCreated  bool
 	)
 
 	AfterEach(func(ctx context.Context) {
-		if clusterPatched {
-			By("restoring Cluster CR gateway fields and insecure flag")
-			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
-				if err != nil {
-					return err
-				}
-				co.Spec.GatewayPrivateEndpointIP = originalGatewayIP
-				co.Spec.GatewayTelemetryDomain = originalGatewayDom
-				if co.Spec.OperatorFlags == nil {
-					co.Spec.OperatorFlags = arov1alpha1.OperatorFlags{}
-				}
-				if hadInsecureFlag {
-					co.Spec.OperatorFlags[operator.GenevaLoggingOTelGatewayInsecure] = originalInsecure
-				} else {
-					delete(co.Spec.OperatorFlags, operator.GenevaLoggingOTelGatewayInsecure)
-				}
-				_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, co, metav1.UpdateOptions{})
-				return err
-			})
-			Expect(err).NotTo(HaveOccurred())
-			waitForOTelExporterDaemonSetsRestored(ctx, collectorClusterIP, originalGatewayIP)
+		if exporterCreated {
+			By("deleting test-owned otel exporters")
+			for _, clone := range otelE2EExporterClones {
+				CleanupK8sResource[*appsv1.DaemonSet](ctx, clients.Kubernetes.AppsV1().DaemonSets(otelE2ELoggingNS), clone.name)
+			}
+			CleanupK8sResource[*corev1.ConfigMap](ctx, clients.Kubernetes.CoreV1().ConfigMaps(otelE2ELoggingNS), otelE2EExporterConfigMap)
 		}
 
 		if collectorCreated {
@@ -99,41 +96,22 @@ var _ = Describe("OTEL gateway integration", func() {
 		collectorConfig, err := staticResources.ReadFile("static_resources/otel-collector.yaml")
 		Expect(err).NotTo(HaveOccurred())
 		collectorCreated = true
-		collectorClusterIP, err = deployOTelCollectorInCluster(ctx, image, string(collectorConfig))
+		collectorClusterIP, err := deployOTelCollectorInCluster(ctx, image, string(collectorConfig))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(net.ParseIP(collectorClusterIP)).NotTo(BeNil())
 		log.Infof("in-cluster collector Service ClusterIP: %s", collectorClusterIP)
 
-		By("waiting for collector to be healthy before pointing exporters at it")
+		By("waiting for collector to be healthy before exporting to it")
 		waitForOTelCollectorPodHealthy(ctx)
 
-		By("saving and patching Cluster CR to point exporters at in-cluster collector")
-		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-		originalGatewayIP = co.Spec.GatewayPrivateEndpointIP
-		originalGatewayDom = co.Spec.GatewayTelemetryDomain
-		originalInsecure, hadInsecureFlag = co.Spec.OperatorFlags[operator.GenevaLoggingOTelGatewayInsecure]
+		By("waiting for the operator to have rendered its otel exporters")
+		waitForOperatorOTelExporters(ctx)
 
-		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			co.Spec.GatewayPrivateEndpointIP = collectorClusterIP
-			co.Spec.GatewayTelemetryDomain = otelE2ETelemetryDomain
-			if co.Spec.OperatorFlags == nil {
-				co.Spec.OperatorFlags = arov1alpha1.OperatorFlags{}
-			}
-			co.Spec.OperatorFlags[operator.GenevaLoggingOTelGatewayInsecure] = operator.FlagTrue
-			_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, co, metav1.UpdateOptions{})
-			return err
-		})
-		Expect(err).NotTo(HaveOccurred())
-		clusterPatched = true
-
-		By("waiting for otel-exporter DaemonSets to roll out with new gateway target")
-		waitForOTelConfigInsecure(ctx)
-		waitForOTelExporterDaemonSetsReady(ctx, collectorClusterIP)
+		By("deploying test-owned copies of the operator-rendered otel exporters")
+		exporterCreated = true
+		endpoint := net.JoinHostPort(collectorClusterIP, strconv.Itoa(int(otelE2EOTLPPort)))
+		Expect(deployOTelE2EExporter(ctx, endpoint)).To(Succeed())
+		waitForOTelE2EExporterReady(ctx)
 
 		marker := "aro-e2e-otel-marker-" + strings.ToLower(uuid.DefaultGenerator.Generate())
 		for _, src := range []struct {
@@ -326,65 +304,146 @@ func registryServerFromImage(image string) (string, error) {
 	return parts[0], nil
 }
 
-func waitForOTelConfigInsecure(ctx context.Context) {
-	GinkgoHelper()
-	Eventually(func(g Gomega, ctx context.Context) {
-		cm, err := clients.Kubernetes.CoreV1().ConfigMaps(otelE2ELoggingNS).Get(ctx, "otel-config", metav1.GetOptions{})
-		g.Expect(err).NotTo(HaveOccurred())
-		g.Expect(cm.Data["master-config.yaml"] + cm.Data["worker-config.yaml"]).To(ContainSubstring("insecure: true"))
-	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-}
-
-func waitForOTelExporterDaemonSetsReady(ctx context.Context, wantHostAliasIP string) {
-	GinkgoHelper()
-	for _, daemonSetName := range []string{genevalogging.MasterDaemonsetName, genevalogging.WorkerDaemonsetName} {
-		Eventually(func(g Gomega, ctx context.Context) {
-			ds, err := clients.Kubernetes.AppsV1().DaemonSets(otelE2ELoggingNS).Get(ctx, daemonSetName, metav1.GetOptions{})
-			g.Expect(err).NotTo(HaveOccurred())
-			if wantHostAliasIP != "" {
-				g.Expect(otelHostAliasContains(ds.Spec.Template.Spec.HostAliases, wantHostAliasIP)).To(BeTrue(),
-					"DaemonSet %s missing hostAlias for %s", daemonSetName, wantHostAliasIP)
-			}
-			assertOTelExporterDaemonSetRolledOut(g, ds)
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+func deployOTelE2EExporter(ctx context.Context, endpoint string) error {
+	cm, err := clients.Kubernetes.CoreV1().ConfigMaps(otelE2ELoggingNS).Get(ctx, otelE2EOTelConfigMap, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("get %s configmap: %w", otelE2EOTelConfigMap, err)
 	}
-}
 
-func waitForOTelExporterDaemonSetsRestored(ctx context.Context, leaveIP, restoreIP string) {
-	GinkgoHelper()
-	for _, daemonSetName := range []string{genevalogging.MasterDaemonsetName, genevalogging.WorkerDaemonsetName} {
-		Eventually(func(g Gomega, ctx context.Context) {
-			ds, err := clients.Kubernetes.AppsV1().DaemonSets(otelE2ELoggingNS).Get(ctx, daemonSetName, metav1.GetOptions{})
-			g.Expect(err).NotTo(HaveOccurred())
-			if leaveIP != "" {
-				g.Expect(otelHostAliasContains(ds.Spec.Template.Spec.HostAliases, leaveIP)).To(BeFalse(),
-					"DaemonSet %s still has hostAlias for collector %s", daemonSetName, leaveIP)
-			}
-			if restoreIP != "" {
-				g.Expect(otelHostAliasContains(ds.Spec.Template.Spec.HostAliases, restoreIP)).To(BeTrue(),
-					"DaemonSet %s missing restored hostAlias for %s", daemonSetName, restoreIP)
-			}
-			assertOTelExporterDaemonSetRolledOut(g, ds)
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	patched := map[string]string{}
+	for _, clone := range otelE2EExporterClones {
+		rendered, ok := cm.Data[clone.configKey]
+		if !ok {
+			return fmt.Errorf("configmap %s has no %s key", otelE2EOTelConfigMap, clone.configKey)
+		}
+		cfg, err := otelConfigWithPlaintextGateway(rendered)
+		if err != nil {
+			return err
+		}
+		patched[clone.configKey] = cfg
 	}
-}
 
-func assertOTelExporterDaemonSetRolledOut(g Gomega, ds *appsv1.DaemonSet) {
-	GinkgoHelper()
-	g.Expect(ds.Status.DesiredNumberScheduled).To(BeNumerically(">", 0))
-	g.Expect(ds.Status.DesiredNumberScheduled).To(Equal(ds.Status.NumberAvailable))
-	g.Expect(ds.Status.DesiredNumberScheduled).To(Equal(ds.Status.UpdatedNumberScheduled))
-	g.Expect(ds.Status.CurrentNumberScheduled).To(Equal(ds.Status.NumberReady))
-	g.Expect(ds.Generation).To(Equal(ds.Status.ObservedGeneration))
-}
+	if _, err := clients.Kubernetes.CoreV1().ConfigMaps(otelE2ELoggingNS).Create(ctx, &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: otelE2EExporterConfigMap, Namespace: otelE2ELoggingNS},
+		Data:       patched,
+	}, metav1.CreateOptions{}); err != nil {
+		return fmt.Errorf("create exporter configmap: %w", err)
+	}
 
-func otelHostAliasContains(aliases []corev1.HostAlias, ip string) bool {
-	for _, ha := range aliases {
-		if ha.IP == ip {
-			return true
+	for _, clone := range otelE2EExporterClones {
+		src, err := clients.Kubernetes.AppsV1().DaemonSets(otelE2ELoggingNS).Get(ctx, clone.src, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("get %s daemonset: %w", clone.src, err)
+		}
+		ds, err := otelE2EExporterDaemonSet(src, clone.name, endpoint)
+		if err != nil {
+			return err
+		}
+		if _, err := clients.Kubernetes.AppsV1().DaemonSets(otelE2ELoggingNS).Create(ctx, ds, metav1.CreateOptions{}); err != nil {
+			return fmt.Errorf("create %s daemonset: %w", clone.name, err)
 		}
 	}
-	return false
+	return nil
+}
+
+func waitForOperatorOTelExporters(ctx context.Context) {
+	GinkgoHelper()
+	for _, clone := range otelE2EExporterClones {
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err := clients.Kubernetes.AppsV1().DaemonSets(otelE2ELoggingNS).Get(ctx, clone.src, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred(),
+				"operator has not created DaemonSet %s; the gateway target may not be ready", clone.src)
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	}
+}
+
+func otelConfigWithPlaintextGateway(rendered string) (string, error) {
+	var root map[string]any
+	if err := yaml.Unmarshal([]byte(rendered), &root); err != nil {
+		return "", fmt.Errorf("parse rendered otel config: %w", err)
+	}
+	exporters, ok := root["exporters"].(map[string]any)
+	if !ok {
+		return "", fmt.Errorf("rendered otel config has no exporters block")
+	}
+	gateway, ok := exporters[otelE2EGatewayExporterID].(map[string]any)
+	if !ok {
+		return "", fmt.Errorf("rendered otel config has no %q exporter", otelE2EGatewayExporterID)
+	}
+	gateway["tls"] = map[string]any{"insecure": true}
+
+	out, err := yaml.Marshal(root)
+	if err != nil {
+		return "", fmt.Errorf("render patched otel config: %w", err)
+	}
+	return string(out), nil
+}
+
+func otelE2EExporterDaemonSet(src *appsv1.DaemonSet, name, endpoint string) (*appsv1.DaemonSet, error) {
+	ds := src.DeepCopy()
+	labels := map[string]string{"app": name}
+
+	ds.ObjectMeta = metav1.ObjectMeta{
+		Name:      name,
+		Namespace: otelE2ELoggingNS,
+		Labels:    labels,
+	}
+	ds.Status = appsv1.DaemonSetStatus{}
+	ds.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
+	ds.Spec.Template.Labels = labels
+	ds.Spec.Template.Annotations = nil
+	ds.Spec.Template.Spec.HostAliases = nil
+
+	var sawConfigVolume, sawStorageVolume bool
+	for i := range ds.Spec.Template.Spec.Volumes {
+		v := &ds.Spec.Template.Spec.Volumes[i]
+		if v.ConfigMap != nil && v.ConfigMap.Name == otelE2EOTelConfigMap {
+			v.ConfigMap.Name = otelE2EExporterConfigMap
+			sawConfigVolume = true
+		}
+		if v.HostPath != nil && v.HostPath.Path == otelE2EProdFileStorage {
+			v.HostPath = nil
+			v.EmptyDir = &corev1.EmptyDirVolumeSource{}
+			sawStorageVolume = true
+		}
+	}
+	if !sawConfigVolume {
+		return nil, fmt.Errorf("daemonset %s has no %s configmap volume", src.Name, otelE2EOTelConfigMap)
+	}
+	if !sawStorageVolume {
+		return nil, fmt.Errorf("daemonset %s has no %s hostPath volume", src.Name, otelE2EProdFileStorage)
+	}
+
+	var sawEndpoint bool
+	for i := range ds.Spec.Template.Spec.Containers {
+		c := &ds.Spec.Template.Spec.Containers[i]
+		for j := range c.Env {
+			if c.Env[j].Name == otelE2EGatewayEndpointEnv {
+				c.Env[j].Value = endpoint
+				sawEndpoint = true
+			}
+		}
+	}
+	if !sawEndpoint {
+		return nil, fmt.Errorf("daemonset %s has no %s env var", src.Name, otelE2EGatewayEndpointEnv)
+	}
+	return ds, nil
+}
+
+func waitForOTelE2EExporterReady(ctx context.Context) {
+	GinkgoHelper()
+	for _, clone := range otelE2EExporterClones {
+		Eventually(func(g Gomega, ctx context.Context) {
+			ds, err := clients.Kubernetes.AppsV1().DaemonSets(otelE2ELoggingNS).Get(ctx, clone.name, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(ds.Status.DesiredNumberScheduled).To(BeNumerically(">", 0),
+				"DaemonSet %s scheduled onto no nodes", clone.name)
+			g.Expect(ds.Status.DesiredNumberScheduled).To(Equal(ds.Status.NumberAvailable))
+			g.Expect(ds.Status.DesiredNumberScheduled).To(Equal(ds.Status.UpdatedNumberScheduled))
+			g.Expect(ds.Status.CurrentNumberScheduled).To(Equal(ds.Status.NumberReady))
+			g.Expect(ds.Generation).To(Equal(ds.Status.ObservedGeneration))
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	}
 }
 
 func assertOTelSourceInCollectorLogs(ctx context.Context, marker, source string, extra ...string) {

@@ -355,10 +355,6 @@ extensions:
 exporters:
   {{ .GatewayExporterID }}:
     endpoint: ${env:GENEVA_GATEWAY_ENDPOINT}
-{{- if .GatewayTLSInsecure }}
-    tls:
-      insecure: true
-{{- end }}
     compression: gzip
     retry_on_failure:
       enabled: true
