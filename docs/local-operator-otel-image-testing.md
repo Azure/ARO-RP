@@ -130,6 +130,38 @@ oc -n openshift-azure-logging get pods -l app=otel-exporter-master -o wide
 oc -n openshift-azure-logging get configmap otel-config -o jsonpath='{.data.worker-config\.yaml}' | head -n 60
 ```
 
+## 8. Run the OTEL gateway e2e test
+
+`test/e2e/otel_gateway.go` deploys a synthetic telemetry collector in the
+cluster and checks that the operator-rendered exporter config delivers
+containers, journald and audit logs to it. It is meant for local clusters and
+is skipped unless `TELEMETRY_COLLECTOR_IMAGE` is set.
+
+Build the collector from `Dockerfile.telemetrycollector` and push it to the
+`openshift` namespace of the internal registry, which every namespace can pull
+from without a pull secret (registry login as in step 1):
+
+```bash
+COLLECTOR_TAG="$(git log -1 --format=%h -- telemetry/collector)"
+
+make image-telemetrycollector VERSION="${COLLECTOR_TAG}" \
+  TELEMETRY_COLLECTOR_IMAGE="${REGISTRY_HOST}/openshift/aro-e2e-telemetry-collector:${COLLECTOR_TAG}" \
+  REGISTRY=registry.access.redhat.com BUILDER_REGISTRY=quay.io
+docker push "${REGISTRY_HOST}/openshift/aro-e2e-telemetry-collector:${COLLECTOR_TAG}"
+```
+
+Run only this test, using the in-cluster pull spec of the pushed image:
+
+```bash
+export TELEMETRY_COLLECTOR_IMAGE="image-registry.openshift-image-registry.svc:5000/openshift/aro-e2e-telemetry-collector:${COLLECTOR_TAG}"
+make e2e.test
+./e2e.test -test.v --ginkgo.vv --ginkgo.focus "OTEL gateway integration"
+```
+
+The test needs the operator's `otel-exporter-master`/`otel-exporter-worker`
+DaemonSets to exist, which requires `spec.gatewayPrivateEndpointIP` to be set
+on the Cluster CR.
+
 ## Notes
 
 - `aro-operator-master` runs controllers like `GenevaLogging`; if it is scaled to `0`, profile/config changes may not reconcile.

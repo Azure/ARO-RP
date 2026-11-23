@@ -6,11 +6,9 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -34,16 +32,13 @@ import (
 )
 
 const (
-	otelE2ECollectorNS         = "aro-e2e-otel"
-	otelE2ECollectorName       = "otel-e2e-collector"
-	otelE2ECollectorContainer  = "collector"
-	otelE2ECollectorMarker     = "[ARO-E2E-OTEL]"
-	otelE2EImageEnv            = "TELEMETRY_COLLECTOR_IMAGE"
-	otelE2ERegistryUserEnv     = "TELEMETRY_COLLECTOR_REGISTRY_USER"
-	otelE2ERegistryPasswordEnv = "TELEMETRY_COLLECTOR_REGISTRY_PASSWORD"
-	otelE2ETrustedRegistry     = "arosvcdev.azurecr.io"
-	otelE2ELoggingNS           = "openshift-azure-logging"
-	otelE2EOTLPPort            = int32(4317)
+	otelE2ECollectorNS        = "aro-e2e-otel"
+	otelE2ECollectorName      = "otel-e2e-collector"
+	otelE2ECollectorContainer = "collector"
+	otelE2ECollectorMarker    = "[ARO-E2E-OTEL]"
+	otelE2EImageEnv           = "TELEMETRY_COLLECTOR_IMAGE"
+	otelE2ELoggingNS          = "openshift-azure-logging"
+	otelE2EOTLPPort           = int32(4317)
 
 	otelE2EExporterMaster     = "aro-e2e-otel-exporter-master"
 	otelE2EExporterWorker     = "aro-e2e-otel-exporter-worker"
@@ -146,13 +141,6 @@ func deployOTelCollectorInCluster(ctx context.Context, image, collectorConfig st
 		return "", fmt.Errorf("create collector configmap: %w", err)
 	}
 
-	var pullSecrets []corev1.LocalObjectReference
-	if secretName, err := maybeCreateOTelPullSecret(ctx, image); err != nil {
-		return "", err
-	} else if secretName != "" {
-		pullSecrets = []corev1.LocalObjectReference{{Name: secretName}}
-	}
-
 	labels := map[string]string{"app": otelE2ECollectorName}
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: otelE2ECollectorName, Namespace: otelE2ECollectorNS},
@@ -162,7 +150,6 @@ func deployOTelCollectorInCluster(ctx context.Context, image, collectorConfig st
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: labels},
 				Spec: corev1.PodSpec{
-					ImagePullSecrets: pullSecrets,
 					Containers: []corev1.Container{{
 						Name:  otelE2ECollectorContainer,
 						Image: image,
@@ -230,43 +217,6 @@ func deployOTelCollectorInCluster(ctx context.Context, image, collectorConfig st
 	return created.Spec.ClusterIP, nil
 }
 
-func maybeCreateOTelPullSecret(ctx context.Context, image string) (string, error) {
-	server, err := registryServerFromImage(image)
-	if err != nil {
-		return "", err
-	}
-	user := os.Getenv(otelE2ERegistryUserEnv)
-	pass := os.Getenv(otelE2ERegistryPasswordEnv)
-	if user == "" && pass == "" && server == otelE2ETrustedRegistry {
-		user = os.Getenv("AZURE_CLIENT_ID")
-		pass = os.Getenv("AZURE_CLIENT_SECRET")
-	}
-	if user == "" || pass == "" {
-		return "", nil
-	}
-	dockerConfig, err := json.Marshal(map[string]any{
-		"auths": map[string]any{
-			server: map[string]string{
-				"username": user,
-				"password": pass,
-			},
-		},
-	})
-	if err != nil {
-		return "", err
-	}
-	secretName := otelE2ECollectorName + "-pull"
-	_, err = clients.Kubernetes.CoreV1().Secrets(otelE2ECollectorNS).Create(ctx, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: otelE2ECollectorNS},
-		Type:       corev1.SecretTypeDockerConfigJson,
-		Data:       map[string][]byte{corev1.DockerConfigJsonKey: dockerConfig},
-	}, metav1.CreateOptions{})
-	if err != nil {
-		return "", fmt.Errorf("create pull secret: %w", err)
-	}
-	return secretName, nil
-}
-
 func waitForOTelCollectorPodHealthy(ctx context.Context) {
 	GinkgoHelper()
 	Eventually(func(g Gomega, ctx context.Context) {
@@ -286,22 +236,6 @@ func waitForOTelCollectorPodHealthy(ctx context.Context) {
 		}
 		g.Expect(ready).To(BeTrue(), "collector pod not Ready: %+v", pod.Status)
 	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-}
-
-func registryServerFromImage(image string) (string, error) {
-	hostPath := image
-	if strings.Contains(image, "://") {
-		u, err := url.Parse(image)
-		if err != nil {
-			return "", err
-		}
-		hostPath = strings.TrimPrefix(u.Host+u.Path, "/")
-	}
-	parts := strings.Split(hostPath, "/")
-	if len(parts) == 0 || parts[0] == "" || !strings.Contains(parts[0], ".") {
-		return "", fmt.Errorf("cannot derive registry server from image %q", image)
-	}
-	return parts[0], nil
 }
 
 func deployOTelE2EExporter(ctx context.Context, endpoint string) error {
