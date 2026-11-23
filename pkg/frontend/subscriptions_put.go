@@ -55,6 +55,7 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 	}
 
 	oldState := doc.Subscription.State
+	oldOverrides := doc.Subscription.Overrides
 
 	h := &codec.JsonHandle{
 		Indent: 4,
@@ -85,6 +86,10 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 		doc.Subscription.Properties.AccountOwner.Email != "" {
 		doc.Subscription.Properties.AccountOwner.Email = ""
 	}
+
+	// re-apply the subscription overrides, which are only changed in the admin
+	// API
+	doc.Subscription.Overrides = oldOverrides
 
 	if isCreate {
 		doc, err = dbSubscriptions.Create(ctx, doc)

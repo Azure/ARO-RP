@@ -708,8 +708,6 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			mocks: func(mi *mock_env.MockInterface) {
-				// set in the env during runtime
-				mi.EXPECT().OverrideClusterDeploymentZonesOnOptIn().Return([]string{"1", "2", "3"})
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				sub := newMockSubscriptionDocument()
@@ -717,22 +715,8 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 					Name:  api.FeatureFlagOverrideClusterDeploymentZones,
 					State: "Registered",
 				})
-				sub.Subscription.Properties.AvailabilityZones = &api.AvailabilityZonesProfile{
-					Location: "eastus",
-					ZoneMappings: []api.AvailabilityZoneMapping{
-						{
-							PhysicalZone: "1",
-							LogicalZone:  "2",
-						},
-						{
-							PhysicalZone: "2",
-							LogicalZone:  "3",
-						},
-						{
-							PhysicalZone: "3",
-							LogicalZone:  "1",
-						},
-					},
+				sub.Subscription.Overrides = &api.SubscriptionOverrides{
+					InstallationZones: []string{"2", "3", "1"},
 				}
 
 				f.AddSubscriptionDocuments(sub)
@@ -751,13 +735,11 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 			wantResponse:   getNewServicePrincipalOpenShiftClusterResponse(),
 		},
 		{
-			name: "create a new OpenShift Service Principal cluster - overridden zones, but zones are not set in env",
+			name: "create a new OpenShift Service Principal cluster - overridden non-zonal",
 			request: func() *v20250725.OpenShiftCluster {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			mocks: func(mi *mock_env.MockInterface) {
-				// set in the env during runtime
-				mi.EXPECT().OverrideClusterDeploymentZonesOnOptIn().Return(nil)
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				sub := newMockSubscriptionDocument()
@@ -765,22 +747,8 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 					Name:  api.FeatureFlagOverrideClusterDeploymentZones,
 					State: "Registered",
 				})
-				sub.Subscription.Properties.AvailabilityZones = &api.AvailabilityZonesProfile{
-					Location: "eastus",
-					ZoneMappings: []api.AvailabilityZoneMapping{
-						{
-							PhysicalZone: "1",
-							LogicalZone:  "2",
-						},
-						{
-							PhysicalZone: "2",
-							LogicalZone:  "3",
-						},
-						{
-							PhysicalZone: "3",
-							LogicalZone:  "1",
-						},
-					},
+				sub.Subscription.Overrides = &api.SubscriptionOverrides{
+					InstallationZones: []string{"NoNZonAl"},
 				}
 
 				f.AddSubscriptionDocuments(sub)
@@ -789,19 +757,21 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 			wantSystemDataEnriched: true,
 			wantDocuments: func(checker *testdatabase.Checker) {
 				checker.AddAsyncOperationDocuments(getAsynchronousOperationDocument(api.ProvisioningStateCreating, api.ProvisioningStateCreating))
-				checker.AddOpenShiftClusterDocuments(getServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateCreating, "", ""))
+
+				doc := getServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateCreating, "", "")
+				doc.OpenShiftCluster.Properties.Zones = []string{}
+
+				checker.AddOpenShiftClusterDocuments(doc)
 			},
 			wantStatusCode: http.StatusCreated,
 			wantResponse:   getNewServicePrincipalOpenShiftClusterResponse(),
 		},
 		{
-			name: "create a new OpenShift Service Principal cluster - overridden zones but mapping failure",
+			name: "create a new OpenShift Service Principal cluster - overridden zone AFEC flag but no zones set",
 			request: func() *v20250725.OpenShiftCluster {
 				return getServicePrincipalOpenShiftClusterRequest()
 			},
 			mocks: func(mi *mock_env.MockInterface) {
-				// set in the env during runtime
-				mi.EXPECT().OverrideClusterDeploymentZonesOnOptIn().Return([]string{"1", "2", "3"})
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				sub := newMockSubscriptionDocument()
@@ -812,9 +782,20 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 
 				f.AddSubscriptionDocuments(sub)
 			},
-			// do we want to expose this to the user?
-			wantStatusCode: http.StatusInternalServerError,
-			wantError:      "500: InternalServerError: : Internal server error.",
+			wantAsync:              true,
+			wantSystemDataEnriched: true,
+			wantDocuments: func(checker *testdatabase.Checker) {
+				checker.AddAsyncOperationDocuments(getAsynchronousOperationDocument(api.ProvisioningStateCreating, api.ProvisioningStateCreating))
+
+				doc := getServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateCreating, "", "")
+				// remains nil, will be populated later in the install process
+				// based on SKUs
+				doc.OpenShiftCluster.Properties.Zones = nil
+
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			wantStatusCode: http.StatusCreated,
+			wantResponse:   getNewServicePrincipalOpenShiftClusterResponse(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

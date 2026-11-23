@@ -260,19 +260,17 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 		// If the subscription has the relevant feature flag and the zones are
 		// not set directly (e.g. via the API) overwrite the default cluster
-		// zones with the ones in the environment
-		if feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagOverrideClusterDeploymentZones) &&
-			doc.OpenShiftCluster.Properties.Zones == nil {
-			overrideZones := f.env.OverrideClusterDeploymentZonesOnOptIn()
-			// if != nil we have an override set in the env
-			if overrideZones != nil {
-				log.Infof("feature '%s' set on subscription, overriding zones to %v", api.FeatureFlagOverrideClusterDeploymentZones, overrideZones)
-
-				logicalZonesForSub, err := subscription.Subscription.Properties.MapPhysicalZonesToLogicalZonesForSubscription(f.env.Location(), overrideZones)
-				if err != nil {
-					return nil, err
+		// zones with the ones in the Subscription overrides
+		if feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagOverrideClusterDeploymentZones) {
+			if subscription.Subscription.Overrides == nil || len(subscription.Subscription.Overrides.InstallationZones) == 0 {
+				log.Warn("this subscription has no overrides set, using default zones")
+			} else {
+				// non-zonal
+				if len(subscription.Subscription.Overrides.InstallationZones) == 1 && strings.EqualFold(subscription.Subscription.Overrides.InstallationZones[0], "nonzonal") {
+					doc.OpenShiftCluster.Properties.Zones = []string{}
+				} else {
+					doc.OpenShiftCluster.Properties.Zones = subscription.Subscription.Overrides.InstallationZones
 				}
-				doc.OpenShiftCluster.Properties.Zones = logicalZonesForSub
 			}
 		}
 
