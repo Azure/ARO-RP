@@ -364,6 +364,11 @@ exporters:
       queue_size: 1200
       num_consumers: 2
       storage: file_storage
+      batch:
+        sizer: bytes
+        min_size: 1048576      # 1 MiB
+        max_size: 3670016      # 3.5 MiB
+        flush_timeout: 1s
 
 service:
   telemetry:
