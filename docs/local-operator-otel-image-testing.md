@@ -162,6 +162,29 @@ The test needs the operator's `otel-exporter-master`/`otel-exporter-worker`
 DaemonSets to exist, which requires `spec.gatewayPrivateEndpointIP` to be set
 on the Cluster CR.
 
+### What the test covers, and what it doesn't
+
+The test copies the live `otel-config` ConfigMap and the
+`otel-exporter-master`/`otel-exporter-worker` DaemonSets into test-owned
+resources and points the copies at the synthetic collector. It verifies that
+the operator's exporters collect containers, journald and audit logs and
+deliver them over OTLP.
+
+- It tests the operator deployed on the cluster, not your local checkout. To
+  cover operator changes, first roll out your operator image (steps 3 and 5).
+- The copies override a few fields, so changes to these are not covered:
+  gateway TLS (plaintext instead of TLS), journald `start_at` (`end` instead of
+  `beginning`), the gateway endpoint and hostAliases, file storage (emptyDir
+  instead of the hostPath), and names, labels, annotations and the container
+  name.
+- The collector config is static (`test/e2e/static_resources/otel-collector.yaml`)
+  and is not the production gateway config in
+  `pkg/deploy/generator/scripts/gatewayVMSS.sh`. Changes to gateway
+  authentication (`gatewayauth`, mTLS), processors, routing and the Kusto/mdsd
+  exporters are not covered, and neither is exporter-to-gateway TLS
+  compatibility. Only the collector binary is real, when built from
+  `Dockerfile.telemetrycollector`.
+
 ## Notes
 
 - `aro-operator-master` runs controllers like `GenevaLogging`; if it is scaled to `0`, profile/config changes may not reconcile.
