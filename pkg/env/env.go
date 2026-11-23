@@ -123,7 +123,6 @@ type Interface interface {
 	LiveConfig() liveconfig.Manager
 	ClusterCertificates() azcertificates.Client
 	EnvironmentType() string
-	OverrideClusterDeploymentZonesOnOptIn() []string
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry, component ServiceName) (Interface, error) {
