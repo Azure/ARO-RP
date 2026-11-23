@@ -250,7 +250,7 @@ func deployOTelE2EExporter(ctx context.Context, endpoint string) error {
 		if !ok {
 			return fmt.Errorf("configmap %s has no %s key", otelE2EOTelConfigMap, clone.configKey)
 		}
-		cfg, err := otelConfigWithPlaintextGateway(rendered)
+		cfg, err := otelE2EExporterConfig(rendered)
 		if err != nil {
 			return err
 		}
@@ -291,7 +291,7 @@ func waitForOperatorOTelExporters(ctx context.Context) {
 	}
 }
 
-func otelConfigWithPlaintextGateway(rendered string) (string, error) {
+func otelE2EExporterConfig(rendered string) (string, error) {
 	var root map[string]any
 	if err := yaml.Unmarshal([]byte(rendered), &root); err != nil {
 		return "", fmt.Errorf("parse rendered otel config: %w", err)
@@ -305,6 +305,16 @@ func otelConfigWithPlaintextGateway(rendered string) (string, error) {
 		return "", fmt.Errorf("rendered otel config has no %q exporter", otelE2EGatewayExporterID)
 	}
 	gateway["tls"] = map[string]any{"insecure": true}
+
+	receivers, ok := root["receivers"].(map[string]any)
+	if !ok {
+		return "", fmt.Errorf("rendered otel config has no receivers block")
+	}
+	journald, ok := receivers["journald"].(map[string]any)
+	if !ok {
+		return "", fmt.Errorf("rendered otel config has no journald receiver")
+	}
+	journald["start_at"] = "end"
 
 	out, err := yaml.Marshal(root)
 	if err != nil {
