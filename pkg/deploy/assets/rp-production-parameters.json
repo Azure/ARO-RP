@@ -155,9 +155,6 @@
         "otelAuditQueueSize": {
             "value": ""
         },
-        "overrideClusterDeploymentZonesOnOptIn": {
-            "value": ""
-        },
         "portalAccessGroupIds": {
             "value": ""
         },

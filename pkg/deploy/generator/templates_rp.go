@@ -97,9 +97,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clustersInstallViaHive",
 			"clusterDefaultInstallerPullspec",
 			"clustersAdoptByHive",
-
-			// Zone override in region option
-			"overrideClusterDeploymentZonesOnOptIn",
 		)
 	}
 
@@ -117,8 +114,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"armClientId",
 			"gatewayDomains",
 			"globalDevopsServicePrincipalId",
-			"rpFeatures",
-			"overrideClusterDeploymentZonesOnOptIn":
+			"rpFeatures":
 			p.DefaultValue = ""
 		case "vmSize":
 			p.DefaultValue = "Standard_D2s_v3"
