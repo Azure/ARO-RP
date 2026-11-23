@@ -203,7 +203,7 @@ ENABLE_GIG_BRIDGE_MODE=1"
 
     local -i otel_mem_mib=$(( $(host_mem_mib) * 7 / 100 ))
     local -i otel_limit_mib=$(( otel_mem_mib * 80 / 100 ))
-    local -i otel_spike_mib=$(( otel_limit_mib * 12 / 100 ))
+    local -i otel_spike_mib=$(( otel_limit_mib * 20 / 100 ))
 
     # shellcheck disable=SC2034
     local -r gateway_otel_collector_conf="extensions:
@@ -219,6 +219,12 @@ receivers:
     protocols:
       grpc:
         endpoint: 0.0.0.0:4317
+        read_buffer_size: 65536 # 64 KiB
+        keepalive:
+          server_parameters:
+            max_connection_age: 60m
+            max_connection_age_grace: 1m
+            max_connection_idle: 15m
         middlewares:
           - id: gatewayauth
         auth:
