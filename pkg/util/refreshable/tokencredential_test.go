@@ -50,17 +50,11 @@ func (f transportFunc) Do(req *http.Request) (*http.Response, error) { return f(
 func TestTokenCredentialRebuildThroughBearerTokenPolicy(t *testing.T) {
 	ctx := context.Background()
 
-	controller := gomock.NewController(t)
-	_env := mock_env.NewMockInterface(controller)
-
 	built := 0
-	_env.EXPECT().FPNewClientCertificateCredential("tenant", nil).Times(2).DoAndReturn(
-		func(tenantID string, additionalTenants []string) (azcore.TokenCredential, error) {
-			built++
-			return &fakeCredential{token: fmt.Sprintf("token-%d", built)}, nil
-		})
-
-	cred, err := NewFPTokenCredential(_env, "tenant", nil)
+	cred, err := NewTokenCredential(func() (azcore.TokenCredential, error) {
+		built++
+		return &fakeCredential{token: fmt.Sprintf("token-%d", built)}, nil
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

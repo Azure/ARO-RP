@@ -130,7 +130,9 @@ type manager struct {
 	newACRTokenManager  func(env.Interface) (acrtoken.Manager, error)
 
 	msiDataplane                           dataplane.ClientFactory
+	msiDataplaneCredential                 refreshable.TokenCredential
 	clusterMsiKeyVaultStore                azsecrets.Client
+	clusterMsiCredential                   refreshable.TokenCredential
 	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient
 
 	openShiftClusterDocumentVersioner openShiftClusterDocumentVersioner
@@ -349,12 +351,13 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 			}
 
 			// MSI dataplane client receives tenant from the bearer challenge, so we can't limit the allowed tenants in the credential
-			fpMSICred, err := _env.FPNewClientCertificateCredential(_env.TenantID(), []string{"*"})
+			fpMSICred, err := refreshable.NewFPTokenCredential(_env, _env.TenantID(), []string{"*"})
 			if err != nil {
 				return nil, err
 			}
 
 			msiDataplane = dataplane.NewClientFactory(fpMSICred, _env.MsiRpEndpoint(), msiDataplaneClientOptions)
+			m.msiDataplaneCredential = fpMSICred
 		}
 		m.msiDataplane = msiDataplane
 

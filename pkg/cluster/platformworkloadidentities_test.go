@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -12,16 +13,21 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	sdkazcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	azruntime "github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utilarm "github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 	mock_armmsi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armmsi"
+	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -46,6 +52,7 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 	fooTarget := `.properties.platformWorkloadIdentityProfile.platformWorkloadIdentities["foo"]`
 	unauthorizedErr := azruntime.NewResponseError(&http.Response{StatusCode: http.StatusUnauthorized})
 	forbiddenErr := azruntime.NewResponseError(&http.Response{StatusCode: http.StatusForbidden})
+	authorizationErr := &sdkazcore.ResponseError{StatusCode: http.StatusBadRequest, ErrorCode: "AuthorizationFailed"}
 	notFoundErr := azruntime.NewResponseError(&http.Response{StatusCode: http.StatusNotFound})
 	tooManyRequestsErr := azruntime.NewResponseError(&http.Response{StatusCode: http.StatusTooManyRequests})
 
@@ -86,6 +93,9 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 		userAssignedIdentitiesClientMocks func(*mock_armmsi.MockUserAssignedIdentitiesClient)
 		wantErr                           string
 		wantIdentities                    *map[string]api.PlatformWorkloadIdentity
+		wantRebuilds                      int
+		rebuildErr                        error
+		transientLookupErr                error
 	}{
 		{
 			name: "error - CSP cluster",
@@ -169,7 +179,8 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 			wantErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fooTarget, unauthorizedErr.Error()).Error(),
 		},
 		{
-			name: "error - forbidden identity lookup becomes invalid platform workload identity",
+			name:         "error - forbidden identity lookup becomes invalid platform workload identity",
+			wantRebuilds: utilarm.RBACPropagationRetrySteps,
 			doc: &api.OpenShiftClusterDocument{
 				ID:  clusterId,
 				Key: clusterId,
@@ -238,33 +249,20 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 			wantErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fooTarget, tooManyRequestsErr.Error()).Error(),
 		},
 		{
-			name: "success - transient forbidden error retried then succeeds",
+			name: "error - credential rebuild failure is surfaced",
 			doc:  validWIClusterDoc,
 			userAssignedIdentitiesClientMocks: func(mock *mock_armmsi.MockUserAssignedIdentitiesClient) {
-				gomock.InOrder(
-					mock.EXPECT().Get(gomock.Any(), gomock.Eq(clusterRG), gomock.Eq(identityFooName), gomock.Any()).
-						Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, forbiddenErr),
-					mock.EXPECT().Get(gomock.Any(), gomock.Eq(clusterRG), gomock.Eq(identityFooName), gomock.Any()).
-						Return(armmsi.UserAssignedIdentitiesClientGetResponse{
-							Identity: armmsi.Identity{
-								Properties: &armmsi.UserAssignedIdentityProperties{
-									ClientID:    &identityFooClientId,
-									PrincipalID: &identityFooObjectId,
-								},
-							},
-						}, nil),
-				)
-
-				mock.EXPECT().Get(gomock.Any(), gomock.Eq(clusterRG), gomock.Eq(identityBarName), gomock.Any()).Times(1).
-					Return(armmsi.UserAssignedIdentitiesClientGetResponse{
-						Identity: armmsi.Identity{
-							Properties: &armmsi.UserAssignedIdentityProperties{
-								ClientID:    &identityBarClientId,
-								PrincipalID: &identityBarObjectId,
-							},
-						},
-					}, nil)
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, forbiddenErr)
 			},
+			wantRebuilds: 1,
+			rebuildErr:   errors.New("cannot rebuild cluster MSI credential"),
+		},
+		{
+			name:               "success - transient forbidden error retried then succeeds",
+			doc:                validWIClusterDoc,
+			wantRebuilds:       1,
+			transientLookupErr: forbiddenErr,
 			wantIdentities: &map[string]api.PlatformWorkloadIdentity{
 				identityFooName: {
 					ResourceID: identityFooResourceId,
@@ -277,6 +275,40 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 					ObjectID:   identityBarObjectId,
 				},
 			},
+		},
+		{
+			name:               "success - authorization error code retried without HTTP 403",
+			doc:                validWIClusterDoc,
+			wantRebuilds:       1,
+			transientLookupErr: authorizationErr,
+		},
+		{
+			name:               "success - unauthorized client message retried with fresh credential",
+			doc:                validWIClusterDoc,
+			wantRebuilds:       1,
+			transientLookupErr: errors.New("AADSTS700016: application not found"),
+		},
+		{
+			name: "error - authorization code exhausts retries as invalid platform workload identity",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterId,
+				Key: clusterId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								identityFooName: {ResourceID: identityFooResourceId},
+							},
+						},
+					},
+				},
+			},
+			userAssignedIdentitiesClientMocks: func(mock *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(utilarm.RBACPropagationRetrySteps).
+					Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, authorizationErr)
+			},
+			wantRebuilds: utilarm.RBACPropagationRetrySteps,
+			wantErr:      api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fooTarget, authorizationErr.Error()).Error(),
 		},
 		{
 			name: "success - transient too many requests error retried then succeeds",
@@ -319,7 +351,8 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 			},
 		},
 		{
-			name: "error - forbidden exhausts all retries",
+			name:         "error - forbidden exhausts all retries",
+			wantRebuilds: utilarm.RBACPropagationRetrySteps,
 			doc: &api.OpenShiftClusterDocument{
 				ID:  clusterId,
 				Key: clusterId,
@@ -382,9 +415,44 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 
+			builds := 0
+			credential := mock_azcore.NewMockTokenCredential(controller)
+			refreshableCredential, err := refreshable.NewTokenCredential(func() (azcore.TokenCredential, error) {
+				builds++
+				if builds > 1 && tt.rebuildErr != nil {
+					return nil, tt.rebuildErr
+				}
+				return credential, nil
+			})
+			require.NoError(t, err)
+
 			mockUserAssignedIdentities := mock_armmsi.NewMockUserAssignedIdentitiesClient(controller)
 			if tt.userAssignedIdentitiesClientMocks != nil {
 				tt.userAssignedIdentitiesClientMocks(mockUserAssignedIdentities)
+			}
+			if tt.transientLookupErr != nil {
+				gomock.InOrder(
+					mockUserAssignedIdentities.EXPECT().Get(gomock.Any(), clusterRG, identityFooName, gomock.Any()).
+						Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, tt.transientLookupErr),
+					mockUserAssignedIdentities.EXPECT().Get(gomock.Any(), clusterRG, identityFooName, gomock.Any()).
+						Return(armmsi.UserAssignedIdentitiesClientGetResponse{
+							Identity: armmsi.Identity{
+								Properties: &armmsi.UserAssignedIdentityProperties{
+									ClientID:    &identityFooClientId,
+									PrincipalID: &identityFooObjectId,
+								},
+							},
+						}, nil),
+				)
+				mockUserAssignedIdentities.EXPECT().Get(gomock.Any(), clusterRG, identityBarName, gomock.Any()).
+					Return(armmsi.UserAssignedIdentitiesClientGetResponse{
+						Identity: armmsi.Identity{
+							Properties: &armmsi.UserAssignedIdentityProperties{
+								ClientID:    &identityBarClientId,
+								PrincipalID: &identityBarObjectId,
+							},
+						},
+					}, nil)
 			}
 
 			openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
@@ -400,10 +468,16 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 				doc:                    tt.doc,
 				db:                     openShiftClustersDatabase,
 				userAssignedIdentities: mockUserAssignedIdentities,
+				clusterMsiCredential:   refreshableCredential,
 			}
 
-			err := m.platformWorkloadIdentityIDs(ctx)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			err = m.platformWorkloadIdentityIDs(ctx)
+			if tt.rebuildErr != nil {
+				require.ErrorIs(t, err, tt.rebuildErr)
+			} else {
+				utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			}
+			assert.Equal(t, tt.wantRebuilds, builds-1)
 
 			if err == nil {
 				err = m.persistPlatformWorkloadIdentityIDs(ctx)
