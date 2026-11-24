@@ -19,11 +19,12 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
-	"github.com/Azure/ARO-RP/pkg/api/v20250725"
+	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -256,6 +257,33 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		if err != nil {
 			return nil, err
 		}
+
+		// If the subscription has the relevant feature flag and the zones are
+		// not set directly (e.g. via the API) overwrite the default cluster
+		// zones with the ones in the environment
+		if feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagOverrideClusterDeploymentZones) &&
+			doc.OpenShiftCluster.Properties.Zones == nil {
+			overrideZones := f.env.OverrideClusterDeploymentZonesOnOptIn()
+			// if != nil we have an override set in the env
+			if overrideZones != nil {
+				log.Infof("feature '%s' set on subscription, overriding zones to %v", api.FeatureFlagOverrideClusterDeploymentZones, overrideZones)
+
+				logicalZonesForSub, err := subscription.Subscription.Properties.MapPhysicalZonesToLogicalZonesForSubscription(f.env.Location(), overrideZones)
+				if err != nil {
+					// when the subscription has no zone mapping for this region
+					// it is not 500, so use a specific CloudError
+					log.Warnf("failed to map override zones for feature '%s' in location '%s': %s", api.FeatureFlagOverrideClusterDeploymentZones, f.env.Location(), err)
+					return nil, api.NewCloudError(
+						http.StatusInternalServerError,
+						api.CloudErrorCodeInternalServerError,
+						"",
+						fmt.Sprintf("Could not apply the availability zone override in location '%s'", f.env.Location()),
+					)
+				}
+				doc.OpenShiftCluster.Properties.Zones = logicalZonesForSub
+			}
+		}
+
 		ext = putOrPatchClusterParameters.converter.ToExternal(doc.OpenShiftCluster)
 
 		err = f.ValidateNewCluster(ctx, subscription, doc.OpenShiftCluster, putOrPatchClusterParameters.staticValidator, ext, putOrPatchClusterParameters.path)
