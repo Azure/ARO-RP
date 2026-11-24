@@ -255,10 +255,6 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 	)
 
 	parts = append(parts,
-		"'CLUSTERMDSDIMAGE=''"+version.MdsdImage("")+"''\n'",
-	)
-
-	parts = append(parts,
 		"'LOCATION=$(base64 -d <<<'''",
 		"base64(resourceGroup().location)",
 		"''')\n'",
