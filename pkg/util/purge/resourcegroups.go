@@ -6,6 +6,7 @@ package purge
 import (
 	"context"
 	"sort"
+	"sync"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -22,45 +23,51 @@ func (rc *ResourceCleaner) CleanResourceGroups(ctx context.Context) error {
 	}
 
 	sort.Slice(gs, func(i, j int) bool { return *gs[i].Name < *gs[j].Name })
+	var wg sync.WaitGroup
 	for _, g := range gs {
-		err := rc.cleanResourceGroup(ctx, g)
-		if err != nil {
-			rc.log.Error(err)
+		if !rc.shouldDelete(g, rc.log) {
+			continue
 		}
+
+		if rc.dryRun {
+			rc.log.Printf("DRY-RUN: Would delete ResourceGroup: %s", *g.Name)
+			continue
+		}
+
+		wg.Go(func() {
+			err := rc.cleanResourceGroup(ctx, g)
+			if err != nil {
+				rc.log.Errorf("error cleaning resource group %v: %v", *g.Name, err)
+			}
+		})
 	}
+	wg.Wait()
 
 	return nil
 }
 
-// cleanResourceGroup checkes whether the resource group can be deleted if yes proceed to clean the group in an order:
+// cleanResourceGroup cleans the group in an order:
 //   - unassign subnets
 //   - clean private links
 //   - checks ARO presence -> store app object ID for futher use
 //   - deletes resource group
 func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
-	if rc.shouldDelete(resourceGroup, rc.log) {
-		if rc.dryRun {
-			rc.log.Printf("DRY-RUN: Would delete ResourceGroup: %s", *resourceGroup.Name)
-			return nil
-		}
-
-		rc.log.Printf("Deleting ResourceGroup: %s", *resourceGroup.Name)
-		err := rc.cleanNetworking(ctx, resourceGroup)
-		if err != nil {
-			return err
-		}
-
-		err = rc.cleanPrivateLink(ctx, resourceGroup)
-		if err != nil {
-			return err
-		}
-
-		_, err = rc.resourcegroupscli.Delete(ctx, *resourceGroup.Name)
-		if err != nil {
-			return err
-		}
-		rc.log.Printf("Deleted ResourceGroup: %s", *resourceGroup.Name)
+	rc.log.Printf("Deleting ResourceGroup: %s", *resourceGroup.Name)
+	err := rc.cleanNetworking(ctx, resourceGroup)
+	if err != nil {
+		return err
 	}
+
+	err = rc.cleanPrivateLink(ctx, resourceGroup)
+	if err != nil {
+		return err
+	}
+
+	err = rc.resourcegroupscli.DeleteAndWait(ctx, *resourceGroup.Name)
+	if err != nil {
+		return err
+	}
+	rc.log.Printf("Deleted ResourceGroup: %s", *resourceGroup.Name)
 
 	return nil
 }
