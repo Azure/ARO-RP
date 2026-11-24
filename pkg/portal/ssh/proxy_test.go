@@ -10,11 +10,9 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net"
-	"net/http"
 	"strings"
 	"testing"
 
-	"github.com/gorilla/mux"
 	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
@@ -566,13 +564,10 @@ func TestProxy(t *testing.T) {
 
 			hook, log := testlog.New()
 
-			s, err := New(nil, nil, log, nil, hostKey, nil, dbOpenShiftClusters, dbPortal, dialer)
+			s, err := New(nil, nil, log, nil, hostKey, dbOpenShiftClusters, dbPortal, dialer)
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			r := mux.NewRouter()
-			r.Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/ssh/new").HandlerFunc(s.New)
 
 			done := make(chan struct{})
 

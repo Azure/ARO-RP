@@ -34,7 +34,7 @@ func NewTestPortal(_env env.Core, dbOpenShiftClusters database.OpenShiftClusters
 	otelAudit := testlog.NewOtelAuditClient()
 
 	l := listener.NewListener()
-	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, otelAudit, l, nil, nil, "", nil, nil, "", nil, nil, make([]byte, 32), nil, nonElevatedGroupIDs, elevatedGroupIDs, nil, nil, nil).(*portal)
+	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, otelAudit, l, nil, nil, "", nil, nil, "", nil, nil, make([]byte, 32), nil, nonElevatedGroupIDs, nil, nil, nil).(*portal)
 
 	return &testPortal{
 		p:             p,
@@ -88,13 +88,7 @@ func (p *testPortal) Request(method string, path string, authenticated bool, ele
 	}
 
 	if authenticated {
-		var groups []string
-		if elevated {
-			groups = elevatedGroupIDs
-		} else {
-			groups = nonElevatedGroupIDs
-		}
-		err = addAuth(req, groups)
+		err = addAuth(req, nonElevatedGroupIDs)
 		if err != nil {
 			return nil, err
 		}
