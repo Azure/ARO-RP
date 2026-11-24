@@ -182,7 +182,7 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 	var releases []pkgmirror.Node
 	if len(flag.Args()) == 1 {
 		mirrorLog.Print("reading release graph")
-		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 12))
+		releases, err = pkgmirror.AddFromGraph(ctx, version.NewVersion(4, 12))
 		if err != nil {
 			return err
 		}
@@ -199,7 +199,7 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 					return err
 				}
 
-				node, err := pkgmirror.VersionInfo(vers)
+				node, err := pkgmirror.VersionInfo(ctx, vers)
 				if err != nil {
 					return err
 				}

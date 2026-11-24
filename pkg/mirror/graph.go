@@ -4,6 +4,7 @@ package mirror
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"mime"
@@ -39,8 +40,8 @@ func ValidateReleaseVersion(releaseVersion string) error {
 
 // AddFromGraph adds all nodes whose version is of the form x.y.z (no suffix)
 // and >= min
-func AddFromGraph(min version.Version) ([]Node, error) {
-	req, err := http.NewRequest(http.MethodGet, "https://amd64.ocp.releases.ci.openshift.org/graph", nil)
+func AddFromGraph(ctx context.Context, min version.Version) ([]Node, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://amd64.ocp.releases.ci.openshift.org/graph", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -100,8 +101,8 @@ func AddFromGraph(min version.Version) ([]Node, error) {
 }
 
 // VersionInfo fetches the Node containing the version payload
-func VersionInfo(ver version.Version) (Node, error) {
-	nodes, err := AddFromGraph(ver)
+func VersionInfo(ctx context.Context, ver version.Version) (Node, error) {
+	nodes, err := AddFromGraph(ctx, ver)
 	if err != nil {
 		return Node{}, err
 	}
