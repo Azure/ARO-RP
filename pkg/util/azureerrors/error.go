@@ -53,6 +53,16 @@ const (
 	VMProfileWorker
 )
 
+func IsAuthorizationError(err error) bool {
+	return err != nil &&
+		(IsUnauthorizedClientError(err) ||
+			IsStatusForbiddenError(err) ||
+			HasAuthorizationFailedError(err) ||
+			HasLinkedAuthorizationFailedError(err) ||
+			IsInvalidSecretError(err) ||
+			IsDeploymentMissingPermissionsError(err))
+}
+
 // HasAuthorizationFailedError returns true it the error is, or contains, an
 // AuthorizationFailed error
 func HasAuthorizationFailedError(err error) bool {

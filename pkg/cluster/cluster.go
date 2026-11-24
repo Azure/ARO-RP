@@ -131,6 +131,7 @@ type manager struct {
 
 	msiDataplane                           dataplane.ClientFactory
 	clusterMsiKeyVaultStore                azsecrets.Client
+	clusterMsiCredential                   refreshable.TokenCredential
 	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient
 
 	openShiftClusterDocumentVersioner openShiftClusterDocumentVersioner
