@@ -4,7 +4,24 @@ All need `api-version=admin`.
 
 ## GET /admin/RESOURCE_ID/maintenancemanifests
 
-Returns a list of MIMO maintenance manifests.
+Returns a list of MIMO maintenance manifests for the cluster.
+
+### Query parameters
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `limit` | int | `100` | Max items to return |
+| `$skipToken` | string | | Continuation token for paging |
+| `after` | int64 (unix seconds) | `now - 30 days` when both `after` and `before` are omitted | Inclusive lower bound on `runAfter` |
+| `before` | int64 (unix seconds) | none | Inclusive upper bound on `runAfter` |
+
+When neither `after` nor `before` is provided, only manifests with `runAfter >= now - 30d` are returned. Future scheduled manifests (with `runAfter` in the future) are still included. Pass `after=0` (and optionally `before=...`) to widen the window.
+
+### Example
+
+```sh
+curl -k "https://localhost:8443/admin/subscriptions/SUBSCRIPTION_ID/resourcegroups/RESOURCE_GROUP/providers/microsoft.redhatopenshift/openshiftclusters/CLUSTER_NAME/maintenancemanifests?api-version=admin&after=1700000000&before=1730000000"
+```
 
 ## PUT /admin/RESOURCE_ID/maintenancemanifests
 

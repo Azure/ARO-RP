@@ -10,13 +10,17 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
+
+const maintenanceManifestListDefaultLookback = 30 * 24 * time.Hour
 
 func (f *frontend) getAdminMaintManifests(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -37,6 +41,11 @@ func (f *frontend) _getAdminMaintManifests(ctx context.Context, r *http.Request,
 	limit, err := strconv.Atoi(limitstr)
 	if err != nil {
 		limit = 100
+	}
+
+	opts, err := parseMaintenanceManifestListOptions(r, time.Now())
+	if err != nil {
+		return nil, err
 	}
 
 	converter := f.apis[admin.APIVersion].MaintenanceManifestConverter
@@ -65,7 +74,7 @@ func (f *frontend) _getAdminMaintManifests(ctx context.Context, r *http.Request,
 		return nil, err
 	}
 
-	i, err := dbMaintenanceManifests.GetByClusterResourceID(ctx, resourceID, skipToken)
+	i, err := dbMaintenanceManifests.GetByClusterResourceID(ctx, resourceID, skipToken, opts)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
@@ -93,4 +102,40 @@ func (f *frontend) _getAdminMaintManifests(ctx context.Context, r *http.Request,
 	}
 
 	return json.MarshalIndent(converter.ToExternalList(docList, nextLink, true), "", "    ")
+}
+
+func parseMaintenanceManifestListOptions(r *http.Request, now time.Time) (database.MaintenanceManifestListOptions, error) {
+	q := r.URL.Query()
+	afterStr := q.Get("after")
+	beforeStr := q.Get("before")
+
+	var opts database.MaintenanceManifestListOptions
+
+	if afterStr == "" && beforeStr == "" {
+		opts.After = now.Add(-maintenanceManifestListDefaultLookback).Unix()
+		return opts, nil
+	}
+
+	if afterStr != "" {
+		after, err := strconv.ParseInt(afterStr, 10, 64)
+		if err != nil {
+			return opts, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "after", "after must be a unix epoch timestamp")
+		}
+		opts.After = after
+	} else {
+		opts.After = now.Add(-maintenanceManifestListDefaultLookback).Unix()
+	}
+
+	if beforeStr != "" {
+		before, err := strconv.ParseInt(beforeStr, 10, 64)
+		if err != nil {
+			return opts, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "before", "before must be a unix epoch timestamp")
+		}
+		if before < opts.After {
+			return opts, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "before", "before must be greater than or equal to after")
+		}
+		opts.Before = &before
+	}
+
+	return opts, nil
 }
