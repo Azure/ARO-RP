@@ -53,5 +53,7 @@ type RegisteredFeatureProfile struct {
 // SubscriptionOverrides represents ARO-specific overrides for this Subscription
 // in this region
 type SubscriptionOverrides struct {
+	MissingFields
+
 	InstallationZones []string `json:"installationZones,omitempty"`
 }
