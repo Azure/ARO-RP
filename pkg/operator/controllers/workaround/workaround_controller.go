@@ -45,7 +45,7 @@ type Reconciler struct {
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
 		log:         log,
-		workarounds: []Workaround{NewSystemReserved(log, client), NewCopyFailWorkaround(log, client), NewDirtyfragWorkaround(log, client), NewCVE202698432Workaround(log, client)},
+		workarounds: []Workaround{NewSystemReserved(log, client), NewCopyFailWorkaround(log, client), NewDirtyfragWorkaround(log, client), NewCVE202698432Workaround(log, client), NewIDMSWorkaround(log, client)},
 		client:      client,
 	}
 }
@@ -108,6 +108,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Watches(&configv1.ClusterVersion{}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(predicates.ClusterVersion)).
+		// re-reconcile quickly if the ImageDigestMirrorSet is deleted or changed
+		Watches(&configv1.ImageDigestMirrorSet{}, &handler.EnqueueRequestForObject{}).
 		Named(ControllerName).
 		Complete(r)
 }

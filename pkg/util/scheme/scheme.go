@@ -25,6 +25,7 @@ import (
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	operatorv1alpha1 "github.com/openshift/api/operator/v1alpha1"
 	samplesv1 "github.com/openshift/api/samples/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
@@ -54,6 +55,7 @@ func init() {
 	utilruntime.Must(consolev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(monitoringv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(operatorv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(cloudcredentialv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(hivev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(hivev1alpha1.AddToScheme(scheme.Scheme))
