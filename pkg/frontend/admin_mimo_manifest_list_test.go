@@ -124,7 +124,7 @@ func TestMIMOListManifests(t *testing.T) {
 			},
 			queryExtra: "&after=0",
 			wantResponse: &admin.MaintenanceManifestList{
-				NextLink: "https://mockrefererhost/?%24skipToken=" + url.QueryEscape(base64.StdEncoding.EncodeToString([]byte("FAKE1"))),
+				NextLink: "https://mockrefererhost/?%24skipToken=" + url.QueryEscape(base64.StdEncoding.EncodeToString([]byte("FAKE1"))) + "&after=0",
 				MaintenanceManifests: []*admin.MaintenanceManifest{
 					{
 						ID:                "07070707-0707-0707-0707-070707070001",

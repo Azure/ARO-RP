@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -96,12 +97,40 @@ func (f *frontend) _getAdminMaintManifests(ctx context.Context, r *http.Request,
 		}
 	}
 
-	nextLink, err := f.buildNextLink(r.Header.Get("Referer"), i.Continuation())
+	// Embed the resolved time window in nextLink so page 2+ does not recompute
+	// a drifting default after (or fail when only before was originally supplied).
+	referer, err := refererWithMaintenanceManifestListOptions(r.Header.Get("Referer"), opts)
+	if err != nil {
+		return nil, err
+	}
+
+	nextLink, err := f.buildNextLink(referer, i.Continuation())
 	if err != nil {
 		return nil, err
 	}
 
 	return json.MarshalIndent(converter.ToExternalList(docList, nextLink, true), "", "    ")
+}
+
+func refererWithMaintenanceManifestListOptions(referer string, opts database.MaintenanceManifestListOptions) (string, error) {
+	if referer == "" {
+		return referer, nil
+	}
+
+	u, err := url.Parse(referer)
+	if err != nil {
+		return "", err
+	}
+
+	q := u.Query()
+	q.Set("after", strconv.FormatInt(opts.After, 10))
+	if opts.Before != nil {
+		q.Set("before", strconv.FormatInt(*opts.Before, 10))
+	} else {
+		q.Del("before")
+	}
+	u.RawQuery = q.Encode()
+	return u.String(), nil
 }
 
 func parseMaintenanceManifestListOptions(r *http.Request, now time.Time) (database.MaintenanceManifestListOptions, error) {
