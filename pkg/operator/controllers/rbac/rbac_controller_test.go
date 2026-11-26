@@ -4,11 +4,14 @@ package rbac
 // Licensed under the Apache License 2.0.
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -21,11 +24,24 @@ import (
 )
 
 func TestRBAC(t *testing.T) {
+	enabledCluster := &arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: arov1alpha1.SingletonClusterName,
+		},
+		Spec: arov1alpha1.ClusterSpec{
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				operator.RbacEnabled: operator.FlagTrue,
+			},
+		},
+	}
+
 	testCases := []struct {
-		desc        string
-		objects     []client.Object
-		wantCreated map[string]int
-		wantErr     string
+		desc                     string
+		objects                  []client.Object
+		wantCreated              map[string]int
+		wantUpdated              map[string]int
+		wantSREReadOnlyResources []string
+		wantErr                  string
 	}{
 		{
 			desc:    "no cluster obj fails",
@@ -44,15 +60,32 @@ func TestRBAC(t *testing.T) {
 			wantCreated: map[string]int{},
 		},
 		{
-			desc: "enabled",
+			desc:    "enabled",
+			objects: []client.Object{enabledCluster.DeepCopy()},
+			wantCreated: map[string]int{
+				"ClusterRole//system:aro-diagnostics":        1,
+				"ClusterRoleBinding//system:aro-diagnostics": 1,
+				"ClusterRole//system:aro-sre":                1,
+				"ClusterRoleBinding//system:aro-sre":         1,
+			},
+			wantSREReadOnlyResources: []string{
+				"validatingadmissionpolicies",
+				"validatingadmissionpolicybindings",
+			},
+		},
+		{
+			desc: "enabled, existing system:aro-sre without validating admission policy access is updated",
 			objects: []client.Object{
-				&arov1alpha1.Cluster{
+				enabledCluster.DeepCopy(),
+				&rbacv1.ClusterRole{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: arov1alpha1.SingletonClusterName,
+						Name: "system:aro-sre",
 					},
-					Spec: arov1alpha1.ClusterSpec{
-						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.RbacEnabled: operator.FlagTrue,
+					Rules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{"admissionregistration.k8s.io"},
+							Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
+							Verbs:     []string{"get", "list", "watch"},
 						},
 					},
 				},
@@ -60,8 +93,14 @@ func TestRBAC(t *testing.T) {
 			wantCreated: map[string]int{
 				"ClusterRole//system:aro-diagnostics":        1,
 				"ClusterRoleBinding//system:aro-diagnostics": 1,
-				"ClusterRole//system:aro-sre":                1,
 				"ClusterRoleBinding//system:aro-sre":         1,
+			},
+			wantUpdated: map[string]int{
+				"ClusterRole//system:aro-sre": 1,
+			},
+			wantSREReadOnlyResources: []string{
+				"validatingadmissionpolicies",
+				"validatingadmissionpolicybindings",
 			},
 		},
 	}
@@ -90,6 +129,25 @@ func TestRBAC(t *testing.T) {
 
 			diff, _ := testclienthelper.CompareTally(tC.wantCreated, createTally)
 			r.Empty(diff)
+
+			diff, _ = testclienthelper.CompareTally(tC.wantUpdated, updateTally)
+			r.Empty(diff)
+
+			if len(tC.wantSREReadOnlyResources) > 0 {
+				role := &rbacv1.ClusterRole{}
+				r.NoError(cl.Get(t.Context(), types.NamespacedName{Name: "system:aro-sre"}, role))
+
+				for _, resource := range tC.wantSREReadOnlyResources {
+					var verbs []string
+					for _, rule := range role.Rules {
+						if slices.Contains(rule.APIGroups, "admissionregistration.k8s.io") &&
+							slices.Contains(rule.Resources, resource) {
+							verbs = append(verbs, rule.Verbs...)
+						}
+					}
+					r.ElementsMatch([]string{"get", "list", "watch"}, verbs, resource)
+				}
+			}
 		})
 	}
 }
