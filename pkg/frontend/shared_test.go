@@ -253,6 +253,19 @@ func (ti *testInfra) done() {
 	}
 }
 
+// Run the given frontend and close/stop all workers when the test completes.
+func (ti *testInfra) Run(f *frontend) {
+	stop := make(chan struct{})
+	done := make(chan struct{})
+
+	go f.Run(ti.t.Context(), stop, done)
+
+	ti.t.Cleanup(func() {
+		close(stop)
+		<-done
+	})
+}
+
 func (ti *testInfra) buildFixtures(fixtures func(*testdatabase.Fixture)) error {
 	if fixtures != nil {
 		fixtures(ti.fixture)
