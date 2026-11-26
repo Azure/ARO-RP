@@ -312,7 +312,7 @@ func TestValidateZones(t *testing.T) {
 			mockEnv := mock_env.NewMockInterface(controller)
 
 			if tt.resourceSkusClientErr == nil {
-				mockEnv.EXPECT().FeatureIsSet(env.FeatureEnableClusterExpandedAvailabilityZones).Return(tt.expandedAZs)
+				mockEnv.EXPECT().FeatureIsSet(env.FeatureEnableClusterExpandedAvailabilityZones).Return(tt.expandedAZs).Times(2)
 			}
 
 			openShiftClustersDatabase, openShiftClustersClient := testdatabase.NewFakeOpenShiftClusters()
@@ -337,7 +337,7 @@ func TestValidateZones(t *testing.T) {
 							return
 						}
 					}
-				})
+				}).Times(2)
 
 			origDoc := tt.origDoc
 
@@ -373,6 +373,11 @@ func TestValidateZones(t *testing.T) {
 
 			err := m.validateZones(ctx)
 			utilerror.AssertErrorMatchesAll(t, err, tt.wantErrs)
+
+			// validate a second run-through (e.g. a bootstrap retry does the same thing)
+			err = m.validateZones(ctx)
+			utilerror.AssertErrorMatchesAll(t, err, tt.wantErrs)
+
 			if len(tt.wantErrs) == 0 {
 				for _, err := range checker.CheckOpenShiftClusters(openShiftClustersClient) {
 					t.Error(err)
