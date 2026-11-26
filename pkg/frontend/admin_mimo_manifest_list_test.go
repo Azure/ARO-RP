@@ -6,9 +6,11 @@ package frontend
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -468,5 +470,186 @@ func TestParseMaintenanceManifestListOptions(t *testing.T) {
 				t.Errorf("Before=%d, want %d", *got.Before, *tt.want.Before)
 			}
 		})
+	}
+}
+
+func TestRefererWithMaintenanceManifestListOptions(t *testing.T) {
+	before := int64(200)
+	got, err := refererWithMaintenanceManifestListOptions("https://mockrefererhost/", database.MaintenanceManifestListOptions{
+		After:  100,
+		Before: &before,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := url.Parse(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Query().Get("after") != "100" {
+		t.Errorf("after=%q, want 100", u.Query().Get("after"))
+	}
+	if u.Query().Get("before") != "200" {
+		t.Errorf("before=%q, want 200", u.Query().Get("before"))
+	}
+
+	got, err = refererWithMaintenanceManifestListOptions("https://mockrefererhost/?before=999", database.MaintenanceManifestListOptions{
+		After: 100,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err = url.Parse(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Query().Get("after") != "100" {
+		t.Errorf("after=%q, want 100", u.Query().Get("after"))
+	}
+	if u.Query().Has("before") {
+		t.Errorf("before=%q, want omitted", u.Query().Get("before"))
+	}
+}
+
+func TestMIMOListManifestsPaginationPreservesDefaultAfterWithAdvancingClock(t *testing.T) {
+	mockSubID := "00000000-0000-0000-0000-000000000000"
+	mockTenantID := "00000000-0000-0000-0000-000000000000"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
+	ctx := context.Background()
+
+	t0 := time.Unix(1_700_000_000, 0)
+	current := t0
+	clock := func() time.Time { return current }
+
+	defaultAfter := t0.Add(-maintenanceManifestListDefaultLookback).Unix()
+	boundaryAfter := defaultAfter
+	recentAfter := t0.Add(-1 * time.Hour).Unix()
+	oldAfter := t0.Add(-31 * 24 * time.Hour).Unix()
+
+	ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions().WithMaintenanceManifests(clock)
+	defer ti.done()
+
+	ti.fixture.AddSubscriptionDocuments(&api.SubscriptionDocument{
+		ID: mockSubID,
+		Subscription: &api.Subscription{
+			State: api.SubscriptionStateRegistered,
+			Properties: &api.SubscriptionProperties{
+				TenantID: mockTenantID,
+			},
+		},
+	})
+
+	err := ti.buildFixtures(func(f *testdatabase.Fixture) {
+		f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+			Key: strings.ToLower(resourceID),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID:   resourceID,
+				Name: "resourceName",
+				Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+			},
+		})
+		// Sorted by ID: old (...001), boundary (...002), recent (...003)
+		f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+			ClusterResourceID: strings.ToLower(resourceID),
+			MaintenanceManifest: api.MaintenanceManifest{
+				MaintenanceTaskID: "oldtask",
+				State:             api.MaintenanceManifestStateCompleted,
+				RunAfter:          oldAfter,
+				RunBefore:         oldAfter + 3600,
+			},
+		})
+		f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+			ClusterResourceID: strings.ToLower(resourceID),
+			MaintenanceManifest: api.MaintenanceManifest{
+				MaintenanceTaskID: "boundarytask",
+				State:             api.MaintenanceManifestStateCompleted,
+				RunAfter:          boundaryAfter,
+				RunBefore:         boundaryAfter + 3600,
+			},
+		})
+		f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+			ClusterResourceID: strings.ToLower(resourceID),
+			MaintenanceManifest: api.MaintenanceManifest{
+				MaintenanceTaskID: "recenttask",
+				State:             api.MaintenanceManifestStatePending,
+				RunAfter:          recentAfter,
+				RunBefore:         recentAfter + 3600,
+			},
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, testdatabase.NewFakeAEAD(), nil, nil, nil, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.now = clock
+
+	go f.Run(ctx, nil, nil)
+
+	// Page 1: default window, limit 1. Expect boundary manifest and a nextLink that pins after.
+	resp, b, err := ti.request(http.MethodGet,
+		fmt.Sprintf("https://server/admin%s/maintenancemanifests?limit=1", resourceID),
+		http.Header{"Referer": []string{"https://mockrefererhost/"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("page1 status=%d body=%s", resp.StatusCode, string(b))
+	}
+
+	var page1 admin.MaintenanceManifestList
+	if err := json.Unmarshal(b, &page1); err != nil {
+		t.Fatal(err)
+	}
+	if len(page1.MaintenanceManifests) != 1 || page1.MaintenanceManifests[0].MaintenanceTaskID != "boundarytask" {
+		t.Fatalf("page1 unexpected manifests: %+v", page1.MaintenanceManifests)
+	}
+	if page1.NextLink == "" {
+		t.Fatal("page1 missing nextLink")
+	}
+
+	nextURL, err := url.Parse(page1.NextLink)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pinnedAfter := nextURL.Query().Get("after")
+	if pinnedAfter != strconv.FormatInt(defaultAfter, 10) {
+		t.Fatalf("nextLink after=%q, want %d", pinnedAfter, defaultAfter)
+	}
+	skipToken := nextURL.Query().Get("$skipToken")
+	if skipToken == "" {
+		t.Fatal("nextLink missing $skipToken")
+	}
+
+	// Advance clock so a recomputed default after would exclude the boundary manifest.
+	current = t0.Add(48 * time.Hour)
+
+	// Page 2 using the pinned after from nextLink must still succeed and return the recent manifest.
+	resp, b, err = ti.request(http.MethodGet,
+		fmt.Sprintf("https://server/admin%s/maintenancemanifests?limit=1&after=%s&%%24skipToken=%s",
+			resourceID, pinnedAfter, url.QueryEscape(skipToken)),
+		http.Header{"Referer": []string{"https://mockrefererhost/"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("page2 status=%d body=%s", resp.StatusCode, string(b))
+	}
+
+	var page2 admin.MaintenanceManifestList
+	if err := json.Unmarshal(b, &page2); err != nil {
+		t.Fatal(err)
+	}
+	if len(page2.MaintenanceManifests) != 1 || page2.MaintenanceManifests[0].MaintenanceTaskID != "recenttask" {
+		t.Fatalf("page2 unexpected manifests: %+v", page2.MaintenanceManifests)
+	}
+
+	// Without the pinned after, the drifted default window excludes the boundary item from page 1's set.
+	driftedAfter := current.Add(-maintenanceManifestListDefaultLookback).Unix()
+	if driftedAfter <= boundaryAfter {
+		t.Fatalf("test setup error: drifted after %d should be > boundary %d", driftedAfter, boundaryAfter)
 	}
 }

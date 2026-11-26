@@ -44,7 +44,7 @@ func (f *frontend) _getAdminMaintManifests(ctx context.Context, r *http.Request,
 		limit = 100
 	}
 
-	opts, err := parseMaintenanceManifestListOptions(r, time.Now())
+	opts, err := parseMaintenanceManifestListOptions(r, f.now())
 	if err != nil {
 		return nil, err
 	}
