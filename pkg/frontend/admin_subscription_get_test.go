@@ -17,7 +17,6 @@ import (
 )
 
 func TestAdminGetSubscriptionDocument(t *testing.T) {
-	ctx := t.Context()
 	type test struct {
 		name           string
 		subscriptionID string
@@ -40,18 +39,32 @@ func TestAdminGetSubscriptionDocument(t *testing.T) {
 			name:           "get subscription document",
 			subscriptionID: "00000000-0000-0000-0000-000000000001",
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+				doc := &api.SubscriptionDocument{
 					ID: "00000000-0000-0000-0000-000000000001",
 					Subscription: &api.Subscription{
-						State:      api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{},
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "1234",
+						},
+						Overrides: &api.SubscriptionOverrides{
+							InstallationZones: []string{"1"},
+						},
 					},
-				})
+				}
+				doc.Subscription.Properties.CodecMissingField([]byte("otherdata"), "data")
+				f.AddSubscriptionDocuments(doc)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: map[string]any{
-				"properties": map[string]any{},
-				"state":      "Registered",
+				"properties": map[string]any{
+					// data held in MissingFields
+					"otherdata": "data",
+					"tenantId":  "1234",
+				},
+				"overrides": map[string]any{
+					"installationZones": []any{"1"},
+				},
+				"state": "Registered",
 			},
 		},
 	} {
@@ -60,24 +73,17 @@ func TestAdminGetSubscriptionDocument(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions()
 			defer ti.done()
 
-			err := ti.buildFixtures(tt.fixture)
-			if err != nil {
-				t.Fatal(err)
-			}
+			r.NoError(ti.buildFixtures(tt.fixture))
 
-			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, testdatabase.NewFakeAEAD(), nil, nil, nil, nil, nil, nil)
-			if err != nil {
-				t.Fatal(err)
-			}
+			f, err := NewFrontend(t.Context(), ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, testdatabase.NewFakeAEAD(), nil, nil, nil, nil, nil, nil)
+			r.NoError(err)
 
-			go f.Run(ctx, nil, nil)
+			ti.Run(f)
 
 			resp, b, err := ti.request(http.MethodGet,
 				"https://server/admin/subscriptions/"+tt.subscriptionID,
 				nil, nil)
-			if err != nil {
-				t.Fatal(err)
-			}
+			r.NoError(err)
 
 			r.Equal(tt.wantStatusCode, resp.StatusCode)
 

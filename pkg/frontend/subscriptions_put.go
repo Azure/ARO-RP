@@ -57,12 +57,8 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 	oldState := doc.Subscription.State
 	oldOverrides := doc.Subscription.Overrides
 
-	h := &codec.JsonHandle{
-		Indent: 4,
-	}
-
 	doc.Subscription = &api.Subscription{}
-	err = codec.NewDecoderBytes(body, h).Decode(&doc.Subscription)
+	err = codec.NewDecoderBytes(body, f.indentingJsonHandle).Decode(&doc.Subscription)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", fmt.Sprintf("The request content was invalid and could not be deserialized: %q.", err))
 	}
@@ -101,7 +97,7 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 	}
 
 	var b []byte
-	err = codec.NewEncoderBytes(&b, h).Encode(doc.Subscription)
+	err = codec.NewEncoderBytes(&b, f.indentingJsonHandle).Encode(doc.Subscription)
 	if err != nil {
 		return nil, err
 	}

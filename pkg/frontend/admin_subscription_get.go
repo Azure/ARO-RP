@@ -5,10 +5,9 @@ package frontend
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
-	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -18,7 +17,8 @@ import (
 func (f *frontend) getAdminSubscription(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	subscriptionID := strings.TrimPrefix(r.URL.Path, "/admin/subscriptions/")
+	subscriptionID := chi.URLParam(r, "subscriptionId")
+
 	b, err := f._getAdminSubscription(ctx, subscriptionID)
 
 	if cloudErr, ok := err.(*api.CloudError); ok {
@@ -40,5 +40,5 @@ func (f *frontend) _getAdminSubscription(ctx context.Context, subscriptionID str
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "subscription not found")
 	}
 
-	return json.MarshalIndent(doc.Subscription, "", "    ")
+	return f.encodeToJSON(doc.Subscription)
 }
