@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -23,7 +22,6 @@ func TestAdminPutSubscriptionDocument(t *testing.T) {
 		body           any
 		fixture        func(f *testdatabase.Fixture)
 		checker        func(c *testdatabase.Checker)
-		compareOption  cmp.Option
 		wantStatusCode int
 		wantError      string
 		wantResponse   map[string]any
@@ -265,6 +263,7 @@ func TestAdminPutSubscriptionDocument(t *testing.T) {
 			if tt.wantError != "" {
 				cloudErr := &api.CloudError{StatusCode: resp.StatusCode}
 				err = json.Unmarshal(b, &cloudErr)
+				r.NoError(err)
 				r.Equal(tt.wantError, cloudErr.Error())
 				return
 			}
