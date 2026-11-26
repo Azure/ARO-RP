@@ -150,9 +150,18 @@ make image-telemetrycollector VERSION="${COLLECTOR_TAG}" \
 docker push "${REGISTRY_HOST}/openshift/aro-e2e-telemetry-collector:${COLLECTOR_TAG}"
 ```
 
+The e2e suite does not use your `oc` login. It needs the local RP running (see
+[E2e tests](./testing.md#e2e-tests) or the
+[containerized dev environment](./containerized-dev-environment.md)) and
+fetches the cluster's admin kubeconfig through it. Source `./env` and make sure
+`CLUSTER` and `RESOURCEGROUP` name the same cluster you pushed the image to.
+Keep `CI` unset: with `CI` set, the suite creates and deletes clusters.
+
 Run only this test, using the in-cluster pull spec of the pushed image:
 
 ```bash
+source ./env
+unset CI
 export TELEMETRY_COLLECTOR_IMAGE="image-registry.openshift-image-registry.svc:5000/openshift/aro-e2e-telemetry-collector:${COLLECTOR_TAG}"
 make e2e.test
 ./e2e.test -test.v --ginkgo.vv --ginkgo.focus "OTEL gateway integration"
