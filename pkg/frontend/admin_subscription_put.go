@@ -45,8 +45,7 @@ func (f *frontend) _putAdminSubscription(ctx context.Context, r *http.Request) (
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "subscription not found")
 	}
 
-	var sub *api.Subscription
-
+	sub := &api.Subscription{}
 	err = codec.NewDecoderBytes(body, f.indentingJsonHandle).Decode(&sub)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", fmt.Sprintf("The request content was invalid and could not be deserialized: %q.", err))

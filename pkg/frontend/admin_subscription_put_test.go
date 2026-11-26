@@ -166,6 +166,75 @@ func TestAdminPutSubscriptionDocument(t *testing.T) {
 				"state": "Registered",
 			},
 		},
+		{
+			name:           "empty body clears overrides",
+			subscriptionID: "00000000-0000-0000-0000-000000000001",
+			body:           map[string]any{},
+			fixture: func(f *testdatabase.Fixture) {
+				doc := &api.SubscriptionDocument{
+					ID: "00000000-0000-0000-0000-000000000001",
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "1234",
+						},
+						Overrides: &api.SubscriptionOverrides{
+							InstallationZones: []string{"1"},
+						},
+					},
+				}
+				doc.Subscription.Properties.CodecMissingField([]byte("otherdata"), "data")
+				doc.Subscription.Overrides.CodecMissingField([]byte("otherdatainoverrides"), "data2")
+				f.AddSubscriptionDocuments(doc)
+			},
+			checker: func(c *testdatabase.Checker) {
+				doc := &api.SubscriptionDocument{
+					ID: "00000000-0000-0000-0000-000000000001",
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "1234",
+						},
+						Overrides: nil,
+					},
+				}
+				doc.Subscription.Properties.CodecMissingField([]byte("otherdata"), "data")
+				c.AddSubscriptionDocuments(doc)
+			},
+			wantStatusCode: http.StatusOK,
+			wantResponse: map[string]any{
+				"properties": map[string]any{
+					// data held in MissingFields
+					"otherdata": "data",
+					"tenantId":  "1234",
+				},
+				"state": "Registered",
+			},
+		},
+		{
+			name:           "nil body errors",
+			subscriptionID: "00000000-0000-0000-0000-000000000001",
+			body:           nil,
+			fixture: func(f *testdatabase.Fixture) {
+				doc := &api.SubscriptionDocument{
+					ID: "00000000-0000-0000-0000-000000000001",
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "1234",
+						},
+						Overrides: &api.SubscriptionOverrides{
+							InstallationZones: []string{"1"},
+						},
+					},
+				}
+				doc.Subscription.Properties.CodecMissingField([]byte("otherdata"), "data")
+				doc.Subscription.Overrides.CodecMissingField([]byte("otherdatainoverrides"), "data2")
+				f.AddSubscriptionDocuments(doc)
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidRequestContent: : The request content was invalid and could not be deserialized: "unexpected EOF".`,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			r := require.New(t)
