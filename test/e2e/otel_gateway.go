@@ -50,6 +50,8 @@ const (
 	otelE2EGatewayExporterID  = "otlp_grpc/gateway"
 	otelE2EGatewayEndpointEnv = "GENEVA_GATEWAY_ENDPOINT"
 	otelE2EProdFileStorage    = "/var/lib/otelcol/file_storage"
+	otelE2EProdContainer      = "otel-exporter"
+	otelE2EExporterContainer  = "otel-exporter-e2e"
 )
 
 var otelE2EExporterClones = []struct {
@@ -70,15 +72,12 @@ var _ = Describe("OTEL gateway integration", func() {
 	AfterEach(func(ctx context.Context) {
 		if exporterCreated {
 			By("deleting test-owned otel exporters")
-			for _, clone := range otelE2EExporterClones {
-				CleanupK8sResource[*appsv1.DaemonSet](ctx, clients.Kubernetes.AppsV1().DaemonSets(otelE2ELoggingNS), clone.name)
-			}
-			CleanupK8sResource[*corev1.ConfigMap](ctx, clients.Kubernetes.CoreV1().ConfigMaps(otelE2ELoggingNS), otelE2EExporterConfigMap)
+			deleteOTelE2EExporters(ctx)
 		}
 
 		if collectorCreated {
 			By("deleting in-cluster OTEL collector namespace")
-			CleanupK8sResource[*corev1.Namespace](ctx, clients.Kubernetes.CoreV1().Namespaces(), otelE2ECollectorNS)
+			deleteOTelE2ECollector(ctx)
 		}
 	})
 
@@ -87,6 +86,10 @@ var _ = Describe("OTEL gateway integration", func() {
 		if image == "" {
 			Skip(fmt.Sprintf("%s not set; skipping OTEL e2e", otelE2EImageEnv))
 		}
+
+		By("deleting leftovers from previous runs")
+		deleteOTelE2EExporters(ctx)
+		deleteOTelE2ECollector(ctx)
 
 		By("deploying in-cluster synthetic telemetrycollector")
 		collectorConfig, err := staticResources.ReadFile("static_resources/otel-collector.yaml")
@@ -128,6 +131,19 @@ var _ = Describe("OTEL gateway integration", func() {
 		}
 	})
 })
+
+func deleteOTelE2EExporters(ctx context.Context) {
+	GinkgoHelper()
+	for _, clone := range otelE2EExporterClones {
+		CleanupK8sResource[*appsv1.DaemonSet](ctx, clients.Kubernetes.AppsV1().DaemonSets(otelE2ELoggingNS), clone.name)
+	}
+	CleanupK8sResource[*corev1.ConfigMap](ctx, clients.Kubernetes.CoreV1().ConfigMaps(otelE2ELoggingNS), otelE2EExporterConfigMap)
+}
+
+func deleteOTelE2ECollector(ctx context.Context) {
+	GinkgoHelper()
+	CleanupK8sResource[*corev1.Namespace](ctx, clients.Kubernetes.CoreV1().Namespaces(), otelE2ECollectorNS)
+}
 
 func deployOTelCollectorInCluster(ctx context.Context, image, collectorConfig string) (string, error) {
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: otelE2ECollectorNS}}
@@ -359,15 +375,22 @@ func otelE2EExporterDaemonSet(src *appsv1.DaemonSet, name, endpoint string) (*ap
 		return nil, fmt.Errorf("daemonset %s has no %s hostPath volume", src.Name, otelE2EProdFileStorage)
 	}
 
-	var sawEndpoint bool
+	var sawContainer, sawEndpoint bool
 	for i := range ds.Spec.Template.Spec.Containers {
 		c := &ds.Spec.Template.Spec.Containers[i]
+		if c.Name == otelE2EProdContainer {
+			c.Name = otelE2EExporterContainer
+			sawContainer = true
+		}
 		for j := range c.Env {
 			if c.Env[j].Name == otelE2EGatewayEndpointEnv {
 				c.Env[j].Value = endpoint
 				sawEndpoint = true
 			}
 		}
+	}
+	if !sawContainer {
+		return nil, fmt.Errorf("daemonset %s has no %s container", src.Name, otelE2EProdContainer)
 	}
 	if !sawEndpoint {
 		return nil, fmt.Errorf("daemonset %s has no %s env var", src.Name, otelE2EGatewayEndpointEnv)
