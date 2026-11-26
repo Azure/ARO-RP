@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -396,10 +397,36 @@ func assertOTelSourceInCollectorLogs(ctx context.Context, marker, source string,
 	Eventually(func(g Gomega, ctx context.Context) {
 		logs, err := otelCollectorPodLogs(ctx)
 		g.Expect(err).NotTo(HaveOccurred())
-		for _, s := range want {
-			g.Expect(logs).To(ContainSubstring(s), "missing %q for source %s:\n%s", s, source, logs)
-		}
+		g.Expect(otelLogRecordContainingAll(logs, want)).To(BeTrue(),
+			"no single log record contains all of %q for source %s:\n%s", want, source, logs)
 	}).WithContext(ctx).WithTimeout(2 * time.Minute).WithPolling(5 * time.Second).Should(Succeed())
+}
+
+var otelDebugExporterBlockHeader = regexp.MustCompile(`(?m)^(?:ResourceLog|ScopeLogs|LogRecord) #\d+`)
+
+func otelLogRecordContainingAll(logs string, want []string) bool {
+	starts := otelDebugExporterBlockHeader.FindAllStringIndex(logs, -1)
+	for i, start := range starts {
+		end := len(logs)
+		if i+1 < len(starts) {
+			end = starts[i+1][0]
+		}
+		block := logs[start[0]:end]
+		if !strings.HasPrefix(block, "LogRecord #") {
+			continue
+		}
+		matched := true
+		for _, s := range want {
+			if !strings.Contains(block, s) {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
 }
 
 func otelCollectorPodLogs(ctx context.Context) (string, error) {
