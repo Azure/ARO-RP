@@ -132,67 +132,41 @@ oc -n openshift-azure-logging get configmap otel-config -o jsonpath='{.data.work
 
 ## 8. Run the OTEL gateway e2e test
 
-`test/e2e/otel_gateway.go` deploys a synthetic telemetry collector in the
-cluster and checks that the operator-rendered exporter config delivers
-containers, journald and audit logs to it. It is meant for local clusters and
-is skipped unless `TELEMETRY_COLLECTOR_IMAGE` is set.
+`test/e2e/otel_gateway.go` checks that the operator-rendered exporter config
+delivers containers, journald and audit logs to a synthetic in-cluster
+collector. It runs on local clusters only and is skipped unless
+`TELEMETRY_COLLECTOR_IMAGE` is set.
 
-Build the collector from `Dockerfile.telemetrycollector` and push it to the
-`openshift` namespace of the internal registry, which every namespace can pull
-from without a pull secret (registry login as in step 1):
+Set `TELEMETRY_COLLECTOR_IMAGE` to the collector image you are about to
+release: `arointsvc.azurecr.io/telemetrycollector:<ARO-RP release tag>`, built
+by the `image-telemetry-collector` pipeline in sdp-pipelines. Dev clusters can
+pull from `arointsvc` without extra credentials. The exporter copies use
+whatever exporter image the operator runs; to test a new exporter image, set
+`aro.genevalogging.otel.pullSpec` first (step 6).
 
-```bash
-COLLECTOR_TAG="$(git log -1 --format=%h -- telemetry/collector)"
-
-make image-telemetrycollector VERSION="${COLLECTOR_TAG}" \
-  TELEMETRY_COLLECTOR_IMAGE="${REGISTRY_HOST}/openshift/aro-e2e-telemetry-collector:${COLLECTOR_TAG}" \
-  REGISTRY=registry.access.redhat.com BUILDER_REGISTRY=quay.io
-docker push "${REGISTRY_HOST}/openshift/aro-e2e-telemetry-collector:${COLLECTOR_TAG}"
-```
-
-The e2e suite does not use your `oc` login. It needs the local RP running (see
-[E2e tests](./testing.md#e2e-tests) or the
-[containerized dev environment](./containerized-dev-environment.md)) and
-fetches the cluster's admin kubeconfig through it. Source `./env` and make sure
-`CLUSTER` and `RESOURCEGROUP` name the same cluster you pushed the image to.
-Keep `CI` unset: with `CI` set, the suite creates and deletes clusters.
-
-Run only this test, using the in-cluster pull spec of the pushed image:
+Run it like any local e2e test ([E2e tests](./testing.md#e2e-tests)): local RP
+running, `./env` sourced with `CLUSTER`/`RESOURCEGROUP` pointing at your
+cluster, and `CI` unset (with `CI` set, the suite creates and deletes
+clusters). The cluster needs `spec.gatewayPrivateEndpointIP` set on its Cluster
+CR, otherwise the operator doesn't create the exporters.
 
 ```bash
-source ./env
-unset CI
-export TELEMETRY_COLLECTOR_IMAGE="image-registry.openshift-image-registry.svc:5000/openshift/aro-e2e-telemetry-collector:${COLLECTOR_TAG}"
+export TELEMETRY_COLLECTOR_IMAGE=arointsvc.azurecr.io/telemetrycollector:<ARO-RP release tag>
 make e2e.test
-./e2e.test -test.v --ginkgo.vv --ginkgo.focus "OTEL gateway integration"
+./e2e.test --ginkgo.focus "OTEL gateway integration"
 ```
-
-The test needs the operator's `otel-exporter-master`/`otel-exporter-worker`
-DaemonSets to exist, which requires `spec.gatewayPrivateEndpointIP` to be set
-on the Cluster CR.
 
 ### What the test covers, and what it doesn't
 
-The test copies the live `otel-config` ConfigMap and the
-`otel-exporter-master`/`otel-exporter-worker` DaemonSets into test-owned
-resources and points the copies at the synthetic collector. It verifies that
-the operator's exporters collect containers, journald and audit logs and
-deliver them over OTLP.
-
 - It tests the operator deployed on the cluster, not your local checkout. To
-  cover operator changes, first roll out your operator image (steps 3 and 5).
-- The copies override a few fields, so changes to these are not covered:
-  gateway TLS (plaintext instead of TLS), journald `start_at` (`end` instead of
-  `beginning`), the gateway endpoint and hostAliases, file storage (emptyDir
-  instead of the hostPath), and names, labels, annotations and the container
-  name.
-- The collector config is static (`test/e2e/static_resources/otel-collector.yaml`)
-  and is not the production gateway config in
-  `pkg/deploy/generator/scripts/gatewayVMSS.sh`. Changes to gateway
-  authentication (`gatewayauth`, mTLS), processors, routing and the Kusto/mdsd
-  exporters are not covered, and neither is exporter-to-gateway TLS
-  compatibility. Only the collector binary is real, when built from
-  `Dockerfile.telemetrycollector`.
+  cover operator changes, roll out your operator image first (steps 3 and 5).
+- Fields the test overrides on its exporter copies are not covered: gateway
+  TLS, journald `start_at`, the gateway endpoint and hostAliases, file storage,
+  and names, labels, annotations and the container name.
+- The collector runs a static config
+  (`test/e2e/static_resources/otel-collector.yaml`), not the production gateway
+  config, so gateway authentication, processors, routing and the Kusto/mdsd
+  exporters are not covered, and neither is exporter-to-gateway TLS.
 
 ## Notes
 
