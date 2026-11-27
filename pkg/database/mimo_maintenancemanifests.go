@@ -34,10 +34,13 @@ const (
 
 	// List API time filters. Query text is fixed so fake Cosmos handlers can match exactly.
 	// Parameter.Value is a string in this client, so StringToNumber is required for numeric compare.
+	// Pending/InProgress manifests are always included so fleet cancellation never misses a live task.
+	manifestActiveStateFragment = `doc.maintenanceManifest.state IN ("Pending", "InProgress")`
+
 	MaintenanceManifestQueryForClusterAfter = MaintenanceManifestQueryForCluster +
-		" AND doc.maintenanceManifest.runAfter >= StringToNumber(@after)"
-	MaintenanceManifestQueryForClusterAfterBefore = MaintenanceManifestQueryForClusterAfter +
-		" AND doc.maintenanceManifest.runAfter <= StringToNumber(@before)"
+		" AND (" + manifestActiveStateFragment + " OR doc.maintenanceManifest.runAfter >= StringToNumber(@after))"
+	MaintenanceManifestQueryForClusterAfterBefore = MaintenanceManifestQueryForCluster +
+		" AND (" + manifestActiveStateFragment + " OR (doc.maintenanceManifest.runAfter >= StringToNumber(@after) AND doc.maintenanceManifest.runAfter <= StringToNumber(@before)))"
 
 	MaintenanceManifestGetFutureForScheduleIDAndCluster = MaintenanceManifestQueryForCluster + " AND " + manifestPendingFragment + " AND " + manifestFetchOnlyByScheduleID + " AND " + manifestFetchOnlyRunAfterInFutureFragment
 	MaintenanceManifestGetFutureForScheduleID           = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestFetchOnlyByScheduleID + " AND " + manifestFetchOnlyRunAfterInFutureFragment

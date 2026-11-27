@@ -190,6 +190,146 @@ func TestMIMOListManifests(t *testing.T) {
 						RunAfter:          500,
 						RunBefore:         600,
 					},
+					{
+						ID:                "07070707-0707-0707-0707-070707070003",
+						MaintenanceTaskID: "too-new",
+						State:             admin.MaintenanceManifestStatePending,
+						Priority:          0,
+						RunAfter:          900,
+						RunBefore:         1000,
+					},
+				},
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			name: "old pending always returned",
+			fixtures: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					},
+				})
+				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+					ClusterResourceID: strings.ToLower(resourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						MaintenanceTaskID: "old-pending",
+						State:             api.MaintenanceManifestStatePending,
+						RunAfter:          -5183000,
+						RunBefore:         -5182000,
+					},
+				})
+			},
+			wantResponse: &admin.MaintenanceManifestList{
+				MaintenanceManifests: []*admin.MaintenanceManifest{
+					{
+						ID:                "07070707-0707-0707-0707-070707070001",
+						MaintenanceTaskID: "old-pending",
+						State:             admin.MaintenanceManifestStatePending,
+						Priority:          0,
+						RunAfter:          -5183000,
+						RunBefore:         -5182000,
+					},
+				},
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			name: "old in progress always returned",
+			fixtures: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					},
+				})
+				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+					ClusterResourceID: strings.ToLower(resourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						MaintenanceTaskID: "old-inprogress",
+						State:             api.MaintenanceManifestStateInProgress,
+						RunAfter:          -5183000,
+						RunBefore:         -5182000,
+					},
+				})
+			},
+			wantResponse: &admin.MaintenanceManifestList{
+				MaintenanceManifests: []*admin.MaintenanceManifest{
+					{
+						ID:                "07070707-0707-0707-0707-070707070001",
+						MaintenanceTaskID: "old-inprogress",
+						State:             admin.MaintenanceManifestStateInProgress,
+						Priority:          0,
+						RunAfter:          -5183000,
+						RunBefore:         -5182000,
+					},
+				},
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			name: "old completed excluded",
+			fixtures: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					},
+				})
+				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+					ClusterResourceID: strings.ToLower(resourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						MaintenanceTaskID: "old-completed",
+						State:             api.MaintenanceManifestStateCompleted,
+						RunAfter:          -5183000,
+						RunBefore:         -5182000,
+					},
+				})
+			},
+			wantResponse: &admin.MaintenanceManifestList{
+				MaintenanceManifests: []*admin.MaintenanceManifest{},
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			name: "explicit window with old active",
+			fixtures: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					},
+				})
+				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+					ClusterResourceID: strings.ToLower(resourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						MaintenanceTaskID: "old-active",
+						State:             api.MaintenanceManifestStatePending,
+						RunAfter:          50,
+						RunBefore:         90,
+					},
+				})
+			},
+			queryExtra: "&after=100&before=800",
+			wantResponse: &admin.MaintenanceManifestList{
+				MaintenanceManifests: []*admin.MaintenanceManifest{
+					{
+						ID:                "07070707-0707-0707-0707-070707070001",
+						MaintenanceTaskID: "old-active",
+						State:             admin.MaintenanceManifestStatePending,
+						Priority:          0,
+						RunAfter:          50,
+						RunBefore:         90,
+					},
 				},
 			},
 			wantStatusCode: http.StatusOK,
@@ -275,6 +415,7 @@ func TestMIMOListManifests(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			f.now = now
 
 			go f.Run(ctx, nil, nil)
 
