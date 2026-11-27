@@ -36,8 +36,8 @@ func TestGetByClusterResourceIDQueryWiring(t *testing.T) {
 		wantParams []cosmosdb.Parameter
 	}{
 		{
-			name: "after only",
-			opts: MaintenanceManifestListOptions{After: 100},
+			name:      "after only",
+			opts:      MaintenanceManifestListOptions{After: 100},
 			wantQuery: MaintenanceManifestQueryForClusterAfter,
 			wantParams: []cosmosdb.Parameter{
 				{Name: "@clusterResourceID", Value: clusterResourceID},
@@ -45,8 +45,8 @@ func TestGetByClusterResourceIDQueryWiring(t *testing.T) {
 			},
 		},
 		{
-			name: "after and before",
-			opts: MaintenanceManifestListOptions{After: 100, Before: new(int64(200))},
+			name:      "after and before",
+			opts:      MaintenanceManifestListOptions{After: 100, Before: new(int64(200))},
 			wantQuery: MaintenanceManifestQueryForClusterAfterBefore,
 			wantParams: []cosmosdb.Parameter{
 				{Name: "@clusterResourceID", Value: clusterResourceID},
@@ -55,8 +55,8 @@ func TestGetByClusterResourceIDQueryWiring(t *testing.T) {
 			},
 		},
 		{
-			name: "after zero for full history",
-			opts: MaintenanceManifestListOptions{After: 0},
+			name:      "after zero for full history",
+			opts:      MaintenanceManifestListOptions{After: 0},
 			wantQuery: MaintenanceManifestQueryForClusterAfter,
 			wantParams: []cosmosdb.Parameter{
 				{Name: "@clusterResourceID", Value: clusterResourceID},
