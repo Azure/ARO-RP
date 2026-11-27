@@ -40,6 +40,7 @@ const (
 	CopyFailWorkaroundEnabled           = "aro.workaround.copyfail.enabled"
 	DirtyfragWorkaroundEnabled          = "aro.workaround.dirtyfrag.enabled"
 	CVE202698432WorkaroundEnabled       = "aro.workaround.cve-2026-98432.enabled"
+	IDMSWorkaroundEnabled               = "aro.workaround.idms.enabled"
 	AutosizedNodesEnabled               = "aro.autosizednodes.enabled"
 	MuoEnabled                          = "rh.srep.muo.enabled"
 	MuoManaged                          = "rh.srep.muo.managed"
@@ -112,6 +113,7 @@ func DefaultOperatorFlags() map[string]string {
 		CopyFailWorkaroundEnabled:          FlagTrue,
 		DirtyfragWorkaroundEnabled:         FlagTrue,
 		CVE202698432WorkaroundEnabled:      FlagTrue,
+		IDMSWorkaroundEnabled:              FlagTrue,
 		AutosizedNodesEnabled:              FlagTrue,
 		MuoEnabled:                         FlagTrue,
 		MuoManaged:                         FlagTrue,
