@@ -130,6 +130,44 @@ oc -n openshift-azure-logging get pods -l app=otel-exporter-master -o wide
 oc -n openshift-azure-logging get configmap otel-config -o jsonpath='{.data.worker-config\.yaml}' | head -n 60
 ```
 
+## 8. Run the OTEL gateway e2e test
+
+`test/e2e/otel_gateway.go` checks that the operator-rendered exporter config
+delivers containers, journald and audit logs to a synthetic in-cluster
+collector. It runs on local clusters only and is skipped unless
+`TELEMETRY_COLLECTOR_IMAGE` is set.
+
+Set `TELEMETRY_COLLECTOR_IMAGE` to the collector image you are about to
+release: `arointsvc.azurecr.io/telemetrycollector:<ARO-RP release tag>`, built
+by the `image-telemetry-collector` pipeline in sdp-pipelines. Dev clusters can
+pull from `arointsvc` without extra credentials. The exporter copies use
+whatever exporter image the operator runs; to test a new exporter image, set
+`aro.genevalogging.otel.pullSpec` first (step 6).
+
+Run it like any local e2e test ([E2e tests](./testing.md#e2e-tests)): local RP
+running, `./env` sourced with `CLUSTER`/`RESOURCEGROUP` pointing at your
+cluster, and `CI` unset (with `CI` set, the suite creates and deletes
+clusters). The cluster needs `spec.gatewayPrivateEndpointIP` set on its Cluster
+CR, otherwise the operator doesn't create the exporters.
+
+```bash
+export TELEMETRY_COLLECTOR_IMAGE=arointsvc.azurecr.io/telemetrycollector:<ARO-RP release tag>
+make e2e.test
+./e2e.test --ginkgo.focus "OTEL gateway integration"
+```
+
+### What the test covers, and what it doesn't
+
+- It tests the operator deployed on the cluster, not your local checkout. To
+  cover operator changes, roll out your operator image first (steps 3 and 5).
+- Fields the test overrides on its exporter copies are not covered: gateway
+  TLS, journald `start_at`, the gateway endpoint and hostAliases, file storage,
+  and names, labels, annotations and the container name.
+- The collector runs a static config
+  (`test/e2e/static_resources/otel-collector.yaml`), not the production gateway
+  config, so gateway authentication, processors, routing and the Kusto/mdsd
+  exporters are not covered, and neither is exporter-to-gateway TLS.
+
 ## Notes
 
 - `aro-operator-master` runs controllers like `GenevaLogging`; if it is scaled to `0`, profile/config changes may not reconcile.
