@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/ugorji/go/codec"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -66,4 +67,14 @@ func (lw *limitedWriter) Write(p []byte) (int, error) {
 	}
 	// Return len(p), not n: io.Writer contract allows reporting short writes only when err != nil.
 	return len(p), nil
+}
+
+func (f *frontend) encodeToJSON(obj any) ([]byte, error) {
+	var b []byte
+	encoder := codec.NewEncoderBytes(&b, f.indentingJsonHandle)
+	err := encoder.Encode(obj)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }

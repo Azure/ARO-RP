@@ -21,6 +21,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chiMiddlewares "github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
+	"github.com/ugorji/go/codec"
 	cryptossh "golang.org/x/crypto/ssh"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -76,6 +77,8 @@ type frontend struct {
 	auditLog *logrus.Entry
 	baseLog  *logrus.Entry
 	env      env.Interface
+
+	indentingJsonHandle *codec.JsonHandle
 
 	logMiddleware         middleware.LogMiddleware
 	validateMiddleware    middleware.ValidateMiddleware
@@ -216,6 +219,8 @@ func NewFrontend(ctx context.Context,
 		systemDataClusterDocEnricher: enrichClusterSystemData,
 
 		streamResponder: defaultResponder{},
+
+		indentingJsonHandle: &codec.JsonHandle{Indent: 4},
 	}
 
 	// Load Holmes config: API base from Key Vault in prod, env vars in dev.
@@ -425,6 +430,8 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 		})
 
 		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
+			r.Get("/", f.getAdminSubscription)
+			r.Put("/", f.putAdminSubscription)
 			r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}", func(r chi.Router) {
 				// Top pods metrics endpoint
 				r.Get("/top/pods", f.getAdminTopPods)

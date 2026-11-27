@@ -55,13 +55,10 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 	}
 
 	oldState := doc.Subscription.State
-
-	h := &codec.JsonHandle{
-		Indent: 4,
-	}
+	oldOverrides := doc.Subscription.Overrides
 
 	doc.Subscription = &api.Subscription{}
-	err = codec.NewDecoderBytes(body, h).Decode(&doc.Subscription)
+	err = codec.NewDecoderBytes(body, f.indentingJsonHandle).Decode(&doc.Subscription)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", fmt.Sprintf("The request content was invalid and could not be deserialized: %q.", err))
 	}
@@ -86,6 +83,10 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 		doc.Subscription.Properties.AccountOwner.Email = ""
 	}
 
+	// re-apply the subscription overrides, which are only changed in the admin
+	// API
+	doc.Subscription.Overrides = oldOverrides
+
 	if isCreate {
 		doc, err = dbSubscriptions.Create(ctx, doc)
 	} else {
@@ -96,7 +97,7 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 	}
 
 	var b []byte
-	err = codec.NewEncoderBytes(&b, h).Encode(doc.Subscription)
+	err = codec.NewEncoderBytes(&b, f.indentingJsonHandle).Encode(doc.Subscription)
 	if err != nil {
 		return nil, err
 	}

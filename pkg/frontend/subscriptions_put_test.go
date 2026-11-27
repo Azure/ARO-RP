@@ -238,6 +238,36 @@ func TestPutSubscription(t *testing.T) {
 			wantError:      `400: InvalidSubscriptionState: : Request is not allowed in subscription in state 'Deleted'.`,
 		},
 		{
+			name: "update an existing subscription - retains overrides",
+			request: func(sub *api.Subscription) {
+				sub.State = api.SubscriptionStateWarned
+				sub.Properties = &api.SubscriptionProperties{TenantID: "changed"}
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Overrides: &api.SubscriptionOverrides{
+							InstallationZones: []string{"3"},
+						},
+					},
+				})
+			},
+			compareOption: cmpopts.IgnoreUnexported(api.MissingFields{}),
+			wantDbDoc: &api.SubscriptionDocument{
+				ID: mockSubID,
+				Subscription: &api.Subscription{
+					State:      api.SubscriptionStateWarned,
+					Properties: &api.SubscriptionProperties{TenantID: "changed"},
+					Overrides: &api.SubscriptionOverrides{
+						InstallationZones: []string{"3"},
+					},
+				},
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
 			name:           "internal error",
 			dbError:        errors.New("random error"),
 			wantStatusCode: http.StatusInternalServerError,

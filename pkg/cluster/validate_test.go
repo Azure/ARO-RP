@@ -36,6 +36,7 @@ func TestValidateZones(t *testing.T) {
 		workerSkuZones       []string
 		expandedAZs          bool
 
+		origDoc               *api.OpenShiftCluster
 		doc                   api.OpenShiftCluster
 		resourceSkusClientErr error
 		wantErrs              []error
@@ -136,6 +137,152 @@ func TestValidateZones(t *testing.T) {
 			workerSkuZones:        []string{"1", "2", "3"},
 			wantErrs:              []error{computeskus.ErrListVMResourceSKUs, errTestSKUFetchError},
 		},
+
+		// Zones provided in document (e.g. the API). These zones should still
+		// be checked against the SKU.
+		{
+			name:                 "zonal, available, single-zone set to 1 in doc",
+			controlPlaneSkuZones: []string{"1", "2", "3"},
+			workerSkuZones:       []string{"1", "2", "3"},
+			origDoc: &api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSize(workerProfileSku),
+						},
+					},
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSize(controlPlaneSku),
+					},
+					Zones: []string{"1"},
+				},
+			},
+			doc: api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD16asV4,
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSizeStandardD8asV4,
+						},
+					},
+					Zones: []string{"1"},
+				},
+			},
+		},
+		{
+			name:                 "zonal, expanded AZs, available, single-zone set to 4 in doc",
+			controlPlaneSkuZones: []string{"1", "2", "3", "4"},
+			workerSkuZones:       []string{"1", "2", "3", "4"},
+			expandedAZs:          true,
+			origDoc: &api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSize(workerProfileSku),
+						},
+					},
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSize(controlPlaneSku),
+					},
+					Zones: []string{"4"},
+				},
+			},
+			doc: api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD16asV4,
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSizeStandardD8asV4,
+						},
+					},
+					Zones: []string{"4"},
+				},
+			},
+		},
+		{
+			name:                 "zonal, set to 4 in doc but extended AZs are off",
+			controlPlaneSkuZones: []string{"1", "2", "3", "4"},
+			workerSkuZones:       []string{"1", "2", "3", "4"},
+			expandedAZs:          false,
+			origDoc: &api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSize(workerProfileSku),
+						},
+					},
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSize(controlPlaneSku),
+					},
+					Zones: []string{"4"},
+				},
+			},
+			doc: api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD16asV4,
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSizeStandardD8asV4,
+						},
+					},
+					Zones: []string{"4"},
+				},
+			},
+			wantErrs: []error{errors.New("400: InvalidParameter: properties.zones: The selected zones ([4]) are not available across both SKUs")},
+		},
+		{
+			name:                 "non-zonal, available, set to non-zonal in doc",
+			controlPlaneSkuZones: []string{"1", "2", "3"},
+			workerSkuZones:       []string{"1", "2", "3"},
+			origDoc: &api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSize(workerProfileSku),
+						},
+					},
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSize(controlPlaneSku),
+					},
+					Zones: []string{},
+				},
+			},
+			doc: api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD16asV4,
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSizeStandardD8asV4,
+						},
+					},
+					Zones: []string{},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -165,7 +312,7 @@ func TestValidateZones(t *testing.T) {
 			mockEnv := mock_env.NewMockInterface(controller)
 
 			if tt.resourceSkusClientErr == nil {
-				mockEnv.EXPECT().FeatureIsSet(env.FeatureEnableClusterExpandedAvailabilityZones).Return(tt.expandedAZs)
+				mockEnv.EXPECT().FeatureIsSet(env.FeatureEnableClusterExpandedAvailabilityZones).Return(tt.expandedAZs).Times(2)
 			}
 
 			openShiftClustersDatabase, openShiftClustersClient := testdatabase.NewFakeOpenShiftClusters()
@@ -190,26 +337,32 @@ func TestValidateZones(t *testing.T) {
 							return
 						}
 					}
-				})
+				}).Times(2)
+
+			origDoc := tt.origDoc
+
+			if origDoc == nil {
+				origDoc = &api.OpenShiftCluster{
+					ID:       key,
+					Location: "eastus",
+					Properties: api.OpenShiftClusterProperties{
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								VMSize: api.VMSize(workerProfileSku),
+							},
+						},
+						MasterProfile: api.MasterProfile{
+							VMSize: api.VMSize(controlPlaneSku),
+						},
+					},
+				}
+			}
 
 			m := &manager{
 				env: mockEnv,
 				doc: &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       key,
-						Location: "eastus",
-						Properties: api.OpenShiftClusterProperties{
-							WorkerProfiles: []api.WorkerProfile{
-								{
-									VMSize: api.VMSize(workerProfileSku),
-								},
-							},
-							MasterProfile: api.MasterProfile{
-								VMSize: api.VMSize(controlPlaneSku),
-							},
-						},
-					},
+					Key:              strings.ToLower(key),
+					OpenShiftCluster: origDoc,
 				},
 				armResourceSKUs: resourceSkusClient,
 				db:              openShiftClustersDatabase,
@@ -220,6 +373,11 @@ func TestValidateZones(t *testing.T) {
 
 			err := m.validateZones(ctx)
 			utilerror.AssertErrorMatchesAll(t, err, tt.wantErrs)
+
+			// validate a second run-through (e.g. a bootstrap retry does the same thing)
+			err = m.validateZones(ctx)
+			utilerror.AssertErrorMatchesAll(t, err, tt.wantErrs)
+
 			if len(tt.wantErrs) == 0 {
 				for _, err := range checker.CheckOpenShiftClusters(openShiftClustersClient) {
 					t.Error(err)
