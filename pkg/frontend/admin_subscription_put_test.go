@@ -234,6 +234,61 @@ func TestAdminPutSubscriptionDocument(t *testing.T) {
 			wantError:      `400: InvalidRequestContent: : The request content was invalid and could not be deserialized: "unexpected EOF".`,
 		},
 		{
+			name:           "setting non-zonal",
+			subscriptionID: "00000000-0000-0000-0000-000000000001",
+			body: map[string]any{
+				"properties": map[string]any{
+					// this data should be ignored
+					"otherdata": "data2",
+					"tenantId":  "12345",
+				},
+				"overrides": map[string]any{
+					// data held in MissingFields
+					"installationZones": []any{"nonzonal"},
+				},
+				// this data should be ignored
+				"state": "XYZ",
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				doc := &api.SubscriptionDocument{
+					ID: "00000000-0000-0000-0000-000000000001",
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "1234",
+						},
+						Overrides: &api.SubscriptionOverrides{},
+					},
+				}
+				f.AddSubscriptionDocuments(doc)
+			},
+			checker: func(c *testdatabase.Checker) {
+				doc := &api.SubscriptionDocument{
+					ID: "00000000-0000-0000-0000-000000000001",
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "1234",
+						},
+						Overrides: &api.SubscriptionOverrides{
+							InstallationZones: []string{"nonzonal"},
+						},
+					},
+				}
+				c.AddSubscriptionDocuments(doc)
+			},
+			wantStatusCode: http.StatusOK,
+			wantResponse: map[string]any{
+				"properties": map[string]any{
+					"tenantId": "1234",
+				},
+				"overrides": map[string]any{
+					"installationZones": []any{"nonzonal"},
+				},
+				"state": "Registered",
+			},
+		},
+		{
 			name:           "mixing nonzonal in zones errors",
 			subscriptionID: "00000000-0000-0000-0000-000000000001",
 			body: map[string]any{

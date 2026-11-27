@@ -75,14 +75,16 @@ func (s *SubscriptionOverrides) Validate() error {
 	}
 
 	for i, zone := range s.InstallationZones {
-		if strings.EqualFold(zone, "nonzonal") && len(s.InstallationZones) > 1 {
-			return NewCloudError(
-				http.StatusBadRequest,
-				CloudErrorCodeInvalidParameter,
-				fmt.Sprintf("overrides.installationZones[%d]", i),
-				`"nonzonal" cannot be mixed with zones`)
-		}
-		if !slices.Contains([]string{"1", "2", "3", "4"}, zone) {
+		if strings.EqualFold(zone, "nonzonal") {
+			// nonzonal is only allowed to be by itself
+			if len(s.InstallationZones) > 1 {
+				return NewCloudError(
+					http.StatusBadRequest,
+					CloudErrorCodeInvalidParameter,
+					fmt.Sprintf("overrides.installationZones[%d]", i),
+					`"nonzonal" cannot be mixed with zones`)
+			}
+		} else if !slices.Contains([]string{"1", "2", "3", "4"}, zone) {
 			return NewCloudError(
 				http.StatusBadRequest,
 				CloudErrorCodeInvalidParameter,
