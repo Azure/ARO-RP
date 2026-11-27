@@ -82,6 +82,8 @@ var _ = Describe("OTEL gateway integration", func() {
 	})
 
 	It("forwards containers, journald, and audit logs to an in-cluster collector", func(ctx context.Context) {
+		skipIfNotInDevelopmentEnv()
+
 		image := os.Getenv(otelE2EImageEnv)
 		if image == "" {
 			Skip(fmt.Sprintf("%s not set; skipping OTEL e2e", otelE2EImageEnv))
