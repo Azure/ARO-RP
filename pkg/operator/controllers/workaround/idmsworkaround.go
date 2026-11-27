@@ -73,7 +73,7 @@ func (w *idmsWorkaround) Name() string {
 // gate, so we must not create one there. It is also not applied while the
 // cluster is upgrading, to avoid re-rendering MachineConfigs mid-upgrade.
 func (w *idmsWorkaround) IsRequired(ctx context.Context, clusterVersion version.Version, cluster *arov1alpha1.Cluster) (bool, error) {
-	if !cluster.Spec.OperatorFlags.GetSimpleBoolean(operator.IDMSWorkaroundEnabled) {
+	if !idmsEnabled(cluster.Spec.OperatorFlags) {
 		return false, nil
 	}
 
@@ -93,6 +93,19 @@ func (w *idmsWorkaround) IsRequired(ctx context.Context, clusterVersion version.
 	}
 
 	return !version.IsClusterUpgrading(cv), nil
+}
+
+// idmsEnabled reports whether the workaround is enabled. Unlike most operator
+// flags, an absent flag means enabled: existing clusters keep their persisted
+// operator flags and never receive new defaults, so treating a missing key as
+// false would leave the repair off on exactly the clusters that need it. Only
+// an explicit value can turn it off.
+func idmsEnabled(flags arov1alpha1.OperatorFlags) bool {
+	if _, ok := flags[operator.IDMSWorkaroundEnabled]; !ok {
+		return true
+	}
+
+	return flags.GetSimpleBoolean(operator.IDMSWorkaroundEnabled)
 }
 
 // Ensure implements [Workaround]. It never modifies or removes anything that
