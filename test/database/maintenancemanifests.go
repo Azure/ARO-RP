@@ -105,11 +105,16 @@ func fakeMaintenanceManifestsForCluster(client cosmosdb.MaintenanceManifestDocum
 		if r.ClusterResourceID != clusterResourceID {
 			continue
 		}
-		if hasAfter && r.MaintenanceManifest.RunAfter < after {
-			continue
-		}
-		if hasBefore && r.MaintenanceManifest.RunAfter > before {
-			continue
+		// Pending/InProgress manifests are always included regardless of time window
+		isActive := r.MaintenanceManifest.State == api.MaintenanceManifestStatePending ||
+			r.MaintenanceManifest.State == api.MaintenanceManifestStateInProgress
+		if !isActive {
+			if hasAfter && r.MaintenanceManifest.RunAfter < after {
+				continue
+			}
+			if hasBefore && r.MaintenanceManifest.RunAfter > before {
+				continue
+			}
 		}
 		results = append(results, r)
 	}

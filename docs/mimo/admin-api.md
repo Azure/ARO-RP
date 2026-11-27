@@ -12,15 +12,21 @@ Returns a list of MIMO maintenance manifests for the cluster.
 |-------|------|---------|-------------|
 | `limit` | int | `100` | Max items to return |
 | `$skipToken` | string | | Continuation token for paging |
-| `after` | int64 (unix seconds) | `now - 30 days` when both `after` and `before` are omitted | Inclusive lower bound on `runAfter` |
+| `after` | int64 (unix seconds) | `now - 30 days` | Inclusive lower bound on `runAfter` |
 | `before` | int64 (unix seconds) | none | Inclusive upper bound on `runAfter` |
 
-When neither `after` nor `before` is provided, only manifests with `runAfter >= now - 30d` are returned. Future scheduled manifests (with `runAfter` in the future) are still included. Pass `after=0` (and optionally `before=...`) to widen the window.
+When `after` is not provided, it defaults to `now - 30 days`. Manifests in active states (**Pending** or **InProgress**) are always returned regardless of the time window, so that fleet cancellation tooling never misses a live task. Pass `after=0` to retrieve the full history.
 
 ### Example
 
 ```sh
 curl -k "https://localhost:8443/admin/subscriptions/SUBSCRIPTION_ID/resourcegroups/RESOURCE_GROUP/providers/microsoft.redhatopenshift/openshiftclusters/CLUSTER_NAME/maintenancemanifests?api-version=admin&after=1700000000&before=1730000000"
+```
+
+#### Retrieve full history
+
+```sh
+curl -k "https://localhost:8443/admin/subscriptions/SUBSCRIPTION_ID/resourcegroups/RESOURCE_GROUP/providers/microsoft.redhatopenshift/openshiftclusters/CLUSTER_NAME/maintenancemanifests?api-version=admin&after=0"
 ```
 
 ## PUT /admin/RESOURCE_ID/maintenancemanifests
