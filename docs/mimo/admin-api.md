@@ -17,10 +17,32 @@ Returns a list of MIMO maintenance manifests for the cluster.
 
 When `after` is not provided, it defaults to `now - 30 days`. Manifests in active states (**Pending** or **InProgress**) are always returned regardless of the time window, so that fleet cancellation tooling never misses a live task. Pass `after=0` to retrieve the full history.
 
-### Example
+The `after` and `before` values are **Unix epoch seconds** (seconds since 1970-01-01 UTC). To convert a date to epoch seconds:
 
 ```sh
+# Linux / WSL
+date -d "2024-11-01" +%s          # → 1730419200
+
+# macOS
+date -j -f "%Y-%m-%d" "2024-11-01" +%s
+
+# PowerShell
+[DateTimeOffset]::new([datetime]"2024-11-01").ToUnixTimeSeconds()
+```
+
+### Examples
+
+#### List manifests within a specific date range
+
+```sh
+# after=1700000000 (2023-11-14) to before=1730000000 (2024-11-06)
 curl -k "https://localhost:8443/admin/subscriptions/SUBSCRIPTION_ID/resourcegroups/RESOURCE_GROUP/providers/microsoft.redhatopenshift/openshiftclusters/CLUSTER_NAME/maintenancemanifests?api-version=admin&after=1700000000&before=1730000000"
+```
+
+#### List manifests from the last 7 days (dynamic)
+
+```sh
+curl -k "https://localhost:8443/admin/subscriptions/SUBSCRIPTION_ID/resourcegroups/RESOURCE_GROUP/providers/microsoft.redhatopenshift/openshiftclusters/CLUSTER_NAME/maintenancemanifests?api-version=admin&after=$(date -d '7 days ago' +%s)"
 ```
 
 #### Retrieve full history
