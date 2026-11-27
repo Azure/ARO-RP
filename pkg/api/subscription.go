@@ -1,5 +1,12 @@
 package api
 
+import (
+	"fmt"
+	"net/http"
+	"slices"
+	"strings"
+)
+
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
@@ -56,4 +63,33 @@ type SubscriptionOverrides struct {
 	MissingFields
 
 	InstallationZones []string `json:"installationZones,omitempty"`
+}
+
+func (s *SubscriptionOverrides) Validate() error {
+	if !slices.Contains([]int{0, 1, 3, 4}, len(s.InstallationZones)) {
+		return NewCloudError(
+			http.StatusBadRequest,
+			CloudErrorCodeInvalidParameter,
+			"overrides.installationZones",
+			`only 0 (no override), 1, 3, or 4 zones allowed`)
+	}
+
+	for i, zone := range s.InstallationZones {
+		if strings.EqualFold(zone, "nonzonal") && len(s.InstallationZones) > 1 {
+			return NewCloudError(
+				http.StatusBadRequest,
+				CloudErrorCodeInvalidParameter,
+				fmt.Sprintf("overrides.installationZones[%d]", i),
+				`"nonzonal" cannot be mixed with zones`)
+		}
+		if !slices.Contains([]string{"1", "2", "3", "4"}, zone) {
+			return NewCloudError(
+				http.StatusBadRequest,
+				CloudErrorCodeInvalidParameter,
+				fmt.Sprintf("overrides.installationZones[%d]", i),
+				fmt.Sprintf(`"%s" is not a valid zone number (1-4)`, zone))
+		}
+	}
+
+	return nil
 }

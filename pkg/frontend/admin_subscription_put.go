@@ -41,14 +41,25 @@ func (f *frontend) _putAdminSubscription(ctx context.Context, r *http.Request) (
 	subscriptionID := chi.URLParam(r, "subscriptionId")
 
 	doc, err := dbSubscriptions.Get(ctx, subscriptionID)
-	if err != nil {
+	if err != nil && cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "subscription not found")
+	} else if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
 	sub := &api.Subscription{}
 	err = codec.NewDecoderBytes(body, f.indentingJsonHandle).Decode(&sub)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", fmt.Sprintf("The request content was invalid and could not be deserialized: %q.", err))
+	}
+
+	// Validate the overrides here. We would usually do it in a validator like
+	// in other objects in pkg/api/<version>, but that's a bit overkill for here.
+	if sub.Overrides != nil {
+		err = sub.Overrides.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// We only apply the components of the subscription that are not controlled

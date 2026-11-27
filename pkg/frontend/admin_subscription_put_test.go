@@ -233,6 +233,72 @@ func TestAdminPutSubscriptionDocument(t *testing.T) {
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidRequestContent: : The request content was invalid and could not be deserialized: "unexpected EOF".`,
 		},
+		{
+			name:           "mixing nonzonal in zones errors",
+			subscriptionID: "00000000-0000-0000-0000-000000000001",
+			body: map[string]any{
+				"overrides": map[string]any{
+					"installationZones": []any{"1", "nonzonal", "4"},
+				},
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: "00000000-0000-0000-0000-000000000001",
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "1234",
+						},
+					},
+				})
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: overrides.installationZones[1]: "nonzonal" cannot be mixed with zones`,
+		},
+		{
+			name:           "non-numbered-zone in installationzones",
+			subscriptionID: "00000000-0000-0000-0000-000000000001",
+			body: map[string]any{
+				"overrides": map[string]any{
+					"installationZones": []any{"1", "2", "x"},
+				},
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: "00000000-0000-0000-0000-000000000001",
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "1234",
+						},
+					},
+				})
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: overrides.installationZones[2]: "x" is not a valid zone number (1-4)`,
+		},
+		{
+			name:           "wrong number of zones in installationzones",
+			subscriptionID: "00000000-0000-0000-0000-000000000001",
+			body: map[string]any{
+				"overrides": map[string]any{
+					"installationZones": []any{"1", "2"},
+				},
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: "00000000-0000-0000-0000-000000000001",
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "1234",
+						},
+					},
+				})
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: overrides.installationZones: only 0 (no override), 1, 3, or 4 zones allowed`,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			r := require.New(t)

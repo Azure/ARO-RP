@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
@@ -36,8 +37,10 @@ func (f *frontend) _getAdminSubscription(ctx context.Context, subscriptionID str
 	}
 
 	doc, err := dbSubscriptions.Get(ctx, subscriptionID)
-	if err != nil {
+	if err != nil && cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "subscription not found")
+	} else if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
 	return f.encodeToJSON(doc.Subscription)
