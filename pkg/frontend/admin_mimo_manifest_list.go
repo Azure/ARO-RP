@@ -44,11 +44,6 @@ func (f *frontend) _getAdminMaintManifests(ctx context.Context, r *http.Request,
 		limit = 100
 	}
 
-	opts, err := parseMaintenanceManifestListOptions(r, f.now())
-	if err != nil {
-		return nil, err
-	}
-
 	converter := f.apis[admin.APIVersion].MaintenanceManifestConverter
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
@@ -68,6 +63,11 @@ func (f *frontend) _getAdminMaintManifests(ctx context.Context, r *http.Request,
 
 	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateDeleting {
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "cluster being deleted")
+	}
+
+	opts, err := parseMaintenanceManifestListOptions(r, f.now())
+	if err != nil {
+		return nil, err
 	}
 
 	skipToken, err := f.parseSkipToken(r.URL.String())
@@ -151,8 +151,6 @@ func parseMaintenanceManifestListOptions(r *http.Request, now time.Time) (databa
 			return opts, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "after", "after must be a unix epoch timestamp")
 		}
 		opts.After = after
-	} else {
-		opts.After = now.Add(-maintenanceManifestListDefaultLookback).Unix()
 	}
 
 	if beforeStr != "" {

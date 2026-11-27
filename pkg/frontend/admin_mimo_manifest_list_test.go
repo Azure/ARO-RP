@@ -335,6 +335,59 @@ func TestMIMOListManifests(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 		},
 		{
+			name: "before only returns full history up to before",
+			fixtures: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					},
+				})
+				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+					ClusterResourceID: strings.ToLower(resourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						MaintenanceTaskID: "very-old",
+						State:             api.MaintenanceManifestStateCompleted,
+						RunAfter:          1,
+						RunBefore:         2,
+					},
+				})
+				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+					ClusterResourceID: strings.ToLower(resourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						MaintenanceTaskID: "in-range",
+						State:             api.MaintenanceManifestStateCompleted,
+						RunAfter:          500,
+						RunBefore:         600,
+					},
+				})
+			},
+			queryExtra: "&before=800",
+			wantResponse: &admin.MaintenanceManifestList{
+				MaintenanceManifests: []*admin.MaintenanceManifest{
+					{
+						ID:                "07070707-0707-0707-0707-070707070001",
+						MaintenanceTaskID: "very-old",
+						State:             admin.MaintenanceManifestStateCompleted,
+						Priority:          0,
+						RunAfter:          1,
+						RunBefore:         2,
+					},
+					{
+						ID:                "07070707-0707-0707-0707-070707070002",
+						MaintenanceTaskID: "in-range",
+						State:             admin.MaintenanceManifestStateCompleted,
+						Priority:          0,
+						RunAfter:          500,
+						RunBefore:         600,
+					},
+				},
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
 			name:           "invalid after",
 			queryExtra:     "&after=not-a-number",
 			wantError:      "400: InvalidParameter: after: after must be a unix epoch timestamp",
@@ -549,10 +602,10 @@ func TestParseMaintenanceManifestListOptions(t *testing.T) {
 			want:     database.MaintenanceManifestListOptions{After: 100},
 		},
 		{
-			name:     "before only uses default after",
+			name:     "before only sets after to zero",
 			rawQuery: fmt.Sprintf("before=%d", now.Unix()),
 			want: database.MaintenanceManifestListOptions{
-				After:  defaultAfter,
+				After:  0,
 				Before: new(now.Unix()),
 			},
 		},
