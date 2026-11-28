@@ -4,6 +4,7 @@ package azurezones
 // Licensed under the Apache License 2.0.
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -24,13 +25,20 @@ func TestDetermineZones(t *testing.T) {
 		wantPIPZones          []string
 		allowExpandedAZs      bool
 
-		wantErr string
+		// wantErr matches the sentinel error wrapped by the returned ZoneError.
+		wantErr error
+		// wantProfile, wantSKUZones and wantSupportedZones check the facts
+		// carried by the ZoneError.
+		wantProfile        VMRole
+		wantSKUZones       int
+		wantSupportedZones int
 	}{
 		{
 			name:                 "control plane in 0 zones, zonal workers",
 			controlPlaneSkuZones: []string{},
 			workerSkuZones:       []string{"1", "2", "3"},
-			wantErr:              "cluster creation with mix of zonal and non-zonal resources is unsupported (control plane zones: 0, worker zones: 3)",
+			wantErr:              ErrMixedZonal,
+			wantProfile:          VMRoleMaster,
 		},
 		{
 			name:                  "non-zonal",
@@ -52,13 +60,15 @@ func TestDetermineZones(t *testing.T) {
 			name:                 "non-zonal control plane, zonal workers",
 			controlPlaneSkuZones: []string{},
 			workerSkuZones:       []string{"1", "2", "3"},
-			wantErr:              "cluster creation with mix of zonal and non-zonal resources is unsupported (control plane zones: 0, worker zones: 3)",
+			wantErr:              ErrMixedZonal,
+			wantProfile:          VMRoleMaster,
 		},
 		{
 			name:                 "zonal control plane, non-zonal workers",
 			controlPlaneSkuZones: []string{"1", "2", "3"},
 			workerSkuZones:       []string{},
-			wantErr:              "cluster creation with mix of zonal and non-zonal resources is unsupported (control plane zones: 3, worker zones: 0)",
+			wantErr:              ErrMixedZonal,
+			wantProfile:          VMRoleWorker,
 		},
 		{
 			name:                  "zonal control plane, zonal workers",
@@ -90,25 +100,86 @@ func TestDetermineZones(t *testing.T) {
 			name:                 "not enough control plane zones",
 			controlPlaneSkuZones: []string{"1", "2"},
 			workerSkuZones:       []string{"1", "2", "3"},
-			wantErr:              "control plane SKU 'controlPlaneSKU' only available in 2 zones, need 3",
+			wantErr:              ErrInsufficientZones,
+			wantProfile:          VMRoleMaster,
+			wantSKUZones:         2,
+			wantSupportedZones:   2,
 		},
 		{
 			name:                 "not enough control plane zones, basic AZs only",
 			controlPlaneSkuZones: []string{"1", "2", "4"},
 			workerSkuZones:       []string{"1", "2", "3"},
-			wantErr:              "control plane SKU 'controlPlaneSKU' only available in 2 zones, need 3",
+			wantErr:              ErrInsufficientZones,
+			wantProfile:          VMRoleMaster,
+			wantSKUZones:         3,
+			wantSupportedZones:   2,
 		},
 		{
 			name:                 "not enough worker zones",
 			controlPlaneSkuZones: []string{"1", "2", "3"},
 			workerSkuZones:       []string{"1", "2"},
-			wantErr:              "worker SKU 'workerSKU' only available in 2 zones, need 3",
+			wantErr:              ErrInsufficientZones,
+			wantProfile:          VMRoleWorker,
+			wantSKUZones:         2,
+			wantSupportedZones:   2,
 		},
 		{
 			name:                 "not enough worker zones, basic AZs only",
 			controlPlaneSkuZones: []string{"1", "2", "3"},
 			workerSkuZones:       []string{"1", "2", "4"},
-			wantErr:              "worker SKU 'workerSKU' only available in 2 zones, need 3",
+			wantErr:              ErrInsufficientZones,
+			wantProfile:          VMRoleWorker,
+			wantSKUZones:         3,
+			wantSupportedZones:   2,
+		},
+		{
+			// A SKU available only in zones ARO does not support is still zonal.
+			// It must not be reported as a mix of zonal and non-zonal SKUs.
+			name:                 "control plane only in unsupported zones, zonal workers",
+			controlPlaneSkuZones: []string{"4", "5", "6"},
+			workerSkuZones:       []string{"1", "2", "3"},
+			wantErr:              ErrInsufficientZones,
+			wantProfile:          VMRoleMaster,
+			wantSKUZones:         3,
+		},
+		{
+			name:                 "worker only in unsupported zones, zonal control plane",
+			controlPlaneSkuZones: []string{"1", "2", "3"},
+			workerSkuZones:       []string{"4", "5", "6"},
+			wantErr:              ErrInsufficientZones,
+			wantProfile:          VMRoleWorker,
+			wantSKUZones:         3,
+		},
+		{
+			// Asymmetric: the control plane is zonal but only in unsupported
+			// zones, the worker is genuinely non-zonal. This must report an
+			// insufficient-zones error on the control plane, not a mixed error:
+			// "select SKUs that are either both zonal or both non-zonal" is not
+			// actionable here.
+			name:                 "control plane only in unsupported zones, non-zonal workers",
+			controlPlaneSkuZones: []string{"4", "5", "6"},
+			workerSkuZones:       []string{},
+			wantErr:              ErrInsufficientZones,
+			wantProfile:          VMRoleMaster,
+			wantSKUZones:         3,
+		},
+		{
+			name:                 "worker only in unsupported zones, non-zonal control plane",
+			controlPlaneSkuZones: []string{},
+			workerSkuZones:       []string{"4", "5", "6"},
+			wantErr:              ErrInsufficientZones,
+			wantProfile:          VMRoleWorker,
+			wantSKUZones:         3,
+		},
+		{
+			// Both sides filtered away: ARO-supported zones are missing on
+			// both, but neither is non-zonal, so this is not a mixed error.
+			name:                 "both only in unsupported zones",
+			controlPlaneSkuZones: []string{"4", "5", "6"},
+			workerSkuZones:       []string{"4", "5", "6"},
+			wantErr:              ErrInsufficientZones,
+			wantProfile:          VMRoleMaster,
+			wantSKUZones:         3,
 		},
 		{
 			name:                  "region with 4 availability zones, expanded AZs, control plane only available in non-consecutive 3, workers use all",
@@ -118,6 +189,40 @@ func TestDetermineZones(t *testing.T) {
 			wantControlPlaneZones: []string{"1", "2", "4"},
 			wantWorkerZones:       []string{"1", "2", "3", "4"},
 			wantPIPZones:          []string{"1", "2", "3", "4"},
+		},
+		{
+			// The sufficiency checks run before the mixed check, so a control
+			// plane short of zones is reported as insufficient even when the
+			// worker is non-zonal. This is the only case that exercises the
+			// "N of the 3 required availability zones" branch with a non-zero
+			// supported count.
+			name:                 "not enough control plane zones, non-zonal workers",
+			controlPlaneSkuZones: []string{"1", "2"},
+			workerSkuZones:       []string{},
+			wantErr:              ErrInsufficientZones,
+			wantProfile:          VMRoleMaster,
+			wantSKUZones:         2,
+			wantSupportedZones:   2,
+		},
+		{
+			// With expanded AZs on, zones 4,5,6 are supported, so the control
+			// plane is zonal and the worker is not: a genuine mixed error.
+			name:                 "expanded AZs on, zonal control plane and non-zonal workers",
+			allowExpandedAZs:     true,
+			controlPlaneSkuZones: []string{"4", "5", "6"},
+			workerSkuZones:       []string{},
+			wantErr:              ErrMixedZonal,
+			wantProfile:          VMRoleWorker,
+		},
+		{
+			// With expanded AZs on, a SKU in zones 4,5,6 is usable.
+			name:                  "unsupported zones are usable when expanded AZs are on",
+			allowExpandedAZs:      true,
+			controlPlaneSkuZones:  []string{"4", "5", "6"},
+			workerSkuZones:        []string{"1", "2", "3"},
+			wantControlPlaneZones: []string{"4", "5", "6"},
+			wantWorkerZones:       []string{"1", "2", "3"},
+			wantPIPZones:          []string{"1", "2", "3", "4", "5", "6"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -134,13 +239,31 @@ func TestDetermineZones(t *testing.T) {
 				}),
 			}
 
-			m := &availabilityZoneManager{
-				allowExpandedAvailabilityZones: tt.allowExpandedAZs,
-			}
+			m := NewManager(tt.allowExpandedAZs)
 
 			controlPlaneZones, workerZones, PIPZones, err := m.DetermineAvailabilityZones(controlPlaneSku, workerSku)
-			if err != nil && err.Error() != tt.wantErr {
-				t.Error("wantErr", cmp.Diff(tt.wantErr, err))
+
+			if tt.wantErr == nil {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			} else {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("got error %v, want %v", err, tt.wantErr)
+				}
+				var zoneErr *ZoneError
+				if !errors.As(err, &zoneErr) {
+					t.Fatalf("expected *ZoneError, got %T", err)
+				}
+				if zoneErr.Profile != tt.wantProfile {
+					t.Errorf("got profile %q, want %q", zoneErr.Profile, tt.wantProfile)
+				}
+				if zoneErr.SKUZones != tt.wantSKUZones {
+					t.Errorf("got SKUZones %d, want %d", zoneErr.SKUZones, tt.wantSKUZones)
+				}
+				if zoneErr.SupportedZones != tt.wantSupportedZones {
+					t.Errorf("got SupportedZones %d, want %d", zoneErr.SupportedZones, tt.wantSupportedZones)
+				}
 			}
 
 			if !reflect.DeepEqual(controlPlaneZones, tt.wantControlPlaneZones) {

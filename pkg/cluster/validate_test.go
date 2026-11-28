@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_armcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcompute"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -39,6 +41,12 @@ func TestValidateZones(t *testing.T) {
 		doc                   api.OpenShiftCluster
 		resourceSkusClientErr error
 		wantErrs              []error
+
+		// wantTarget is asserted when the case must return a CloudError.
+		wantTarget string
+		// wantCloudError is set for zone-validation failures, which must reach
+		// the customer as a 400 InvalidParameter UserError.
+		wantCloudError bool
 	}
 
 	for _, tt := range []*test{
@@ -127,7 +135,122 @@ func TestValidateZones(t *testing.T) {
 			name:                 "zonal, control plane unavailable",
 			controlPlaneSkuZones: []string{"1", "2"},
 			workerSkuZones:       []string{"1", "2", "3"},
-			wantErrs:             []error{errors.New("control plane SKU 'Standard_D16as_v4' only available in 2 zones, need 3")},
+			wantErrs:             []error{errors.New("400: InvalidParameter: properties.masterProfile.VMSize: The selected control plane SKU 'Standard_D16as_v4' is available in only 2 of the 3 required availability zones in region 'eastus' (zones 1, 2, 3). Please select a SKU that is available in zones 1, 2, 3 in this region.")},
+			wantCloudError:       true,
+			wantTarget:           "properties.masterProfile.VMSize",
+		},
+		{
+			name:                 "zonal, worker unavailable",
+			controlPlaneSkuZones: []string{"1", "2", "3"},
+			workerSkuZones:       []string{"1", "2"},
+			wantErrs:             []error{errors.New("400: InvalidParameter: properties.workerProfiles[0].VMSize: The selected worker SKU 'Standard_D8as_v4' is available in only 2 of the 3 required availability zones in region 'eastus' (zones 1, 2, 3). Please select a SKU that is available in zones 1, 2, 3 in this region.")},
+			wantCloudError:       true,
+			wantTarget:           "properties.workerProfiles[0].VMSize",
+		},
+		{
+			// Pins the boundary against a future < -> <= slip.
+			name:                 "zonal, worker in a single zone",
+			controlPlaneSkuZones: []string{"1", "2", "3"},
+			workerSkuZones:       []string{"1"},
+			wantErrs:             []error{errors.New("400: InvalidParameter: properties.workerProfiles[0].VMSize: The selected worker SKU 'Standard_D8as_v4' is available in only 1 of the 3 required availability zones in region 'eastus' (zones 1, 2, 3). Please select a SKU that is available in zones 1, 2, 3 in this region.")},
+			wantCloudError:       true,
+			wantTarget:           "properties.workerProfiles[0].VMSize",
+		},
+		{
+			name:                 "mixed, control plane non-zonal",
+			controlPlaneSkuZones: []string{},
+			workerSkuZones:       []string{"1", "2", "3"},
+			wantErrs:             []error{errors.New("400: InvalidParameter: properties.masterProfile.VMSize: The control plane SKU 'Standard_D16as_v4' is not available in availability zones in region 'eastus', but the worker SKU 'Standard_D8as_v4' is. Zonal and non-zonal SKUs cannot be mixed in a cluster. Please select SKUs that are either both zonal or both non-zonal in this region.")},
+			wantCloudError:       true,
+			wantTarget:           "properties.masterProfile.VMSize",
+		},
+		{
+			name:                 "mixed, worker non-zonal",
+			controlPlaneSkuZones: []string{"1", "2", "3"},
+			workerSkuZones:       []string{},
+			wantErrs:             []error{errors.New("400: InvalidParameter: properties.workerProfiles[0].VMSize: The worker SKU 'Standard_D8as_v4' is not available in availability zones in region 'eastus', but the control plane SKU 'Standard_D16as_v4' is. Zonal and non-zonal SKUs cannot be mixed in a cluster. Please select SKUs that are either both zonal or both non-zonal in this region.")},
+			wantCloudError:       true,
+			wantTarget:           "properties.workerProfiles[0].VMSize",
+		},
+		{
+			// With expanded AZs off, FilterZones strips zone 4 and leaves the
+			// control plane with only 2 usable zones.
+			name:                 "expanded AZs off collapses control plane to 2 zones",
+			controlPlaneSkuZones: []string{"1", "2", "4"},
+			workerSkuZones:       []string{"1", "2", "3"},
+			wantErrs:             []error{errors.New("400: InvalidParameter: properties.masterProfile.VMSize: The selected control plane SKU 'Standard_D16as_v4' is available in only 2 of the 3 required availability zones in region 'eastus' (zones 1, 2, 3). Please select a SKU that is available in zones 1, 2, 3 in this region.")},
+			wantCloudError:       true,
+			wantTarget:           "properties.masterProfile.VMSize",
+		},
+		{
+			// Expanded AZs on: only the zones Azure actually offers are counted,
+			// so the message compares against the requirement directly.
+			name:                 "expanded AZs on, control plane unavailable",
+			expandedAZs:          true,
+			controlPlaneSkuZones: []string{"1", "2"},
+			workerSkuZones:       []string{"1", "2", "3"},
+			wantErrs:             []error{errors.New("400: InvalidParameter: properties.masterProfile.VMSize: The selected control plane SKU 'Standard_D16as_v4' is available in only 2 of the 3 required availability zones in region 'eastus'. Please select a SKU that is available in at least 3 availability zones in this region.")},
+			wantCloudError:       true,
+			wantTarget:           "properties.masterProfile.VMSize",
+		},
+		{
+			// A SKU only in zones ARO does not support is zonal, so this must
+			// not be reported as a mix of zonal and non-zonal SKUs.
+			name:                 "control plane only in unsupported zones, expanded AZs off",
+			controlPlaneSkuZones: []string{"4", "5", "6"},
+			workerSkuZones:       []string{"1", "2", "3"},
+			wantErrs:             []error{errors.New("400: InvalidParameter: properties.masterProfile.VMSize: The selected control plane SKU 'Standard_D16as_v4' is available in 3 availability zone(s) in region 'eastus', but none of them are zones 1, 2, 3, which ARO requires for zonal cluster creation.")},
+			wantCloudError:       true,
+			wantTarget:           "properties.masterProfile.VMSize",
+		},
+		{
+			name:                 "worker only in unsupported zones, expanded AZs off",
+			controlPlaneSkuZones: []string{"1", "2", "3"},
+			workerSkuZones:       []string{"4", "5", "6"},
+			wantErrs:             []error{errors.New("400: InvalidParameter: properties.workerProfiles[0].VMSize: The selected worker SKU 'Standard_D8as_v4' is available in 3 availability zone(s) in region 'eastus', but none of them are zones 1, 2, 3, which ARO requires for zonal cluster creation.")},
+			wantCloudError:       true,
+			wantTarget:           "properties.workerProfiles[0].VMSize",
+		},
+		{
+			// Asymmetric: zonal control plane restricted to unsupported zones,
+			// genuinely non-zonal worker. Must be an insufficient-zones error on
+			// the control plane, not the unactionable mixed-SKU message.
+			name:                 "control plane only in unsupported zones, non-zonal workers",
+			controlPlaneSkuZones: []string{"4", "5", "6"},
+			workerSkuZones:       []string{},
+			wantErrs:             []error{errors.New("400: InvalidParameter: properties.masterProfile.VMSize: The selected control plane SKU 'Standard_D16as_v4' is available in 3 availability zone(s) in region 'eastus', but none of them are zones 1, 2, 3, which ARO requires for zonal cluster creation.")},
+			wantCloudError:       true,
+			wantTarget:           "properties.masterProfile.VMSize",
+		},
+		{
+			name:                 "worker only in unsupported zones, non-zonal control plane",
+			controlPlaneSkuZones: []string{},
+			workerSkuZones:       []string{"4", "5", "6"},
+			wantErrs:             []error{errors.New("400: InvalidParameter: properties.workerProfiles[0].VMSize: The selected worker SKU 'Standard_D8as_v4' is available in 3 availability zone(s) in region 'eastus', but none of them are zones 1, 2, 3, which ARO requires for zonal cluster creation.")},
+			wantCloudError:       true,
+			wantTarget:           "properties.workerProfiles[0].VMSize",
+		},
+		{
+			// With expanded AZs on the same SKUs are perfectly usable.
+			name:                 "unsupported zones are usable when expanded AZs are on",
+			expandedAZs:          true,
+			controlPlaneSkuZones: []string{"4", "5", "6"},
+			workerSkuZones:       []string{"1", "2", "3"},
+			doc: api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD16asV4,
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSizeStandardD8asV4,
+						},
+					},
+					Zones: []string{"1", "2", "3", "4", "5", "6"},
+				},
+			},
 		},
 		{
 			name:                  "error from resourceskus",
@@ -220,6 +343,25 @@ func TestValidateZones(t *testing.T) {
 
 			err := m.validateZones(ctx)
 			utilerror.AssertErrorMatchesAll(t, err, tt.wantErrs)
+
+			if tt.wantCloudError {
+				var cloudErr *api.CloudError
+				if !errors.As(err, &cloudErr) {
+					t.Fatalf("expected *api.CloudError, got %T", err)
+				}
+				if cloudErr.StatusCode != http.StatusBadRequest {
+					t.Errorf("got status %d, want %d", cloudErr.StatusCode, http.StatusBadRequest)
+				}
+				if cloudErr.Code != api.CloudErrorCodeInvalidParameter {
+					t.Errorf("got code %q, want %q", cloudErr.Code, api.CloudErrorCodeInvalidParameter)
+				}
+				if cloudErr.Target != tt.wantTarget {
+					t.Errorf("got target %q, want %q", cloudErr.Target, tt.wantTarget)
+				}
+				if got := utillog.MapStatusCodeToResultType(cloudErr.StatusCode); got != utillog.UserErrorResultType {
+					t.Errorf("got resultType %q, want %q", got, utillog.UserErrorResultType)
+				}
+			}
 			if len(tt.wantErrs) == 0 {
 				for _, err := range checker.CheckOpenShiftClusters(openShiftClustersClient) {
 					t.Error(err)

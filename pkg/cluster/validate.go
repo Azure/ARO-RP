@@ -5,8 +5,10 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
@@ -52,11 +54,15 @@ func (m *manager) validateZones(ctx context.Context) error {
 	}
 
 	// Set RP-level options for expanded AZs
-	zoneChecker := azurezones.NewManager(
-		m.env.FeatureIsSet(env.FeatureEnableClusterExpandedAvailabilityZones))
+	allowExpandedAZs := m.env.FeatureIsSet(env.FeatureEnableClusterExpandedAvailabilityZones)
+	zoneChecker := azurezones.NewManager(allowExpandedAZs)
 
 	_, _, originalZones, err := zoneChecker.DetermineAvailabilityZones(controlPlaneSKU, workerSKU)
 	if err != nil {
+		var zoneErr *azurezones.ZoneError
+		if errors.As(err, &zoneErr) {
+			return zoneErrorAsCloudError(zoneErr, location, allowExpandedAZs)
+		}
 		return err
 	}
 
@@ -78,4 +84,61 @@ func checkSKUAvailability(skus map[string]*armcompute.ResourceSKU, location, pat
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The selected SKU '%v' is unavailable in region '%v'", vmsize, location))
 	}
 	return sku, nil
+}
+
+// zoneErrorAsCloudError turns a failed availability zone check into a
+// customer-facing CloudError. The wording lives here rather than in azurezones
+// so that package stays pure zone logic.
+func zoneErrorAsCloudError(zoneErr *azurezones.ZoneError, location string, allowExpandedAvailabilityZones bool) error {
+	var target string
+	switch zoneErr.Profile {
+	case azurezones.VMRoleMaster:
+		target = "properties.masterProfile.VMSize"
+	case azurezones.VMRoleWorker:
+		target = "properties.workerProfiles[0].VMSize"
+	}
+
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, target,
+		zoneErrorMessage(zoneErr, location, allowExpandedAvailabilityZones))
+}
+
+// zoneRoleNames maps a VM role to the wording used in customer-facing
+// messages, keeping all display text in this package.
+var zoneRoleNames = map[azurezones.VMRole]string{
+	azurezones.VMRoleMaster: "control plane",
+	azurezones.VMRoleWorker: "worker",
+}
+
+// otherRole returns the role paired with the given one.
+func otherRole(role azurezones.VMRole) azurezones.VMRole {
+	if role == azurezones.VMRoleMaster {
+		return azurezones.VMRoleWorker
+	}
+	return azurezones.VMRoleMaster
+}
+
+func zoneErrorMessage(zoneErr *azurezones.ZoneError, location string, allowExpandedAvailabilityZones bool) string {
+	role := zoneRoleNames[zoneErr.Profile]
+	supportedZones := strings.Join(azurezones.SupportedZones, ", ")
+
+	if errors.Is(zoneErr.Err, azurezones.ErrMixedZonal) {
+		otherRole := zoneRoleNames[otherRole(zoneErr.Profile)]
+		return fmt.Sprintf("The %s SKU '%s' is not available in availability zones in region '%s', but the %s SKU '%s' is. Zonal and non-zonal SKUs cannot be mixed in a cluster. Please select SKUs that are either both zonal or both non-zonal in this region.",
+			role, zoneErr.SKUName, location, otherRole, zoneErr.OtherSKUName)
+	}
+
+	// With expanded AZs enabled the supported zone count is the zone count
+	// Azure reports, so it can be compared against the requirement directly.
+	if allowExpandedAvailabilityZones {
+		return fmt.Sprintf("The selected %s SKU '%s' is available in only %d of the %d required availability zones in region '%s'. Please select a SKU that is available in at least %d availability zones in this region.",
+			role, zoneErr.SKUName, zoneErr.SupportedZones, zoneErr.RequiredZones, location, zoneErr.RequiredZones)
+	}
+
+	if zoneErr.SupportedZones == 0 {
+		return fmt.Sprintf("The selected %s SKU '%s' is available in %d availability zone(s) in region '%s', but none of them are zones %s, which ARO requires for zonal cluster creation.",
+			role, zoneErr.SKUName, zoneErr.SKUZones, location, supportedZones)
+	}
+
+	return fmt.Sprintf("The selected %s SKU '%s' is available in only %d of the %d required availability zones in region '%s' (zones %s). Please select a SKU that is available in zones %s in this region.",
+		role, zoneErr.SKUName, zoneErr.SupportedZones, zoneErr.RequiredZones, location, supportedZones, supportedZones)
 }
