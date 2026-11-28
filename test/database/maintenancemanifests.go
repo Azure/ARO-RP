@@ -19,6 +19,12 @@ func injectMaintenanceManifests(c *cosmosdb.FakeMaintenanceManifestDocumentClien
 	c.SetQueryHandler(database.MaintenanceManifestQueryForCluster, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
 		return fakeMaintenanceManifestsForCluster(client, query, options, now)
 	})
+	c.SetQueryHandler(database.MaintenanceManifestQueryForClusterAfter, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
+		return fakeMaintenanceManifestsForCluster(client, query, options, now)
+	})
+	c.SetQueryHandler(database.MaintenanceManifestQueryForClusterAfterBefore, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
+		return fakeMaintenanceManifestsForCluster(client, query, options, now)
+	})
 	c.SetQueryHandler(database.MaintenanceManifestDequeueQueryForCluster, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
 		return fakeMaintenanceManifestsDequeueForCluster(client, query, options, now)
 	})
@@ -90,12 +96,25 @@ func fakeMaintenanceManifestsForCluster(client cosmosdb.MaintenanceManifestDocum
 		panic(err)
 	}
 
-	clusterResourceID := query.Parameters[0].Value
+	clusterResourceID := fakeMaintenanceManifestParamValue(query, "@clusterResourceID")
+	after, hasAfter := fakeMaintenanceManifestParamInt64(query, "@after")
+	before, hasBefore := fakeMaintenanceManifestParamInt64(query, "@before")
 
 	var results []*api.MaintenanceManifestDocument
 	for _, r := range input.MaintenanceManifestDocuments {
 		if r.ClusterResourceID != clusterResourceID {
 			continue
+		}
+		// Pending/InProgress manifests are always included regardless of time window
+		isActive := r.MaintenanceManifest.State == api.MaintenanceManifestStatePending ||
+			r.MaintenanceManifest.State == api.MaintenanceManifestStateInProgress
+		if !isActive {
+			if hasAfter && r.MaintenanceManifest.RunAfter < after {
+				continue
+			}
+			if hasBefore && r.MaintenanceManifest.RunAfter > before {
+				continue
+			}
 		}
 		results = append(results, r)
 	}
@@ -105,6 +124,27 @@ func fakeMaintenanceManifestsForCluster(client cosmosdb.MaintenanceManifestDocum
 	})
 
 	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)
+}
+
+func fakeMaintenanceManifestParamValue(query *cosmosdb.Query, name string) string {
+	for _, p := range query.Parameters {
+		if p.Name == name {
+			return p.Value
+		}
+	}
+	return ""
+}
+
+func fakeMaintenanceManifestParamInt64(query *cosmosdb.Query, name string) (int64, bool) {
+	v := fakeMaintenanceManifestParamValue(query, name)
+	if v == "" {
+		return 0, false
+	}
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return n, true
 }
 
 func fakeMaintenanceManifestsForClusterAndScheduleID(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {

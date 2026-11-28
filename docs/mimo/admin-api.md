@@ -4,7 +4,52 @@ All need `api-version=admin`.
 
 ## GET /admin/RESOURCE_ID/maintenancemanifests
 
-Returns a list of MIMO maintenance manifests.
+Returns a list of MIMO maintenance manifests for the cluster.
+
+### Query parameters
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `limit` | int | `100` | Max items to return |
+| `$skipToken` | string | | Continuation token for paging |
+| `after` | int64 (unix seconds) | `now - 30 days` (`0` when only `before` is set) | Inclusive lower bound on `runAfter` |
+| `before` | int64 (unix seconds) | none | Inclusive upper bound on `runAfter` |
+
+When neither `after` nor `before` is provided, `after` defaults to `now - 30 days`. When only `before` is provided, `after` defaults to `0` (full history up to `before`). Manifests in active states (**Pending** or **InProgress**) are always returned regardless of the time window, so that fleet cancellation tooling (e.g. `fleet-certificate-rotation.ps1 -action cancel`) that lists via this endpoint never misses a live task. Pass `after=0` to retrieve the full history.
+
+The `after` and `before` values are **Unix epoch seconds** (seconds since 1970-01-01 UTC). To convert a date to epoch seconds:
+
+```sh
+# Linux / WSL (UTC)
+date -u -d "2024-11-01" +%s          # → 1730419200
+
+# macOS (UTC)
+TZ=UTC date -j -f "%Y-%m-%d" "2024-11-01" +%s
+
+# PowerShell (UTC)
+[DateTimeOffset]::Parse("2024-11-01T00:00:00Z").ToUnixTimeSeconds()
+```
+
+### Examples
+
+#### List manifests within a specific date range
+
+```sh
+# after=1700000000 (2023-11-14) to before=1730000000 (2024-10-27)
+curl -k "https://localhost:8443/admin/subscriptions/SUBSCRIPTION_ID/resourcegroups/RESOURCE_GROUP/providers/microsoft.redhatopenshift/openshiftclusters/CLUSTER_NAME/maintenancemanifests?api-version=admin&after=1700000000&before=1730000000"
+```
+
+#### List manifests from the last 7 days (dynamic)
+
+```sh
+curl -k "https://localhost:8443/admin/subscriptions/SUBSCRIPTION_ID/resourcegroups/RESOURCE_GROUP/providers/microsoft.redhatopenshift/openshiftclusters/CLUSTER_NAME/maintenancemanifests?api-version=admin&after=$(date -u -d '7 days ago' +%s)"
+```
+
+#### Retrieve full history
+
+```sh
+curl -k "https://localhost:8443/admin/subscriptions/SUBSCRIPTION_ID/resourcegroups/RESOURCE_GROUP/providers/microsoft.redhatopenshift/openshiftclusters/CLUSTER_NAME/maintenancemanifests?api-version=admin&after=0"
+```
 
 ## PUT /admin/RESOURCE_ID/maintenancemanifests
 

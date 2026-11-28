@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -31,9 +32,26 @@ const (
 	MaintenanceManifestQueueOverallQuery              = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment
 	MaintenanceManifestQueueLengthQuery               = "SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment
 
+	// List API time filters. Query text is fixed so fake Cosmos handlers can match exactly.
+	// Parameter.Value is a string in this client, so StringToNumber is required for numeric compare.
+	// Pending/InProgress manifests are always included so fleet cancellation never misses a live task.
+	manifestActiveStateFragment = `doc.maintenanceManifest.state IN ("Pending", "InProgress")`
+
+	MaintenanceManifestQueryForClusterAfter = MaintenanceManifestQueryForCluster +
+		" AND (" + manifestActiveStateFragment + " OR doc.maintenanceManifest.runAfter >= StringToNumber(@after))"
+	MaintenanceManifestQueryForClusterAfterBefore = MaintenanceManifestQueryForCluster +
+		" AND (" + manifestActiveStateFragment + " OR (doc.maintenanceManifest.runAfter >= StringToNumber(@after) AND doc.maintenanceManifest.runAfter <= StringToNumber(@before)))"
+
 	MaintenanceManifestGetFutureForScheduleIDAndCluster = MaintenanceManifestQueryForCluster + " AND " + manifestPendingFragment + " AND " + manifestFetchOnlyByScheduleID + " AND " + manifestFetchOnlyRunAfterInFutureFragment
 	MaintenanceManifestGetFutureForScheduleID           = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestFetchOnlyByScheduleID + " AND " + manifestFetchOnlyRunAfterInFutureFragment
 )
+
+// MaintenanceManifestListOptions controls time filtering for cluster manifest list queries.
+// After is required (the list handler defaults it to now-30d when the client omits after/before).
+type MaintenanceManifestListOptions struct {
+	After  int64  // inclusive lower bound on runAfter
+	Before *int64 // optional inclusive upper bound on runAfter
+}
 
 type MaintenanceManifestDocumentMutator func(*api.MaintenanceManifestDocument) error
 
@@ -46,7 +64,7 @@ type maintenanceManifests struct {
 
 type MaintenanceManifests interface {
 	Create(context.Context, *api.MaintenanceManifestDocument) (*api.MaintenanceManifestDocument, error)
-	GetByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
+	GetByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string, opts MaintenanceManifestListOptions) (cosmosdb.MaintenanceManifestDocumentIterator, error)
 	GetClustersWithRunnableTasks(ctx context.Context) ([]string, error)
 	GetQueuedByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
 	GetFutureTasksForScheduleID(ctx context.Context, scheduleID string, continuation string) cosmosdb.MaintenanceManifestDocumentIterator
@@ -199,19 +217,33 @@ func (c *maintenanceManifests) ChangeFeed() cosmosdb.MaintenanceManifestDocument
 	return c.c.ChangeFeed(nil)
 }
 
-func (c *maintenanceManifests) GetByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error) {
+func (c *maintenanceManifests) GetByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string, opts MaintenanceManifestListOptions) (cosmosdb.MaintenanceManifestDocumentIterator, error) {
 	if clusterResourceID != strings.ToLower(clusterResourceID) {
 		return nil, fmt.Errorf("clusterResourceID %q is not lower case", clusterResourceID)
 	}
 
-	return c.c.Query(clusterResourceID, &cosmosdb.Query{
-		Query: MaintenanceManifestQueryForCluster,
-		Parameters: []cosmosdb.Parameter{
-			{
-				Name:  "@clusterResourceID",
-				Value: clusterResourceID,
-			},
+	query := MaintenanceManifestQueryForClusterAfter
+	params := []cosmosdb.Parameter{
+		{
+			Name:  "@clusterResourceID",
+			Value: clusterResourceID,
 		},
+		{
+			Name:  "@after",
+			Value: strconv.FormatInt(opts.After, 10),
+		},
+	}
+	if opts.Before != nil {
+		query = MaintenanceManifestQueryForClusterAfterBefore
+		params = append(params, cosmosdb.Parameter{
+			Name:  "@before",
+			Value: strconv.FormatInt(*opts.Before, 10),
+		})
+	}
+
+	return c.c.Query(clusterResourceID, &cosmosdb.Query{
+		Query:      query,
+		Parameters: params,
 	}, &cosmosdb.Options{Continuation: continuation}), nil
 }
 
