@@ -15,13 +15,11 @@ type mockQueryManifestClient struct {
 	cosmosdb.MaintenanceManifestDocumentClient
 	gotPartitionKey string
 	gotQuery        *cosmosdb.Query
-	gotOptions      *cosmosdb.Options
 }
 
 func (m *mockQueryManifestClient) Query(partitionKey string, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
 	m.gotPartitionKey = partitionKey
 	m.gotQuery = query
-	m.gotOptions = options
 	return nil
 }
 
@@ -61,6 +59,16 @@ func TestGetByClusterResourceIDQueryWiring(t *testing.T) {
 			wantParams: []cosmosdb.Parameter{
 				{Name: "@clusterResourceID", Value: clusterResourceID},
 				{Name: "@after", Value: "0"},
+			},
+		},
+		{
+			name:      "after zero with before",
+			opts:      MaintenanceManifestListOptions{After: 0, Before: new(int64(200))},
+			wantQuery: MaintenanceManifestQueryForClusterAfterBefore,
+			wantParams: []cosmosdb.Parameter{
+				{Name: "@clusterResourceID", Value: clusterResourceID},
+				{Name: "@after", Value: "0"},
+				{Name: "@before", Value: "200"},
 			},
 		},
 	} {

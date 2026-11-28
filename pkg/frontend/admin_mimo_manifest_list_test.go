@@ -335,7 +335,7 @@ func TestMIMOListManifests(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 		},
 		{
-			name: "before only returns full history up to before",
+			name: "before only with explicit after excludes out of range",
 			fixtures: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
@@ -348,35 +348,27 @@ func TestMIMOListManifests(t *testing.T) {
 				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 					ClusterResourceID: strings.ToLower(resourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceTaskID: "very-old",
-						State:             api.MaintenanceManifestStateCompleted,
-						RunAfter:          1,
-						RunBefore:         2,
-					},
-				})
-				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
-					ClusterResourceID: strings.ToLower(resourceID),
-					MaintenanceManifest: api.MaintenanceManifest{
 						MaintenanceTaskID: "in-range",
 						State:             api.MaintenanceManifestStateCompleted,
 						RunAfter:          500,
 						RunBefore:         600,
 					},
 				})
+				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+					ClusterResourceID: strings.ToLower(resourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						MaintenanceTaskID: "out-of-range",
+						State:             api.MaintenanceManifestStateCompleted,
+						RunAfter:          900,
+						RunBefore:         950,
+					},
+				})
 			},
-			queryExtra: "&before=800",
+			queryExtra: "&after=400&before=800",
 			wantResponse: &admin.MaintenanceManifestList{
 				MaintenanceManifests: []*admin.MaintenanceManifest{
 					{
 						ID:                "07070707-0707-0707-0707-070707070001",
-						MaintenanceTaskID: "very-old",
-						State:             admin.MaintenanceManifestStateCompleted,
-						Priority:          0,
-						RunAfter:          1,
-						RunBefore:         2,
-					},
-					{
-						ID:                "07070707-0707-0707-0707-070707070002",
 						MaintenanceTaskID: "in-range",
 						State:             admin.MaintenanceManifestStateCompleted,
 						Priority:          0,
@@ -579,6 +571,89 @@ func TestMIMOListManifestsDefaultTimeWindow(t *testing.T) {
 	err = validateResponse(resp, b, http.StatusOK, "", wantResponse)
 	if err != nil {
 		t.Error(err)
+	}
+}
+
+func TestMIMOListManifestsBeforeOnlyReturnsOldManifests(t *testing.T) {
+	mockSubID := "00000000-0000-0000-0000-000000000000"
+	mockTenantID := "00000000-0000-0000-0000-000000000000"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
+	ctx := context.Background()
+
+	now := time.Unix(1_700_000_000, 0)
+	clock := func() time.Time { return now }
+	oldRunAfter := now.Add(-60 * 24 * time.Hour).Unix()
+	beforeCutoff := now.Add(-45 * 24 * time.Hour).Unix()
+
+	ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions().WithMaintenanceManifests(clock)
+	defer ti.done()
+
+	ti.fixture.AddSubscriptionDocuments(&api.SubscriptionDocument{
+		ID: mockSubID,
+		Subscription: &api.Subscription{
+			State: api.SubscriptionStateRegistered,
+			Properties: &api.SubscriptionProperties{
+				TenantID: mockTenantID,
+			},
+		},
+	})
+
+	err := ti.buildFixtures(func(f *testdatabase.Fixture) {
+		f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+			Key: strings.ToLower(resourceID),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID:   resourceID,
+				Name: "resourceName",
+				Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+			},
+		})
+		f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+			ClusterResourceID: strings.ToLower(resourceID),
+			MaintenanceManifest: api.MaintenanceManifest{
+				MaintenanceTaskID: "old-completed",
+				State:             api.MaintenanceManifestStateCompleted,
+				RunAfter:          oldRunAfter,
+				RunBefore:         oldRunAfter + 3600,
+			},
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, testdatabase.NewFakeAEAD(), nil, nil, nil, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.now = clock
+
+	go f.Run(ctx, nil, nil)
+
+	resp, b, err := ti.request(http.MethodGet,
+		fmt.Sprintf("https://server/admin%s/maintenancemanifests?limit=100&before=%d", resourceID, beforeCutoff),
+		http.Header{
+			"Referer": []string{"https://mockrefererhost/"},
+		}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantResponse := &admin.MaintenanceManifestList{
+		MaintenanceManifests: []*admin.MaintenanceManifest{
+			{
+				ID:                "07070707-0707-0707-0707-070707070001",
+				MaintenanceTaskID: "old-completed",
+				State:             admin.MaintenanceManifestStateCompleted,
+				Priority:          0,
+				RunAfter:          oldRunAfter,
+				RunBefore:         oldRunAfter + 3600,
+			},
+		},
+	}
+
+	err = validateResponse(resp, b, http.StatusOK, "", wantResponse)
+	if err != nil {
+		t.Errorf("before-only with realistic clock: %v", err)
 	}
 }
 

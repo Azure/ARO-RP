@@ -12,7 +12,7 @@ Returns a list of MIMO maintenance manifests for the cluster.
 |-------|------|---------|-------------|
 | `limit` | int | `100` | Max items to return |
 | `$skipToken` | string | | Continuation token for paging |
-| `after` | int64 (unix seconds) | `now - 30 days` | Inclusive lower bound on `runAfter` |
+| `after` | int64 (unix seconds) | `now - 30 days` (`0` when only `before` is set) | Inclusive lower bound on `runAfter` |
 | `before` | int64 (unix seconds) | none | Inclusive upper bound on `runAfter` |
 
 When neither `after` nor `before` is provided, `after` defaults to `now - 30 days`. When only `before` is provided, `after` defaults to `0` (full history up to `before`). Manifests in active states (**Pending** or **InProgress**) are always returned regardless of the time window, so that fleet cancellation tooling (e.g. `fleet-certificate-rotation.ps1 -action cancel`) that lists via this endpoint never misses a live task. Pass `after=0` to retrieve the full history.
